@@ -1,11 +1,11 @@
 # ============================================================
 # PATXANGA — SUBMIT MOVE CONTRACT
-# Version: 1.1 (Frozen)
+# Version: 1.2 (Frozen)
 # ============================================================
 
 Este documento define o contrato formal da jogada enviada ao backend.
 
-Ele complementa o Context Snapshot Master v1.1.
+Ele complementa o Context Snapshot Master v1.2.
 
 Nenhuma alteração neste contrato pode ser feita sem nova versão formal.
 
@@ -78,8 +78,8 @@ submit_patxanga_move() deve validar obrigatoriamente:
     - iniciar fluxo de pending_vote.
 14. Se todas as palavras forem válidas:
     - calcular pontuação integralmente no servidor.
-    - aplicar multiplicadores.
-    - aplicar Patxanga Real (se utilizada).
+    - aplicar multiplicadores apenas às peças colocadas na jogada atual.
+    - aplicar Patxanga Real somente sobre a palavra principal, se utilizada.
     - aplicar bônus +20 se utilizar 7 peças.
     - atualizar score.
     - atualizar board_state.

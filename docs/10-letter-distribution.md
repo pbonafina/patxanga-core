@@ -1,5 +1,5 @@
 # PATXANGA — DISTRIBUIÇÃO OFICIAL DE PEÇAS
-Versão: 1.0
+Versão: 1.1
 Status: Oficial
 Duração alvo: 20–30 minutos
 Ritmo: Equilibrado
@@ -24,12 +24,13 @@ Todas as peças especiais podem substituir qualquer letra (wildcard).
 |------|------------|-------------|--------|
 | Coringa | 2 | 0 | Substitui qualquer letra |
 | Pular Turno | 4 | 0 | Substitui qualquer letra + faz jogador escolhido pular próximo turno |
-| Patxanga Real | 1 | 0 | Substitui qualquer letra + dobra pontuação total da jogada |
+| Patxanga Real | 1 | 0 | Substitui qualquer letra + dobra a pontuação da palavra principal |
 
 Total especiais: **7**
 
 Observação importante:
-- A Patxanga Real dobra a pontuação total da jogada (palavra principal + cruzamentos + bônus).
+- A Patxanga Real dobra **apenas a palavra principal da jogada**.
+- Não dobra palavras secundárias nem a soma total da jogada.
 
 ---
 
@@ -123,7 +124,7 @@ Total: **9**
 - Boa fluidez lexical
 - Letras raras mantêm tensão estratégica
 - Pontuação média por palavra controlada
-- Patxanga Real gera picos raros e decisivos
+- Patxanga Real gera picos raros e decisivos na palavra principal
 - Peças de Pular Turno aparecem ocasionalmente sem dominar o ritmo
 
 ---
@@ -132,14 +133,13 @@ Total: **9**
 
 1. Calcular pontuação da palavra principal
 2. Calcular pontuação das palavras secundárias (cruzamentos)
-3. Somar pontuação total da jogada
-4. Aplicar bônus por uso de 7 peças (se houver)
-5. Aplicar multiplicador da Patxanga Real (se usada)
+3. Aplicar bônus por uso de 7 peças à jogada (se houver)
+4. Aplicar multiplicador da Patxanga Real **somente sobre a palavra principal**, se usada
 
 ---
 
 ## 7. Status
 
-Distribuição Oficial Patxanga v1.0 consolidada.
+Distribuição Oficial Patxanga v1.1 consolidada.
 Matematicamente fechada.
 Pronta para implementação técnica.

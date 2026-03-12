@@ -1,6 +1,6 @@
 # ============================================================
 # PATXANGA — CONTEXT SNAPSHOT MASTER
-# Version: 1.1 (Frozen)
+# Version: 1.2 (Frozen)
 # ============================================================
 
 Este documento representa o estado oficial, congelado e governado
@@ -53,22 +53,27 @@ Não é permitido:
 Já implementado:
 
 - Modelo de banco inicial
-- Distribuição oficial de peças v1.0
+- Distribuição oficial de peças v1.1
 - Layout oficial do tabuleiro v1.0
 - initialize_patxanga_bag()
 - initialize_patxanga_board()
 - create_patxanga_match()
 - join_patxanga_match()
 - start_patxanga_match() v1.1
-- Submit Move Contract v1.1
-- Operational Log Policy v1.0
-- Handoff Protocol v1.0
+- Submit Move Contract v1.2
+- Snapshot Master v1.2
+- Política de logs formalizada
+- Handoff protocol
+- validate_patxanga_move_alignment()
+- build_patxanga_virtual_board()
+- extract_patxanga_words() v1.0
+- normalize_patxanga_word()
+- validate_word()
 
 Ainda não implementado:
 
 - submit_patxanga_move()
-- validate_word()
-- calculate_score()
+- calculate_patxanga_score()
 - sistema de votação
 - troca de peças
 - passar turno
@@ -80,7 +85,7 @@ Ainda não implementado:
 
 - Matriz 15x15
 - Coordenadas: 1..15
-- Centro obrigatório: (8,8)
+- Centro obrigatório: a primeira jogada deve passar por (8,8)
 - Centro é PD (Palavra Dupla)
 - 4 PT (Palavra Tripla) nos cantos
 - Multiplicadores permitidos:
@@ -90,7 +95,7 @@ Ainda não implementado:
   - PD
   - PT
 
-Multiplicadores aplicam apenas na primeira ocupação da casa.
+Multiplicadores aplicam apenas na primeira ocupação da casa e apenas para peças colocadas na jogada atual.
 
 ---
 
@@ -100,7 +105,7 @@ Multiplicadores aplicam apenas na primeira ocupação da casa.
 - Sem letra Ç.
 - C representa Ç quando necessário.
 - Todas as peças especiais podem substituir qualquer letra.
-- Patxanga Real dobra a pontuação total da jogada.
+- Patxanga Real dobra apenas a pontuação da palavra principal.
 - Bônus de 7 peças: +20 pontos.
 
 Cada peça possui:
@@ -210,7 +215,7 @@ submit_patxanga_move()
 
 Deve respeitar integralmente:
 
-- Submit Move Contract v1.1
+- Submit Move Contract v1.2
 - Arquitetura server-authoritative
 - Replay completo
 - UUID por peça
