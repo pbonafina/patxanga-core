@@ -94,10 +94,14 @@ begin
             v_hydrated_placed_tiles
         );
 
-    -- Validate words
+        -- Validate words
     for v_word in
         select value from jsonb_array_elements(v_words)
     loop
+        if (v_word->>'type') = 'main' and char_length(coalesce(v_word->>'word', '')) < 2 then
+            raise exception 'Main word must have at least 2 letters';
+        end if;
+
         v_is_valid := public.validate_word(v_word->>'word');
 
         if not v_is_valid then
