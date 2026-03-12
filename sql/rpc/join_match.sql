@@ -1,6 +1,6 @@
 -- ============================================================
 -- PATXANGA - RPC: join_patxanga_match()
--- Version: 1.0
+-- Version: 1.1
 -- Mode: Synchronous
 -- ============================================================
 
@@ -21,7 +21,6 @@ declare
     v_match record;
     v_current_count integer;
     v_seat_index integer;
-    v_turn_order integer;
     v_player_id uuid;
 begin
 
@@ -56,16 +55,11 @@ begin
     end if;
 
     -- =============================
-    -- Determine seat and turn order
+    -- Determine seat only
     -- =============================
 
     select coalesce(max(seat_index), 0) + 1
     into v_seat_index
-    from patxanga_players
-    where match_id = p_match_id;
-
-    select coalesce(max(turn_order), 0) + 1
-    into v_turn_order
     from patxanga_players
     where match_id = p_match_id;
 
@@ -86,7 +80,7 @@ begin
     end if;
 
     -- =============================
-    -- Insert player
+    -- Insert player (turn_order = NULL)
     -- =============================
 
     insert into patxanga_players (
@@ -110,7 +104,7 @@ begin
         p_guest_name,
         coalesce(p_guest_name, 'Player'),
         v_seat_index,
-        v_turn_order,
+        null, -- IMPORTANT FIX
         p_is_bot,
         p_bot_level,
         p_bot_profile,
@@ -157,7 +151,6 @@ begin
         jsonb_build_object(
             'player_id', v_player_id,
             'seat_index', v_seat_index,
-            'turn_order', v_turn_order,
             'is_bot', p_is_bot
         ),
         0,
