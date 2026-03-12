@@ -1,7 +1,7 @@
 -- ============================================================
 -- PATXANGA - FULL AUTO ENGINE TEST
 -- submit_patxanga_move()
--- Version: 1.1
+-- Version: 1.2
 -- ============================================================
 
 do $$
@@ -14,10 +14,7 @@ declare
     v_submit_result jsonb;
 begin
 
-    -- =====================================
     -- 1. Create match
-    -- =====================================
-
     v_match_id := public.create_patxanga_match(
         p_host_user_id := v_user1,
         p_language := 'pt-BR',
@@ -27,10 +24,7 @@ begin
 
     raise notice 'Match created: %', v_match_id;
 
-    -- =====================================
     -- 2. Join second player
-    -- =====================================
-
     perform public.join_patxanga_match(
         p_match_id := v_match_id,
         p_user_id := v_user2
@@ -38,18 +32,19 @@ begin
 
     raise notice 'Second player joined: %', v_user2;
 
-    -- =====================================
-    -- 3. Start match
-    -- =====================================
+    raise notice 'Players in match: %',
+    (
+        select count(*)
+        from patxanga_players
+        where match_id = v_match_id
+    );
 
+    -- 3. Start match
     perform public.start_patxanga_match(v_match_id);
 
     raise notice 'Match started';
 
-    -- =====================================
     -- 4. Get one tile from player 1 rack
-    -- =====================================
-
     select value
     into v_tile
     from patxanga_players,
@@ -66,10 +61,7 @@ begin
 
     raise notice 'Selected tile id: %', v_tile_id;
 
-    -- =====================================
     -- 5. Submit move at center (8,8)
-    -- =====================================
-
     v_submit_result := public.submit_patxanga_move(
         v_match_id,
         v_user1,
@@ -84,36 +76,5 @@ begin
     );
 
     raise notice 'Submit result: %', v_submit_result;
-
-    -- =====================================
-    -- 6. Final state debug
-    -- =====================================
-
-    raise notice 'Board: %',
-        (select board_state
-         from patxanga_matches
-         where id = v_match_id);
-
-    raise notice 'Bag remaining: %',
-        (select bag_state->>'remaining'
-         from patxanga_matches
-         where id = v_match_id);
-
-    raise notice 'Player 1 score: %',
-        (select score
-         from patxanga_players
-         where match_id = v_match_id
-           and user_id = v_user1);
-
-    raise notice 'Player 1 rack size: %',
-        (select jsonb_array_length(rack_state)
-         from patxanga_players
-         where match_id = v_match_id
-           and user_id = v_user1);
-
-    raise notice 'Replay count: %',
-        (select count(*)
-         from patxanga_replay_events
-         where match_id = v_match_id);
 
 end $$;
