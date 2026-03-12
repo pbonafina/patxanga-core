@@ -50,7 +50,7 @@ begin
     (
         select jsonb_agg(row_data)
         from (
-            select jsonb_agg(null) as row_data
+            select jsonb_agg(null::jsonb) as row_data
             from generate_series(1,15)
         ) rows,
         generate_series(1,15)
