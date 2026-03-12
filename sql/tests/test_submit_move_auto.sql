@@ -1,7 +1,7 @@
 -- ============================================================
 -- PATXANGA - FULL AUTO ENGINE TEST
 -- submit_patxanga_move()
--- Version: 1.2
+-- Version: 1.4 (Player-ID aware)
 -- ============================================================
 
 do $$
@@ -9,12 +9,13 @@ declare
     v_user1 uuid := gen_random_uuid();
     v_user2 uuid := gen_random_uuid();
     v_match_id uuid;
+    v_current_player_id uuid;
     v_tile jsonb;
     v_tile_id uuid;
     v_submit_result jsonb;
 begin
 
-    -- 1. Create match
+    -- 1. Create match (host = user1)
     v_match_id := public.create_patxanga_match(
         p_host_user_id := v_user1,
         p_language := 'pt-BR',
@@ -44,27 +45,35 @@ begin
 
     raise notice 'Match started';
 
-    -- 4. Get one tile from player 1 rack
+    -- 4. Discover current turn PLAYER id
+    select current_turn_player_id
+    into v_current_player_id
+    from patxanga_matches
+    where id = v_match_id;
+
+    raise notice 'Current turn player_id: %', v_current_player_id;
+
+    -- 5. Get one tile from CURRENT PLAYER rack
     select value
     into v_tile
     from patxanga_players,
          jsonb_array_elements(rack_state)
     where match_id = v_match_id
-      and user_id = v_user1
+      and id = v_current_player_id
     limit 1;
 
     if v_tile is null then
-        raise exception 'No tile found in player 1 rack';
+        raise exception 'No tile found in current player rack';
     end if;
 
     v_tile_id := (v_tile->>'id')::uuid;
 
     raise notice 'Selected tile id: %', v_tile_id;
 
-    -- 5. Submit move at center (8,8)
+    -- 6. Submit move at center (8,8)
     v_submit_result := public.submit_patxanga_move(
         v_match_id,
-        v_user1,
+        v_current_player_id,
         jsonb_build_array(
             jsonb_build_object(
                 'tile_id', v_tile_id::text,
