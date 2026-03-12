@@ -1,6 +1,6 @@
 -- ============================================================
 -- PATXANGA - RPC: submit_patxanga_move()
--- Version: 1.3 (Player-ID aligned)
+-- Version: 1.4 (Hydrated placed tiles)
 -- ============================================================
 
 create or replace function public.submit_patxanga_move(
@@ -16,6 +16,7 @@ $$
 declare
     v_match record;
     v_player record;
+    v_hydrated_placed_tiles jsonb;
     v_virtual_board jsonb;
     v_words jsonb;
     v_score jsonb;
@@ -72,26 +73,32 @@ begin
         p_placed_tiles
     );
 
+    -- Hydrate placed tiles with full rack objects
+    v_hydrated_placed_tiles :=
+        public.hydrate_patxanga_placed_tiles(
+            v_player.rack_state,
+            p_placed_tiles
+        );
+
     -- Build virtual board
     v_virtual_board :=
         public.build_patxanga_virtual_board(
             v_match.board_state,
-            p_placed_tiles
+            v_hydrated_placed_tiles
         );
 
     -- Extract words
     v_words :=
         public.extract_patxanga_words(
             v_virtual_board,
-            p_placed_tiles
+            v_hydrated_placed_tiles
         );
 
     -- Validate words
     for v_word in
         select value from jsonb_array_elements(v_words)
     loop
-        v_is_valid :=
-            public.validate_word(v_word->>'word');
+        v_is_valid := public.validate_word(v_word->>'word');
 
         if not v_is_valid then
             return jsonb_build_object(
@@ -137,23 +144,26 @@ begin
         bag_state = v_new_bag
     where id = p_match_id;
 
-    -- Persist player score + rack (PLAYER ID)
+    -- Persist player score + rack
     update patxanga_players
     set score = score + (v_score->>'total_score')::integer,
-        rack_state = v_new_rack
+        rack_state = v_new_rack,
+        updated_at = now()
     where match_id = p_match_id
       and id = p_player_id;
 
-    -- Advance turn: next PLAYER ID
+    -- Advance turn
     select id
     into v_next_player
     from patxanga_players
     where match_id = p_match_id
       and turn_order >
-          (select turn_order
-           from patxanga_players
-           where match_id = p_match_id
-             and id = p_player_id)
+          (
+              select turn_order
+              from patxanga_players
+              where match_id = p_match_id
+                and id = p_player_id
+          )
     order by turn_order
     limit 1;
 
@@ -170,7 +180,8 @@ begin
 
     update patxanga_matches
     set current_turn_player_id = v_next_player,
-        turn_number = v_new_turn
+        turn_number = v_new_turn,
+        updated_at = now()
     where id = p_match_id;
 
     -- Replay
@@ -186,9 +197,11 @@ begin
         'move_submitted',
         jsonb_build_object(
             'player_id', p_player_id,
+            'placed_tiles', p_placed_tiles,
             'words', v_words,
             'score_breakdown', v_score,
-            'tiles_drawn', v_drawn_tiles
+            'tiles_drawn', v_drawn_tiles,
+            'next_player', v_next_player
         ),
         v_new_turn,
         now()
