@@ -1,13 +1,13 @@
 # ============================================================
 # PATXANGA — SUBMIT MOVE CONTRACT
-# Version: 1.0 (Frozen)
+# Version: 1.1 (Frozen)
 # ============================================================
 
 Este documento define o contrato formal da jogada enviada ao backend.
 
-Ele complementa o Context Snapshot Master v1.0.
+Ele complementa o Context Snapshot Master v1.1.
 
-Nenhuma alteração neste contrato pode ser feita sem nova versão.
+Nenhuma alteração neste contrato pode ser feita sem nova versão formal.
 
 ---
 
@@ -19,15 +19,15 @@ submit_patxanga_move(
     p_placed_tiles jsonb
 )
 
-Linguagem: PL/pgSQL
-Execução: server-authoritative
+Linguagem: PL/pgSQL  
+Execução: server-authoritative  
 Transação: atômica
 
 ---
 
 # 2. FORMATO DO PAYLOAD (p_placed_tiles)
 
-p_placed_tiles é um array JSON contendo as peças colocadas nesta jogada.
+p_placed_tiles é um array JSON contendo exclusivamente as peças colocadas nesta jogada.
 
 Exemplo:
 
@@ -44,7 +44,7 @@ Exemplo:
 
 # 3. REGRAS DO PAYLOAD
 
-- Apenas peças realmente colocadas nesta jogada devem ser enviadas.
+- Apenas peças efetivamente colocadas nesta jogada devem ser enviadas.
 - Não enviar peças já existentes no tabuleiro.
 - row e col variam de 1 a 15.
 - declared_letter é obrigatório apenas para:
@@ -52,46 +52,49 @@ Exemplo:
   - peças especiais que substituem letra
 
 Para peças normais:
-- backend pode validar que declared_letter corresponde à letra da peça
-- ou ignorar declared_letter
+- o backend pode validar declared_letter contra a letra real da peça
+- o backend pode ignorar declared_letter
+- o backend nunca deve confiar no cliente como fonte de verdade
 
 ---
 
 # 4. VALIDAÇÕES OBRIGATÓRIAS DO BACKEND
 
-submit_move() deve validar:
+submit_patxanga_move() deve validar obrigatoriamente:
 
 1. É o turno do jogador.
 2. Peças enviadas pertencem ao rack do jogador.
-3. UUIDs são válidos.
-4. Coordenadas estão dentro do tabuleiro.
+3. UUIDs são válidos e existentes.
+4. Coordenadas estão dentro do tabuleiro (1..15).
 5. Casas estão vazias.
 6. Todas as peças estão alinhadas (horizontal ou vertical).
 7. Não há lacunas na palavra principal.
-8. Primeira jogada passa pelo centro (8,8).
-9. Jogada conecta com palavras existentes (exceto primeira).
+8. Primeira jogada passa pela casa central (8,8).
+9. Jogada conecta com palavras existentes (exceto primeira jogada).
 10. Detectar palavra principal.
 11. Detectar palavras secundárias.
-12. Validar palavras contra dicionário oficial.
-13. Se palavra inexistente:
-    - criar estado pending_vote
-14. Se válida:
-    - calcular pontuação
-    - aplicar multiplicadores
-    - aplicar Patxanga Real
-    - aplicar bônus +20 se usar 7 peças
-    - atualizar score
-    - atualizar board_state
-    - atualizar bag_state
-    - repor peças
-    - criar replay event
-    - avançar turno
+12. Validar todas as palavras contra dicionário oficial.
+13. Se qualquer palavra não existir no dicionário:
+    - iniciar fluxo de pending_vote.
+14. Se todas as palavras forem válidas:
+    - calcular pontuação integralmente no servidor.
+    - aplicar multiplicadores.
+    - aplicar Patxanga Real (se utilizada).
+    - aplicar bônus +20 se utilizar 7 peças.
+    - atualizar score.
+    - atualizar board_state.
+    - atualizar bag_state.
+    - repor peças.
+    - registrar replay.
+    - avançar turno.
+
+Nenhum cálculo crítico pode ser confiado ao cliente.
 
 ---
 
 # 5. FORMATO DO board_state
 
-Matriz 15x15:
+O board_state é uma matriz 15x15:
 
 [
   [
@@ -102,7 +105,36 @@ Matriz 15x15:
   ]
 ]
 
-Multiplicadores só aplicam na primeira ocupação.
+Multiplicadores aplicam apenas na primeira ocupação da célula.
+
+---
+
+# 5.1 PRESERVAÇÃO OBRIGATÓRIA DO UUID NO BOARD_STATE
+
+O board_state deve preservar o objeto completo da peça colocada.
+
+Não é permitido armazenar apenas:
+
+- letra
+- valor numérico
+- special_type
+
+O objeto persistido na célula deve manter obrigatoriamente:
+
+- id (UUID original da peça)
+- letter
+- points
+- is_special
+- special_type (se houver)
+
+Isso garante:
+
+- rastreabilidade total
+- auditoria histórica
+- integridade do modelo UUID por peça
+- consistência com replay
+
+Qualquer tentativa de reduzir o objeto armazenado é proibida.
 
 ---
 
@@ -133,7 +165,7 @@ Array JSON de peças:
 
 # 8. FORMATO DO REPLAY EVENT
 
-insert into patxanga_replay_events:
+Inserção na tabela patxanga_replay_events contendo:
 
 - match_id
 - event_type
@@ -152,25 +184,42 @@ event_type exemplos:
 
 ---
 
-# 9. SISTEMA DE VOTAÇÃO (PREPARAÇÃO)
+# 8.1 REPLAY MÍNIMO OBRIGATÓRIO PARA JOGADAS
 
-Se palavra não existir no dicionário:
+Toda jogada aceita deve registrar evento contendo no mínimo:
 
-- match entra em estado pending_vote
-- salvar palavra em disputa
-- bloquear avanço de turno
-- aguardar votos
-- maioria simples aceita
-- empate rejeita
+- player_id
+- placed_tiles (UUID + coordenadas)
+- palavra principal detectada
+- palavras secundárias detectadas
+- score breakdown detalhado
+- multiplicadores aplicados
+- aplicação de Patxanga Real (se houver)
+- bônus de 7 peças (se aplicado)
+- próximo jogador
 
-Este mecanismo será implementado posteriormente,
-mas submit_move() já deve suportar esse fluxo.
+Replay resumido é proibido.
+
+---
+
+# 9. SISTEMA DE VOTAÇÃO (PENDING_VOTE)
+
+Se qualquer palavra não existir no dicionário:
+
+- A jogada NÃO pode ser rejeitada automaticamente.
+- A jogada NÃO pode ser aceita automaticamente.
+- A partida deve entrar em estado "pending_vote".
+- O contexto completo da jogada deve ser persistido.
+- Nenhuma modificação permanente no board_state pode ocorrer até decisão final.
+- O turno NÃO deve avançar.
+
+submit_patxanga_move() deve suportar integralmente este fluxo.
 
 ---
 
 # 10. PROIBIÇÕES
 
-submit_move() NÃO pode:
+submit_patxanga_move() NÃO pode:
 
 - confiar no frontend para direção
 - confiar em cálculo de pontuação do cliente
@@ -178,6 +227,9 @@ submit_move() NÃO pode:
 - alterar layout do tabuleiro
 - alterar multiplicadores
 - remover UUID das peças
+- simplificar modelo estrutural
+- reduzir replay
+- dividir a transação atômica
 
 ---
 
