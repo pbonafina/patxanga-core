@@ -1,6 +1,6 @@
 -- ============================================================
 -- PATXANGA - RPC: submit_patxanga_move()
--- Version: 1.1 (Hardened - Phase 1)
+-- Version: 1.2 (Rack + Bag Integrated)
 -- ============================================================
 
 create or replace function public.submit_patxanga_move(
@@ -23,11 +23,14 @@ declare
     v_is_valid boolean;
     v_next_player uuid;
     v_new_turn integer;
+    v_new_rack jsonb;
+    v_draw_result jsonb;
+    v_drawn_tiles jsonb;
+    v_new_bag jsonb;
+    v_tiles_to_draw integer;
 begin
 
-    -- =============================
     -- Lock match
-    -- =============================
     select *
     into v_match
     from patxanga_matches
@@ -42,17 +45,11 @@ begin
         raise exception 'Match not active';
     end if;
 
-    if v_match.status = 'pending_vote' then
-        raise exception 'Match is waiting for vote resolution';
-    end if;
-
     if v_match.current_turn_player_id <> p_player_id then
         raise exception 'Not your turn';
     end if;
 
-    -- =============================
-    -- Validate player
-    -- =============================
+    -- Lock player
     select *
     into v_player
     from patxanga_players
@@ -64,48 +61,34 @@ begin
         raise exception 'Player not found';
     end if;
 
-    if v_player.rack_state is null then
-        raise exception 'Rack state is null';
-    end if;
-
-    -- =============================
-    -- Validate tile ownership
-    -- =============================
+    -- Validate ownership
     perform public.validate_patxanga_tile_ownership(
         v_player.rack_state,
         p_placed_tiles
     );
 
-    -- =============================
     -- Validate alignment
-    -- =============================
     perform public.validate_patxanga_move_alignment(
         v_match.board_state,
         p_placed_tiles,
         v_match.turn_number
     );
 
-    -- =============================
     -- Build virtual board
-    -- =============================
     v_virtual_board :=
         public.build_patxanga_virtual_board(
             v_match.board_state,
             p_placed_tiles
         );
 
-    -- =============================
     -- Extract words
-    -- =============================
     v_words :=
         public.extract_patxanga_words(
             v_virtual_board,
             p_placed_tiles
         );
 
-    -- =============================
     -- Validate words
-    -- =============================
     for v_word in
         select value from jsonb_array_elements(v_words)
     loop
@@ -120,9 +103,7 @@ begin
         end if;
     end loop;
 
-    -- =============================
     -- Calculate score
-    -- =============================
     v_score :=
         public.calculate_patxanga_score(
             v_words,
@@ -130,24 +111,42 @@ begin
             p_placed_tiles
         );
 
-    -- =============================
-    -- Persist board
-    -- =============================
+    -- Remove tiles from rack
+    v_new_rack :=
+        public.remove_patxanga_tiles_from_rack(
+            v_player.rack_state,
+            p_placed_tiles
+        );
+
+    -- Draw tiles from bag
+    v_tiles_to_draw := 7 - jsonb_array_length(v_new_rack);
+
+    v_draw_result :=
+        public.draw_patxanga_tiles_from_bag(
+            v_match.bag_state,
+            v_tiles_to_draw
+        );
+
+    v_drawn_tiles := v_draw_result->'drawn_tiles';
+    v_new_bag := v_draw_result->'new_bag_state';
+
+    -- Add drawn tiles to rack
+    v_new_rack := v_new_rack || v_drawn_tiles;
+
+    -- Persist board + bag
     update patxanga_matches
-    set board_state = v_virtual_board
+    set board_state = v_virtual_board,
+        bag_state = v_new_bag
     where id = p_match_id;
 
-    -- =============================
-    -- Update player score
-    -- =============================
+    -- Persist player
     update patxanga_players
-    set score = score + (v_score->>'total_score')::integer
+    set score = score + (v_score->>'total_score')::integer,
+        rack_state = v_new_rack
     where match_id = p_match_id
       and user_id = p_player_id;
 
-    -- =============================
     -- Advance turn
-    -- =============================
     select id
     into v_next_player
     from patxanga_players
@@ -176,9 +175,7 @@ begin
         turn_number = v_new_turn
     where id = p_match_id;
 
-    -- =============================
     -- Replay
-    -- =============================
     insert into patxanga_replay_events (
         match_id,
         event_type,
@@ -192,7 +189,8 @@ begin
         jsonb_build_object(
             'player_id', p_player_id,
             'words', v_words,
-            'score_breakdown', v_score
+            'score_breakdown', v_score,
+            'tiles_drawn', v_drawn_tiles
         ),
         v_new_turn,
         now()
