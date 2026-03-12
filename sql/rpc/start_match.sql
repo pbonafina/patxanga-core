@@ -1,6 +1,6 @@
 -- ============================================================
 -- PATXANGA - RPC: start_patxanga_match()
--- Version: 1.0
+-- Version: 1.1
 -- Mode: Synchronous
 -- ============================================================
 
@@ -15,16 +15,21 @@ $$
 declare
     v_match record;
     v_player_count integer;
+
     v_bag jsonb;
     v_tiles jsonb;
+    v_total_tiles integer;
+
+    v_board jsonb;
+
     v_remaining_tiles jsonb;
     v_current_index integer := 0;
+
     v_player record;
-    v_player_ids uuid[];
     v_shuffled_player_ids uuid[];
     v_first_player_id uuid;
+
     v_player_rack jsonb;
-    v_total_tiles integer;
     i integer;
 begin
 
@@ -47,7 +52,7 @@ begin
     end if;
 
     if v_match.match_mode <> 'synchronous' then
-        raise exception 'Only synchronous matches supported in v1.0';
+        raise exception 'Only synchronous matches supported in v1.1';
     end if;
 
     -- =============================
@@ -80,6 +85,12 @@ begin
     end if;
 
     -- =============================
+    -- Initialize board
+    -- =============================
+
+    v_board := public.initialize_patxanga_board();
+
+    -- =============================
     -- Shuffle player order
     -- =============================
 
@@ -88,12 +99,13 @@ begin
     from patxanga_players
     where match_id = p_match_id;
 
-    if v_shuffled_player_ids is null or array_length(v_shuffled_player_ids, 1) is null then
+    if v_shuffled_player_ids is null
+       or array_length(v_shuffled_player_ids, 1) is null then
         raise exception 'Could not determine player order';
     end if;
 
     -- =============================
-    -- Update turn_order for all players
+    -- Update turn_order for players
     -- =============================
 
     for i in 1..array_length(v_shuffled_player_ids, 1) loop
@@ -107,7 +119,7 @@ begin
     v_first_player_id := v_shuffled_player_ids[1];
 
     -- =============================
-    -- Distribute 7 tiles to each player
+    -- Distribute 7 tiles per player
     -- =============================
 
     for v_player in
@@ -116,6 +128,7 @@ begin
         where match_id = p_match_id
         order by turn_order
     loop
+
         select jsonb_agg(tile)
         into v_player_rack
         from (
@@ -159,7 +172,7 @@ begin
     end loop;
 
     -- =============================
-    -- Remaining bag after distribution
+    -- Remaining bag
     -- =============================
 
     select jsonb_agg(tile)
@@ -183,6 +196,7 @@ begin
     update patxanga_matches
     set
         status = 'active',
+        board_state = v_board,
         bag_state = jsonb_build_object(
             'tiles', v_remaining_tiles,
             'remaining', jsonb_array_length(v_remaining_tiles)
