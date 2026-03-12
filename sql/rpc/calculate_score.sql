@@ -1,6 +1,6 @@
 -- ============================================================
 -- PATXANGA - RPC: calculate_patxanga_score()
--- Version: 1.0
+-- Version: 1.1
 -- Purpose: Calculate score breakdown (no persistence)
 -- ============================================================
 
@@ -27,11 +27,16 @@ declare
     v_bonus_7 integer := 0;
     v_has_patxanga_real boolean := false;
     v_total integer := 0;
+    v_multiplier_type text;
     v_breakdown jsonb := '{}'::jsonb;
 begin
 
     if p_words is null then
         raise exception 'Words cannot be null';
+    end if;
+
+    if p_placed_tiles is null then
+        raise exception 'Placed tiles cannot be null';
     end if;
 
     -- Detect if 7 tiles used
@@ -43,7 +48,8 @@ begin
     for v_tile in
         select value from jsonb_array_elements(p_placed_tiles)
     loop
-        if (v_tile->>'special_type') = 'PATXANGA_REAL' then
+        if coalesce(v_tile->>'special_type', '') = 'PATXANGA_REAL'
+           or coalesce(v_tile->>'special_type', '') = 'patxanga_real' then
             v_has_patxanga_real := true;
         end if;
     end loop;
@@ -52,7 +58,6 @@ begin
     for v_word in
         select value from jsonb_array_elements(p_words)
     loop
-
         v_word_score := 0;
         v_word_multiplier := 1;
         v_is_main := (v_word->>'type') = 'main';
@@ -61,21 +66,23 @@ begin
         for v_tile in
             select value from jsonb_array_elements(v_word->'tiles')
         loop
-
-            v_letter_score := (v_tile->'tile'->>'points')::integer;
+            v_letter_score := coalesce((v_tile->'tile'->>'points')::integer, 0);
 
             -- Check if tile is newly placed
             v_is_new := exists (
                 select 1
                 from jsonb_array_elements(p_placed_tiles) pt
-                where (pt->>'tile_id') = (v_tile->'tile'->>'id')
+                where (pt->>'tile_id') = coalesce(v_tile->'tile'->>'id', pt->>'tile_id')
             );
 
             if v_is_new then
-                case (p_board_state
-                        -> ((v_tile->>'row')::integer - 1)
-                        -> ((v_tile->>'col')::integer - 1)
-                        ->> 'multiplier_type')
+                v_multiplier_type :=
+                    p_board_state
+                    -> ((v_tile->>'row')::integer - 1)
+                    -> ((v_tile->>'col')::integer - 1)
+                    ->> 'multiplier_type';
+
+                case coalesce(v_multiplier_type, 'NM')
                     when 'LD' then
                         v_letter_score := v_letter_score * 2;
                     when 'LT' then
@@ -84,11 +91,14 @@ begin
                         v_word_multiplier := v_word_multiplier * 2;
                     when 'PT' then
                         v_word_multiplier := v_word_multiplier * 3;
+                    when 'NM' then
+                        null;
+                    else
+                        null;
                 end case;
             end if;
 
             v_word_score := v_word_score + v_letter_score;
-
         end loop;
 
         v_word_score := v_word_score * v_word_multiplier;
@@ -98,7 +108,6 @@ begin
         else
             v_score_secondary := v_score_secondary + v_word_score;
         end if;
-
     end loop;
 
     -- Apply bonus before Patxanga Real
@@ -120,7 +129,6 @@ begin
     );
 
     return v_breakdown;
-
 end;
 $$;
 
