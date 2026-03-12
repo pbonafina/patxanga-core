@@ -1,7 +1,7 @@
 -- ============================================================
 -- PATXANGA - FULL AUTO ENGINE TEST
 -- submit_patxanga_move()
--- Version: 1.4 (Player-ID aware)
+-- Version: 1.5 (Two-letter opening move)
 -- ============================================================
 
 do $$
@@ -10,8 +10,11 @@ declare
     v_user2 uuid := gen_random_uuid();
     v_match_id uuid;
     v_current_player_id uuid;
-    v_tile jsonb;
-    v_tile_id uuid;
+    v_rack jsonb;
+    v_tile1 jsonb;
+    v_tile2 jsonb;
+    v_tile1_id uuid;
+    v_tile2_id uuid;
     v_submit_result jsonb;
 begin
 
@@ -53,32 +56,49 @@ begin
 
     raise notice 'Current turn player_id: %', v_current_player_id;
 
-    -- 5. Get one tile from CURRENT PLAYER rack
-    select value
-    into v_tile
-    from patxanga_players,
-         jsonb_array_elements(rack_state)
+    -- 5. Get current player's rack
+    select rack_state
+    into v_rack
+    from patxanga_players
     where match_id = v_match_id
-      and id = v_current_player_id
-    limit 1;
+      and id = v_current_player_id;
 
-    if v_tile is null then
-        raise exception 'No tile found in current player rack';
+    if v_rack is null then
+        raise exception 'Current player rack is null';
     end if;
 
-    v_tile_id := (v_tile->>'id')::uuid;
+    if jsonb_array_length(v_rack) < 2 then
+        raise exception 'Current player rack has fewer than 2 tiles';
+    end if;
 
-    raise notice 'Selected tile id: %', v_tile_id;
+    v_tile1 := v_rack->0;
+    v_tile2 := v_rack->1;
 
-    -- 6. Submit move at center (8,8)
+    if v_tile1 is null or v_tile2 is null then
+        raise exception 'Could not extract first two tiles from rack';
+    end if;
+
+    v_tile1_id := (v_tile1->>'id')::uuid;
+    v_tile2_id := (v_tile2->>'id')::uuid;
+
+    raise notice 'Selected tile 1: % (%)', v_tile1_id, v_tile1->>'letter';
+    raise notice 'Selected tile 2: % (%)', v_tile2_id, v_tile2->>'letter';
+
+    -- 6. Submit 2-letter move at center: (8,8) and (8,9)
     v_submit_result := public.submit_patxanga_move(
         v_match_id,
         v_current_player_id,
         jsonb_build_array(
             jsonb_build_object(
-                'tile_id', v_tile_id::text,
+                'tile_id', v_tile1_id::text,
                 'row', 8,
                 'col', 8,
+                'declared_letter', null
+            ),
+            jsonb_build_object(
+                'tile_id', v_tile2_id::text,
+                'row', 8,
+                'col', 9,
                 'declared_letter', null
             )
         )
