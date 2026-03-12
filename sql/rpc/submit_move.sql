@@ -1,6 +1,6 @@
 -- ============================================================
 -- PATXANGA - RPC: submit_patxanga_move()
--- Version: 1.2 (Rack + Bag Integrated)
+-- Version: 1.3 (Player-ID aligned)
 -- ============================================================
 
 create or replace function public.submit_patxanga_move(
@@ -49,12 +49,12 @@ begin
         raise exception 'Not your turn';
     end if;
 
-    -- Lock player
+    -- Lock player (PLAYER ID, not USER ID)
     select *
     into v_player
     from patxanga_players
     where match_id = p_match_id
-      and user_id = p_player_id
+      and id = p_player_id
     for update;
 
     if not found then
@@ -69,9 +69,7 @@ begin
 
     -- Validate alignment
     perform public.validate_patxanga_move_alignment(
-        v_match.board_state,
-        p_placed_tiles,
-        v_match.turn_number
+        p_placed_tiles
     );
 
     -- Build virtual board
@@ -139,14 +137,14 @@ begin
         bag_state = v_new_bag
     where id = p_match_id;
 
-    -- Persist player
+    -- Persist player score + rack (PLAYER ID)
     update patxanga_players
     set score = score + (v_score->>'total_score')::integer,
         rack_state = v_new_rack
     where match_id = p_match_id
-      and user_id = p_player_id;
+      and id = p_player_id;
 
-    -- Advance turn
+    -- Advance turn: next PLAYER ID
     select id
     into v_next_player
     from patxanga_players
@@ -155,7 +153,7 @@ begin
           (select turn_order
            from patxanga_players
            where match_id = p_match_id
-             and user_id = p_player_id)
+             and id = p_player_id)
     order by turn_order
     limit 1;
 
