@@ -224,3 +224,18 @@ Estado prático atual:
 - frontend ja executa submit real inicial de jogada contra o backend local
 - fluxo ainda e controlado e simples, mas ja cruza a fronteira real da engine
 - backend permanece server-authoritative para validacao, aplicacao e transicao de estado
+
+## Validacao funcional posterior: jogada aceita pela UI no frontend
+
+Validado localmente pela home do frontend:
+
+- selecao local de pecas do rack
+- posicionamento local no board
+- geracao de `p_placed_tiles`
+- chamada real de `submit_patxanga_move(...)`
+- jogada valida aceita pela engine
+- board oficial atualizado apos refresh do bootstrap
+- rack recomposto com novas pecas apos a jogada
+
+Estado confirmado deste marco:
+- ramo `accepted` de submit real de jogada ja foi validado ponta a ponta pela UI
