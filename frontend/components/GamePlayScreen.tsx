@@ -24,6 +24,11 @@ type GamePlayScreenProps = {
   isFinished: boolean;
   winnerPlayerId: string | null;
   finishedAt: string | null;
+  playersSummary: Array<{
+    player_id: string;
+    display_name: string;
+  }>;
+  currentTurnPlayerId: string | null;
 
   boardState: unknown[];
   localPlacements: Record<string, string>;
@@ -31,9 +36,6 @@ type GamePlayScreenProps = {
   pendingVoteTilesByCell: Record<string, { letter?: string }>;
   selectedTileId: string | null;
   playerRackState: unknown[];
-  playerContext: {
-    rack_state: unknown[];
-  } | null | undefined;
 
   placedTilesPreview: unknown[];
   canSubmitMove: boolean;
@@ -57,6 +59,7 @@ type GamePlayScreenProps = {
   onPlaceTile: (cellKey: string, typedCell: BoardCell) => void;
   onToggleTile: (tileId: string) => void;
   onClearPreview: () => void;
+  onReorderTile: (draggedTileId: string, targetTileId: string) => void;
   onSubmitMove: () => void;
   onApprove: () => void;
   onReject: () => void;
@@ -70,6 +73,8 @@ export function GamePlayScreen({
   isFinished,
   winnerPlayerId,
   finishedAt,
+  playersSummary,
+  currentTurnPlayerId,
 
   boardState,
   localPlacements,
@@ -77,7 +82,6 @@ export function GamePlayScreen({
   pendingVoteTilesByCell,
   selectedTileId,
   playerRackState,
-  playerContext,
 
   placedTilesPreview,
   canSubmitMove,
@@ -97,6 +101,7 @@ export function GamePlayScreen({
   onPlaceTile,
   onToggleTile,
   onClearPreview,
+  onReorderTile,
   onSubmitMove,
   onApprove,
   onReject,
@@ -113,45 +118,20 @@ export function GamePlayScreen({
         background: "#fcfcfc",
       }}
     >
-      <div
-        style={{
-          marginBottom: 20,
-          padding: 16,
-          border: "1px solid #e5e7eb",
-          borderRadius: 12,
-          background: "#ffffff",
-        }}
-      >
-        <h2 style={{ marginTop: 0, marginBottom: 8 }}>Mesa de jogo</h2>
-        <p style={{ margin: 0 }}>
-          <strong>Estado atual:</strong> {stateLabel}
-        </p>
+      {isWaiting ? (
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ margin: 0 }}>A partida ainda não começou.</p>
+        </div>
+      ) : null}
 
-        {isActive ? (
-          <p style={{ marginTop: 8, marginBottom: 0 }}>
-            É a fase normal da partida. Selecione uma peça, clique no tabuleiro para posicioná-la e depois confirme a jogada.
-          </p>
-        ) : null}
-
-        {isVoting ? (
-          <p style={{ marginTop: 8, marginBottom: 0 }}>
-            Há uma jogada aguardando votação. O tabuleiro abaixo mostra o estado oficial com o overlay da jogada pendente.
-          </p>
-        ) : null}
-
-        {isWaiting ? (
-          <p style={{ marginTop: 8, marginBottom: 0 }}>
-            A partida ainda não começou.
-          </p>
-        ) : null}
-
-        {isFinished ? (
-          <p style={{ marginTop: 8, marginBottom: 0 }}>
+      {isFinished ? (
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ margin: 0 }}>
             A partida foi encerrada. Vencedor: {winnerPlayerId || "(não disponível)"}.
             {" "}Encerrada em: {finishedAt || "(não disponível)"}.
           </p>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <VotingSection
         isVoting={isVoting}
@@ -167,27 +147,94 @@ export function GamePlayScreen({
 
       {gameplayEnabled ? (
         <>
-          <BoardSection
-            boardState={boardState}
-            localPlacements={localPlacements}
-            localDeclaredLetters={localDeclaredLetters}
-            pendingVoteTilesByCell={pendingVoteTilesByCell}
-            selectedTileId={selectedTileId}
-            playerRackState={playerRackState}
-            buildCellKey={buildCellKey}
-            renderCellLabel={renderCellLabel}
-            renderCellBackground={renderCellBackground}
-            onPlaceTile={onPlaceTile}
-          />
+          <div style={{ position: "relative", width: 630 }}>
+            <div
+              style={{
+                position: "absolute",
+                top: -10,
+                left: 18,
+                zIndex: 2,
+              }}
+            >
+              <div
+                title={
+                  isActive
+                    ? "Partida ativa"
+                    : isVoting
+                      ? "Aguardando votação"
+                      : isFinished
+                        ? "Partida encerrada"
+                        : isWaiting
+                          ? "Aguardando início"
+                          : "Estado desconhecido"
+                }
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: 3,
+                  border: "1px solid #666",
+                  background: isActive
+                    ? "#22c55e"
+                    : isVoting
+                      ? "#eab308"
+                      : isFinished
+                        ? "#ef4444"
+                        : "#9ca3af",
+                }}
+              />
+            </div>
+
+            <div
+              style={{
+                position: "absolute",
+                top: -10,
+                right: 18,
+                display: "flex",
+                gap: 6,
+                zIndex: 2,
+              }}
+            >
+              {playersSummary.map((player) => {
+                const isCurrentTurn = player.player_id === currentTurnPlayerId;
+                return (
+                  <div
+                    key={player.player_id}
+                    title={player.display_name}
+                    style={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: 3,
+                      border: isCurrentTurn ? "2px solid #111827" : "1px solid #666",
+                      background: isCurrentTurn ? "#60a5fa" : "#d1d5db",
+                    }}
+                  />
+                );
+              })}
+            </div>
+
+            <BoardSection
+              boardState={boardState}
+              localPlacements={localPlacements}
+              localDeclaredLetters={localDeclaredLetters}
+              pendingVoteTilesByCell={pendingVoteTilesByCell}
+              selectedTileId={selectedTileId}
+              playerRackState={playerRackState}
+              buildCellKey={buildCellKey}
+              renderCellLabel={renderCellLabel}
+              renderCellBackground={renderCellBackground}
+              onPlaceTile={onPlaceTile}
+            />
+          </div>
 
           {isActive ? (
             <>
               <RackSection
-                playerContext={playerContext}
+                rackTiles={playerRackState}
                 selectedTileId={selectedTileId}
                 showDebug={showDebug}
                 onToggleTile={onToggleTile}
                 onClearPreview={onClearPreview}
+                onReorderTile={onReorderTile}
               />
 
               <div style={{ marginTop: 20, display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -198,14 +245,6 @@ export function GamePlayScreen({
                   style={{ padding: "10px 14px", cursor: "pointer" }}
                 >
                   {isSubmittingMove ? "Enviando..." : "Confirmar jogada"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onClearPreview}
-                  style={{ padding: "10px 14px", cursor: "pointer" }}
-                >
-                  Limpar jogada
                 </button>
               </div>
             </>

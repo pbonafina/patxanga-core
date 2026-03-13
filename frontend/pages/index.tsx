@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMatchBootstrap } from "../hooks/useMatchBootstrap";
 import { loadMatchBootstrap } from "../lib/backend/loadMatchBootstrap";
 import { getSupabaseEnv } from "../lib/supabase/env";
@@ -9,6 +9,7 @@ import { RackSection } from "../components/RackSection";
 import { PlayersSection } from "../components/PlayersSection";
 import { MatchStatusPanel } from "../components/MatchStatusPanel";
 import { MoveSubmitSection } from "../components/MoveSubmitSection";
+import { GamePlayScreen } from "../components/GamePlayScreen";
 
 type BoardCell = {
   tile?: {
@@ -65,6 +66,7 @@ export default function HomePage() {
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
   const [localPlacements, setLocalPlacements] = useState<Record<string, string>>({});
   const [localDeclaredLetters, setLocalDeclaredLetters] = useState<Record<string, string>>({});
+  const [localRackOrder, setLocalRackOrder] = useState<string[]>([]);
   const [showDebug, setShowDebug] = useState(false);
 
   const resolvedBootstrap = useMatchBootstrap(bootstrapData ?? undefined);
@@ -197,6 +199,43 @@ export default function HomePage() {
 
     return result;
   }, [pendingVoteMove]);
+
+  useEffect(() => {
+    const nextIds = (resolvedBootstrap.playerContext?.rack_state ?? [])
+      .map((item) => {
+        const typedTile = item as { id?: string };
+        return typedTile.id ?? null;
+      })
+      .filter((id): id is string => Boolean(id));
+
+    setLocalRackOrder(nextIds);
+  }, [resolvedBootstrap.playerContext]);
+
+  const orderedPlayerRackState = useMemo(() => {
+    const rackState = (resolvedBootstrap.playerContext?.rack_state ?? []) as Array<{
+      id?: string;
+    }>;
+
+    if (rackState.length === 0) {
+      return [];
+    }
+
+    const byId = new Map(
+      rackState
+        .filter((tile) => tile.id)
+        .map((tile) => [tile.id as string, tile])
+    );
+
+    const ordered = localRackOrder
+      .map((tileId) => byId.get(tileId))
+      .filter((tile): tile is { id?: string } => Boolean(tile));
+
+    const missing = rackState.filter(
+      (tile) => tile.id && !localRackOrder.includes(tile.id)
+    );
+
+    return [...ordered, ...missing];
+  }, [localRackOrder, resolvedBootstrap.playerContext]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -518,6 +557,63 @@ export default function HomePage() {
         ) : null}
       </section>
 
+      <GamePlayScreen
+        stateLabel={stateLabel}
+        isWaiting={isWaiting}
+        isActive={isActive}
+        isVoting={isVoting}
+        isFinished={isFinished}
+        winnerPlayerId={resolvedBootstrap.winnerPlayerId}
+        finishedAt={resolvedBootstrap.finishedAt}
+        playersSummary={resolvedBootstrap.playersSummary}
+        currentTurnPlayerId={resolvedBootstrap.currentTurnPlayerId}
+        boardState={resolvedBootstrap.boardState}
+        localPlacements={localPlacements}
+        localDeclaredLetters={localDeclaredLetters}
+        pendingVoteTilesByCell={pendingVoteTilesByCell}
+        selectedTileId={selectedTileId}
+        playerRackState={orderedPlayerRackState}
+        placedTilesPreview={placedTilesPreview}
+        canSubmitMove={placedTilesPreview.length > 0 && Boolean(resolvedBootstrap.playerId)}
+        isSubmittingMove={isSubmittingMove}
+        pendingVoteError={pendingVoteError}
+        pendingVoteMove={pendingVoteMove}
+        canCurrentViewerVote={canCurrentViewerVote}
+        isSubmittingVote={isSubmittingVote}
+        voteResult={voteResult}
+        showDebug={showDebug}
+        buildCellKey={buildCellKey}
+        renderCellLabel={renderCellLabel}
+        renderCellBackground={renderCellBackground}
+        onPlaceTile={handlePlaceTile}
+        onToggleTile={handleToggleTile}
+        onClearPreview={() => {
+          setLocalPlacements({});
+          setLocalDeclaredLetters({});
+          setSelectedTileId(null);
+        }}
+        onReorderTile={(draggedTileId, targetTileId) => {
+          setLocalRackOrder((current) => {
+            const draggedIndex = current.indexOf(draggedTileId);
+            const targetIndex = current.indexOf(targetTileId);
+
+            if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) {
+              return current;
+            }
+
+            const next = [...current];
+            const [dragged] = next.splice(draggedIndex, 1);
+            next.splice(targetIndex, 0, dragged);
+            return next;
+          });
+        }}
+        onSubmitMove={handleSubmitMove}
+        onApprove={() => handleSubmitVote(false)}
+        onReject={() => handleSubmitVote(true)}
+      />
+
+      {showDebug ? (
+        <>
       <MatchStatusPanel
         stateLabel={stateLabel}
         matchId={resolvedBootstrap.matchId}
@@ -532,19 +628,6 @@ export default function HomePage() {
         onToggleDebug={() => setShowDebug((current) => !current)}
       />
 
-
-      <VotingSection
-        isVoting={isVoting}
-        pendingVoteError={pendingVoteError}
-        pendingVoteMove={pendingVoteMove}
-        canCurrentViewerVote={canCurrentViewerVote}
-        isSubmittingVote={isSubmittingVote}
-        voteResult={voteResult}
-        showDebug={showDebug}
-        onApprove={() => handleSubmitVote(false)}
-        onReject={() => handleSubmitVote(true)}
-      />
-
       <PlayersSection
         playersSummary={resolvedBootstrap.playersSummary}
         currentTurnPlayerId={resolvedBootstrap.currentTurnPlayerId}
@@ -557,7 +640,7 @@ export default function HomePage() {
         localDeclaredLetters={localDeclaredLetters}
         pendingVoteTilesByCell={pendingVoteTilesByCell}
         selectedTileId={selectedTileId}
-        playerRackState={resolvedBootstrap.playerContext?.rack_state ?? []}
+        playerRackState={orderedPlayerRackState}
         buildCellKey={buildCellKey}
         renderCellLabel={renderCellLabel}
         renderCellBackground={renderCellBackground}
@@ -567,7 +650,7 @@ export default function HomePage() {
 
       {isActive ? (
       <RackSection
-        playerContext={resolvedBootstrap.playerContext}
+        rackTiles={orderedPlayerRackState}
         selectedTileId={selectedTileId}
         showDebug={showDebug}
         onToggleTile={handleToggleTile}
@@ -575,6 +658,21 @@ export default function HomePage() {
           setLocalPlacements({});
           setLocalDeclaredLetters({});
           setSelectedTileId(null);
+        }}
+        onReorderTile={(draggedTileId, targetTileId) => {
+          setLocalRackOrder((current) => {
+            const draggedIndex = current.indexOf(draggedTileId);
+            const targetIndex = current.indexOf(targetTileId);
+
+            if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) {
+              return current;
+            }
+
+            const next = [...current];
+            const [dragged] = next.splice(draggedIndex, 1);
+            next.splice(targetIndex, 0, dragged);
+            return next;
+          });
         }}
       />
       ) : null}
@@ -588,6 +686,9 @@ export default function HomePage() {
         submitResult={submitResult}
         onSubmitMove={handleSubmitMove}
       />
+      ) : null}
+
+        </>
       ) : null}
 
       {isWaiting ? (
