@@ -48,7 +48,9 @@ export default function HomePage() {
   const [playerIdInput, setPlayerIdInput] = useState("");
   const [bootstrapData, setBootstrapData] = useState<MatchBootstrap | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmittingMove, setIsSubmittingMove] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [submitResult, setSubmitResult] = useState<unknown | null>(null);
   const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
   const [localPlacements, setLocalPlacements] = useState<Record<string, string>>({});
 
@@ -135,6 +137,64 @@ export default function HomePage() {
       );
     } finally {
       setIsLoading(false);
+    }
+  }
+
+
+  async function handleSubmitMove() {
+    if (!resolvedBootstrap.matchId) {
+      setErrorMessage("match_id nao carregado.");
+      return;
+    }
+
+    if (!resolvedBootstrap.playerId) {
+      setErrorMessage("player_id resolvido nao disponivel.");
+      return;
+    }
+
+    if (placedTilesPreview.length === 0) {
+      setErrorMessage("Nenhuma peca posicionada para enviar.");
+      return;
+    }
+
+    setIsSubmittingMove(true);
+    setErrorMessage(null);
+    setSubmitResult(null);
+
+    try {
+      const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
+      const client = getSupabaseBrowserClient();
+
+      if (!client) {
+        throw new Error("Supabase client not configured in frontend environment.");
+      }
+
+      const { data, error } = await client.rpc("submit_patxanga_move", {
+        p_match_id: resolvedBootstrap.matchId,
+        p_player_id: resolvedBootstrap.playerId,
+        p_placed_tiles: placedTilesPreview,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setSubmitResult(data ?? null);
+
+      const refreshedData = await loadMatchBootstrap({
+        matchId: resolvedBootstrap.matchId,
+        playerId: playerIdInput,
+      });
+
+      setBootstrapData(refreshedData);
+      setSelectedTileIds([]);
+      setLocalPlacements({});
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Falha ao enviar jogada."
+      );
+    } finally {
+      setIsSubmittingMove(false);
     }
   }
 
@@ -418,6 +478,43 @@ export default function HomePage() {
           </>
         )}
       </section>
+
+      <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
+        <h2>Submit real de jogada</h2>
+
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={handleSubmitMove}
+            disabled={isSubmittingMove || placedTilesPreview.length === 0 || !resolvedBootstrap.playerId}
+            style={{ padding: "10px 14px", cursor: "pointer" }}
+          >
+            {isSubmittingMove ? "Enviando..." : "Enviar jogada"}
+          </button>
+
+          <span>
+            Usa <strong>match_id</strong> e <strong>player_id</strong> resolvido do bootstrap oficial.
+          </span>
+        </div>
+
+        {submitResult ? (
+          <div style={{ marginTop: 16 }}>
+            <h3 style={{ marginBottom: 8 }}>Retorno bruto da RPC</h3>
+            <pre
+              style={{
+                background: "#f7f7f7",
+                padding: 12,
+                borderRadius: 8,
+                overflowX: "auto",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+{JSON.stringify(submitResult, null, 2)}
+            </pre>
+          </div>
+        ) : null}
+      </section>
+
     </main>
   );
 }
