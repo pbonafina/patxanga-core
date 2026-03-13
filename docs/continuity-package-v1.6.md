@@ -178,3 +178,20 @@ Validado localmente em fluxo real pela UI:
 
 Estado confirmado deste marco:
 - primeiro bootstrap real da match validado ponta a ponta entre frontend e backend local
+
+## Marco posterior: interacao local inicial de gameplay no frontend
+
+Desde este baseline, a home do frontend passou a incluir:
+
+- renderizacao de `players_summary`
+- destaque visual de `current_turn_player_id`
+- renderizacao read-only de `board_state`
+- renderizacao do `rack_state` do jogador resolvido
+- selecao local de pecas do rack
+- preview local de posicionamento de pecas no board
+- limpeza do preview local sem mutar estado oficial da match
+
+Estado prático atual:
+- frontend ja exibe leitura minima util da partida
+- frontend ja possui interacao local inicial sem submit ao backend
+- fluxo ainda preserva backend server-authoritative como fonte de verdade
