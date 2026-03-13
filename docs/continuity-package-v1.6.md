@@ -253,3 +253,19 @@ Estado prático atual:
 - `board_state` oficial permanece intacto durante `pending_vote`
 - UI pode exibir a jogada pendente em overlay visual
 - frontend fica alinhado ao contrato de UX de `pending_vote`
+
+## Validacao funcional posterior: rejeicao de pending_vote pela UI
+
+Validado localmente pela home do frontend:
+
+- carregamento da match em `voting` como jogador elegivel para votar
+- exibicao do contexto pendente de votacao
+- uso de `submit_patxanga_vote(...)` pela UI
+- rejeicao da jogada pendente por outro jogador
+- retorno da match para `active`
+- `current_turn_player_id` preservado no autor da jogada
+- move resolvido como `rejected`
+- `board_state` oficial permanecendo intacto apos a rejeicao
+
+Estado confirmado deste marco:
+- ramo `rejected` de `submit_patxanga_vote(...)` ja foi validado ponta a ponta pela UI
