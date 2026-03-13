@@ -314,8 +314,8 @@ Etapas:
 - [feito] extrair `RackSection`
 - [feito] extrair `PlayersSection`
 - [feito] extrair `MatchStatusPanel`
-- [pendente] extrair `MoveSubmitSection`
-- [pendente] extrair `MatchLoadSection` se ainda houver ganho claro
+- [feito] extrair `MoveSubmitSection`
+- [opcional] extrair `MatchLoadSection` se ainda houver ganho claro
 - manter `pages/index.tsx` como orquestradora de estado e fluxo
 - preservar comportamento atual sem mudar contratos
 
@@ -327,7 +327,8 @@ Criterio de saida:
 Estado atual da fase:
 - Fase 1 avancou de forma consistente
 - os blocos mais sensiveis e volumosos da home ja foram separados
-- proximo alvo natural: `MoveSubmitSection`
+- a `index.tsx` passou a operar principalmente como orquestradora
+- a extracao adicional de `MatchLoadSection` ficou opcional, nao obrigatoria
 
 ### Fase 2 — acabamento de UX da partida
 Objetivo:
@@ -423,8 +424,7 @@ Criterio de saida:
 - primeira versao demonstravel sem parecer painel tecnico
 
 ### Ordem recomendada de execucao
-1. Extrair `MoveSubmitSection`
-2. Refinar UX de votacao
-3. Refinar UX de `waiting` e `finished`
-4. Consolidar contratos e documentacao
-5. Polimento de produto
+1. Refinar UX de votacao
+2. Refinar UX de `waiting` e `finished`
+3. Consolidar contratos e documentacao
+4. Polimento de produto
