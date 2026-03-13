@@ -160,3 +160,80 @@ Ele não substitui:
 - políticas formais de log e handoff
 
 Fim do documento.
+
+## 16. Regras obrigatórias de versionamento
+
+Toda mudança relevante de arquitetura, fluxo, contrato, operação local
+ou baseline documental deve resultar em arquivo versionado no repositório.
+
+Toda mudança relevante deve terminar com a sequência operacional completa:
+- `git add ...`
+- `git commit -m "mensagem descritiva em português"`
+- `git push`
+- `cd ..`
+- `./logstep.sh "mensagem"`
+- `cd patxanga-core`
+
+Regra prática:
+- não considerar trabalho concluído sem indicar claramente se houve ou não versionamento
+- preferir apresentar o versionamento em comandos explícitos, um por linha, no formato operacional usado no projeto
+- preferir mensagens de commit descritivas em português, alinhadas ao conteúdo efetivamente alterado
+- preferir mensagem de logstep curta, objetiva e compatível com a etapa concluída
+- quando uma alteração exigir atualização de documento já existente, isso deve ser sinalizado explicitamente
+- quando surgir novo baseline, deve ser criado ou atualizado o documento correspondente no projeto
+
+## 17. Regras obrigatórias de continuidade entre salas
+
+Continuidade deve ser tratada como parte do trabalho,
+não como detalhe opcional.
+
+Ao final de cada bloco importante, deve haver avaliação explícita sobre a necessidade de atualizar:
+- continuity package vigente
+- snapshot master vigente
+- protocolo local e operacional
+- contratos específicos relacionados ao tema trabalhado
+
+Se a resposta for sim:
+- preparar comandos
+- preparar conteúdo
+- preparar versionamento
+
+Se a resposta for não:
+- dizer explicitamente por que a atualização do kit não é necessária naquele momento
+
+## 18. Critério prático para atualizar o kit de continuidade
+
+A documentação de continuidade deve ser atualizada sempre que houver qualquer uma destas situações:
+- nova arquitetura ou subarquitetura aprovada
+- novo subsistema implementado
+- mudança relevante de fluxo de produto
+- novo contrato entre frontend e backend
+- nova regra operacional importante
+- nova limitação operacional descoberta
+- novo baseline congelado
+- mudança relevante no processo local de build, teste, versionamento ou colaboração
+
+## 19. Responsabilidade ao encerrar uma etapa
+
+Ao encerrar uma etapa importante, a resposta deve informar objetivamente:
+1. estado atual do projeto
+2. impacto no projeto
+3. se precisa atualizar kit de continuidade: sim ou não
+4. se sim, quais arquivos atualizar
+5. comandos prontos para versionar
+6. frase recomendada de retomada para futura sala, quando aplicável
+
+## 20. Ordem oficial dos documentos de continuidade
+
+A ordem oficial de referência entre salas é:
+- continuity package vigente
+- snapshot master vigente
+- protocolo local e operacional
+- contratos específicos relevantes para a sessão
+
+## 21. Regras adicionais de continuidade
+
+- não deixar a atualização do kit implícita
+- não assumir que a atualização será lembrada manualmente depois
+- não encerrar milestones sem avaliar formalmente a continuidade
+- tratar continuidade como requisito de engenharia do projeto
