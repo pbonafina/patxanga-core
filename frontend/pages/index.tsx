@@ -63,6 +63,10 @@ export default function HomePage() {
   const resolvedBootstrap = useMatchBootstrap(bootstrapData ?? undefined);
   const { isConfigured } = getSupabaseEnv();
 
+  const isWaiting = resolvedBootstrap.status === "waiting";
+  const isActive = resolvedBootstrap.status === "active";
+  const isVoting = resolvedBootstrap.status === "voting";
+
   const stateLabel = useMemo(() => {
     switch (resolvedBootstrap.status) {
       case "waiting":
@@ -443,14 +447,14 @@ export default function HomePage() {
       </section>
 
 
-      {resolvedBootstrap.status === "voting" && pendingVoteError ? (
+      {isVoting && pendingVoteError ? (
         <section style={{ marginTop: 24, padding: 16, border: "1px solid #b00020", borderRadius: 8, background: "#fff5f5" }}>
           <h2>Erro ao carregar contexto de votação</h2>
           <p>{pendingVoteError}</p>
         </section>
       ) : null}
 
-      {resolvedBootstrap.status === "voting" && pendingVoteMove ? (
+      {isVoting && pendingVoteMove ? (
         <section style={{ marginTop: 24, padding: 16, border: "1px solid #d97706", borderRadius: 8, background: "#fffbeb" }}>
           <h2>Jogada em avaliação</h2>
           <p><strong>Autor:</strong> {pendingVoteMove.author_display_name ?? "(desconhecido)"}</p>
@@ -531,6 +535,7 @@ export default function HomePage() {
         )}
       </section>
 
+      {(isActive || isVoting) ? (
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
         <h2>Board (read-only)</h2>
 
@@ -619,7 +624,9 @@ export default function HomePage() {
           </div>
         )}
       </section>
+      ) : null}
 
+      {isActive ? (
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
         <h2>Rack do jogador resolvido</h2>
 
@@ -697,7 +704,9 @@ export default function HomePage() {
           </>
         )}
       </section>
+      ) : null}
 
+      {isActive ? (
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
         {showDebug ? <h2>Preview de p_placed_tiles</h2> : <h2 style={{ display: "none" }}>Preview de p_placed_tiles</h2>}
 
@@ -720,6 +729,9 @@ export default function HomePage() {
           </>
         )}
       </section>
+      ) : null}
+
+      {isActive ? (
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
         <h2>Submit real de jogada</h2>
 
@@ -755,6 +767,15 @@ export default function HomePage() {
           </div>
         ) : null}
       </section>
+      ) : null}
+
+      {isWaiting ? (
+        <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
+          <h2>Lobby / aguardando inicio</h2>
+          <p>A partida ainda nao entrou em modo ativo.</p>
+          <p>Quando a match estiver pronta e iniciada, o board e o rack jogavel aparecerao aqui.</p>
+        </section>
+      ) : null}
 
     </main>
   );
