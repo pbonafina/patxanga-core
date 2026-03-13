@@ -37,13 +37,12 @@ export function PlayersSection({
                   background: isCurrentTurn ? "#eef6ff" : "#fff",
                 }}
               >
-                <p><strong>display_name:</strong> {player.display_name}</p>
-                <p><strong>player_id:</strong> {player.player_id}</p>
-                <p><strong>score:</strong> {player.score}</p>
-                <p><strong>seat_index:</strong> {player.seat_index}</p>
-                <p><strong>turn_order:</strong> {player.turn_order}</p>
-                <p><strong>has_forfeited:</strong> {player.has_forfeited ? "true" : "false"}</p>
-                <p><strong>turno atual:</strong> {isCurrentTurn ? "sim" : "nao"}</p>
+                <p><strong>Nome:</strong> {player.display_name}</p>
+                <p><strong>Pontuação:</strong> {player.score}</p>
+                <p><strong>Assento:</strong> {player.seat_index}</p>
+                <p><strong>Ordem de turno:</strong> {player.turn_order}</p>
+                <p><strong>Desistiu:</strong> {player.has_forfeited ? "sim" : "nao"}</p>
+                <p><strong>No turno atual:</strong> {isCurrentTurn ? "sim" : "nao"}</p>
               </div>
             );
           })}
