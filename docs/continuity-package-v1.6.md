@@ -195,3 +195,17 @@ Estado prático atual:
 - frontend ja exibe leitura minima util da partida
 - frontend ja possui interacao local inicial sem submit ao backend
 - fluxo ainda preserva backend server-authoritative como fonte de verdade
+
+## Marco posterior: preview local do payload de jogada no frontend
+
+Desde este baseline, a home do frontend passou a incluir:
+
+- selecao local de pecas do rack
+- preview local de posicionamento no board
+- geracao local de payload compativel com `submit_patxanga_move(...)`
+- preview visivel de `p_placed_tiles` antes de qualquer submit real
+
+Estado prático atual:
+- frontend ja alcanca a fronteira do contrato real de jogada
+- submit real ainda nao foi ligado
+- backend continua como fonte oficial de validacao e aplicacao
