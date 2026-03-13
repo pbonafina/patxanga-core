@@ -45,6 +45,7 @@ export default function HomePage() {
   const [bootstrapData, setBootstrapData] = useState<MatchBootstrap | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
 
   const resolvedBootstrap = useMatchBootstrap(bootstrapData ?? undefined);
   const { isConfigured } = getSupabaseEnv();
@@ -248,36 +249,66 @@ export default function HomePage() {
         ) : resolvedBootstrap.playerContext.rack_state.length === 0 ? (
           <p>Rack vazio.</p>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-            {resolvedBootstrap.playerContext.rack_state.map((tile, index) => {
-              const typedTile = tile as {
-                id?: string;
-                letter?: string;
-                points?: number;
-                is_special?: boolean;
-                special_type?: string | null;
-              };
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+              {resolvedBootstrap.playerContext.rack_state.map((tile, index) => {
+                const typedTile = tile as {
+                  id?: string;
+                  letter?: string;
+                  points?: number;
+                  is_special?: boolean;
+                  special_type?: string | null;
+                };
 
-              return (
-                <div
-                  key={typedTile.id ?? `tile-${index}`}
-                  style={{
-                    padding: 12,
-                    border: "1px solid #bbb",
-                    borderRadius: 8,
-                    background: "#fafafa",
-                  }}
-                >
-                  <p><strong>letter:</strong> <span style={{ fontSize: 20 }}>{typedTile.letter ?? "(nulo)"}</span></p>
-                  <p><strong>points:</strong> {typedTile.points ?? 0}</p>
-                  <p><strong>id:</strong> {typedTile.id ?? "(nulo)"}</p>
-                  <p><strong>is_special:</strong> {typedTile.is_special ? "true" : "false"}</p>
-                  <p><strong>special_type:</strong> {typedTile.special_type ?? "(nulo)"}</p>
-                  <p><strong>tipo visual:</strong> {typedTile.is_special ? "peca especial" : "peca normal"}</p>
-                </div>
-              );
-            })}
-          </div>
+                const tileId = typedTile.id ?? `tile-${index}`;
+                const isSelected = selectedTileIds.includes(tileId);
+
+                return (
+                  <button
+                    key={tileId}
+                    type="button"
+                    onClick={() => {
+                      setSelectedTileIds((current) =>
+                        current.includes(tileId)
+                          ? current.filter((id) => id !== tileId)
+                          : [...current, tileId]
+                      );
+                    }}
+                    style={{
+                      padding: 12,
+                      border: isSelected ? "2px solid #2563eb" : "1px solid #bbb",
+                      borderRadius: 8,
+                      background: isSelected ? "#eef6ff" : "#fafafa",
+                      textAlign: "left",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <p><strong>letter:</strong> <span style={{ fontSize: 20 }}>{typedTile.letter ?? "(nulo)"}</span></p>
+                    <p><strong>points:</strong> {typedTile.points ?? 0}</p>
+                    <p><strong>id:</strong> {typedTile.id ?? "(nulo)"}</p>
+                    <p><strong>is_special:</strong> {typedTile.is_special ? "true" : "false"}</p>
+                    <p><strong>special_type:</strong> {typedTile.special_type ?? "(nulo)"}</p>
+                    <p><strong>tipo visual:</strong> {typedTile.is_special ? "peca especial" : "peca normal"}</p>
+                    <p><strong>selecionada:</strong> {isSelected ? "sim" : "nao"}</p>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ marginTop: 16, padding: 12, border: "1px dashed #bbb", borderRadius: 8 }}>
+              <h3 style={{ marginTop: 0 }}>Preview local de selecao</h3>
+              {selectedTileIds.length === 0 ? (
+                <p>Nenhuma peça selecionada.</p>
+              ) : (
+                <ul>
+                  {selectedTileIds.map((tileId) => (
+                    <li key={tileId}>{tileId}</li>
+                  ))}
+                </ul>
+              )}
+              <p>Este estado ainda é apenas local e não envia jogada ao backend.</p>
+            </div>
+          </>
         )}
       </section>
     </main>
