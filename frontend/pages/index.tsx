@@ -7,6 +7,7 @@ import { VotingSection } from "../components/VotingSection";
 import { BoardSection } from "../components/BoardSection";
 import { RackSection } from "../components/RackSection";
 import { PlayersSection } from "../components/PlayersSection";
+import { MatchStatusPanel } from "../components/MatchStatusPanel";
 
 type BoardCell = {
   tile?: {
@@ -451,31 +452,19 @@ export default function HomePage() {
         ) : null}
       </section>
 
-      <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-        <h2>Estado da partida</h2>
-        <p><strong>Status:</strong> {stateLabel}</p>
-        <p><strong>match_id:</strong> {resolvedBootstrap.matchId || "(vazio)"}</p>
-        <p><strong>jogadores:</strong> {resolvedBootstrap.playersSummary.length}</p>
-
-        <button
-          type="button"
-          onClick={() => setShowDebug((current) => !current)}
-          style={{ marginTop: 12, padding: "8px 12px", cursor: "pointer" }}
-        >
-          {showDebug ? "Ocultar detalhes técnicos" : "Mostrar detalhes técnicos"}
-        </button>
-
-        {showDebug ? (
-          <div style={{ marginTop: 12 }}>
-            <p><strong>player_id resolvido:</strong> {resolvedBootstrap.playerId || "(nulo)"}</p>
-            <p><strong>current_turn_player_id:</strong> {resolvedBootstrap.currentTurnPlayerId || "(nulo)"}</p>
-            <p><strong>winner_player_id:</strong> {resolvedBootstrap.winnerPlayerId || "(nulo)"}</p>
-            <p><strong>started_at:</strong> {resolvedBootstrap.startedAt || "(nulo)"}</p>
-            <p><strong>finished_at:</strong> {resolvedBootstrap.finishedAt || "(nulo)"}</p>
-            <p><strong>turn_number:</strong> {resolvedBootstrap.turnNumber}</p>
-          </div>
-        ) : null}
-      </section>
+      <MatchStatusPanel
+        stateLabel={stateLabel}
+        matchId={resolvedBootstrap.matchId}
+        playersCount={resolvedBootstrap.playersSummary.length}
+        showDebug={showDebug}
+        playerId={resolvedBootstrap.playerId}
+        currentTurnPlayerId={resolvedBootstrap.currentTurnPlayerId}
+        winnerPlayerId={resolvedBootstrap.winnerPlayerId}
+        startedAt={resolvedBootstrap.startedAt}
+        finishedAt={resolvedBootstrap.finishedAt}
+        turnNumber={resolvedBootstrap.turnNumber}
+        onToggleDebug={() => setShowDebug((current) => !current)}
+      />
 
 
       <VotingSection
