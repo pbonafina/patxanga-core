@@ -4,6 +4,37 @@ import { loadMatchBootstrap } from "../lib/backend/loadMatchBootstrap";
 import { getSupabaseEnv } from "../lib/supabase/env";
 import type { MatchBootstrap } from "../types/match";
 
+type BoardCell = {
+  tile?: {
+    letter?: string;
+  } | null;
+  multiplier_type?: string | null;
+} | null;
+
+function renderCellLabel(cell: BoardCell): string {
+  if (!cell) return "";
+  if (cell.tile?.letter) return cell.tile.letter;
+  return cell.multiplier_type ?? "";
+}
+
+function renderCellBackground(cell: BoardCell): string {
+  if (!cell) return "#ffffff";
+  if (cell.tile?.letter) return "#f3f4f6";
+
+  switch (cell.multiplier_type) {
+    case "PT":
+      return "#ffd6d6";
+    case "PD":
+      return "#ffe9c7";
+    case "LT":
+      return "#d9ecff";
+    case "LD":
+      return "#e8ddff";
+    default:
+      return "#ffffff";
+  }
+}
+
 export default function HomePage() {
   const [matchIdInput, setMatchIdInput] = useState("");
   const [playerIdInput, setPlayerIdInput] = useState("");
@@ -51,7 +82,7 @@ export default function HomePage() {
   }
 
   return (
-    <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 960, margin: "0 auto" }}>
+    <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 1100, margin: "0 auto" }}>
       <h1>Patxanga Frontend</h1>
       <p>Bootstrap da match com fallback mock e provider real preparado.</p>
 
@@ -147,6 +178,55 @@ export default function HomePage() {
                 </div>
               );
             })}
+          </div>
+        )}
+      </section>
+
+      <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
+        <h2>Board (read-only)</h2>
+
+        {resolvedBootstrap.boardState.length === 0 ? (
+          <p>Board ainda nao carregado.</p>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(15, 38px)",
+              gap: 2,
+              alignItems: "center",
+              justifyContent: "start",
+            }}
+          >
+            {resolvedBootstrap.boardState.flatMap((row, rowIndex) =>
+              row.map((cell, colIndex) => {
+                const typedCell = cell as BoardCell;
+                const label = renderCellLabel(typedCell);
+
+                return (
+                  <div
+                    key={`${rowIndex}-${colIndex}`}
+                    title={`(${rowIndex + 1}, ${colIndex + 1})`}
+                    style={{
+                      width: 38,
+                      height: 38,
+                      border: "1px solid #bbb",
+                      borderRadius: 4,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      background: renderCellBackground(typedCell),
+                      overflow: "hidden",
+                      textAlign: "center",
+                      padding: 2,
+                    }}
+                  >
+                    {label}
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
       </section>
