@@ -24,9 +24,7 @@ export function RackSection({
   onClearPreview,
 }: RackSectionProps) {
   return (
-    <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-      <h2>Rack do jogador</h2>
-
+    <section style={{ marginTop: 24, padding: 0, border: "none", borderRadius: 0 }}>
       {!playerContext ? (
         <p>Contexto do jogador ainda não carregado.</p>
       ) : playerContext.rack_state.length === 0 ? (
@@ -81,22 +79,6 @@ export function RackSection({
             })}
           </div>
 
-          <div style={{ marginTop: 16, padding: 12, border: "1px dashed #bbb", borderRadius: 8 }}>
-            <h3 style={{ marginTop: 0 }}>Seleção atual</h3>
-            {selectedTileId ? (
-              <p>Há uma peça ativa pronta para posicionar no tabuleiro.</p>
-            ) : (
-              <p>Nenhuma peça selecionada.</p>
-            )}
-            <p>Para remover uma peça já posicionada localmente, clique nela no tabuleiro.</p>
-            <button
-              type="button"
-              onClick={onClearPreview}
-              style={{ padding: "8px 12px", cursor: "pointer" }}
-            >
-              Limpar jogada local
-            </button>
-          </div>
         </>
       )}
     </section>
