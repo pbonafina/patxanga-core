@@ -77,4 +77,4 @@ Comandos sugeridos:
 
 ## 9. Frase curta de retomada recomendada
 
-Retomar Patxanga a partir do continuity-package-v1.6 atualizado, snapshot master v1.6, protocolo local atualizado, submit move contract v1.2, bootstrap real frontend-backend validado e ramo accepted de submit real de jogada já validado pela UI.
+Vou te enviar, nesta ordem: `docs/continuity-package-v1.6.md`, snapshot master vigente, `docs/15-local-ops-and-collaboration-protocol.md`, `docs/12-submit-move-contract.md`, contratos curtos de frontend relevantes e `docs/16-room-restart-prompt-v1.0.md`. Retome Patxanga a partir desses documentos, preserve a arquitetura vigente e continue do ponto atual: bootstrap real frontend-backend validado, submit real inicial de jogada já integrado e ramo `accepted` já validado pela UI. Próximo foco: validar `pending_vote` pela UI.
