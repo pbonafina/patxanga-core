@@ -3,6 +3,7 @@ import { useMatchBootstrap } from "../hooks/useMatchBootstrap";
 import { loadMatchBootstrap } from "../lib/backend/loadMatchBootstrap";
 import { getSupabaseEnv } from "../lib/supabase/env";
 import type { MatchBootstrap } from "../types/match";
+import { VotingSection } from "../components/VotingSection";
 
 type BoardCell = {
   tile?: {
@@ -447,59 +448,17 @@ export default function HomePage() {
       </section>
 
 
-      {isVoting && pendingVoteError ? (
-        <section style={{ marginTop: 24, padding: 16, border: "1px solid #b00020", borderRadius: 8, background: "#fff5f5" }}>
-          <h2>Erro ao carregar contexto de votação</h2>
-          <p>{pendingVoteError}</p>
-        </section>
-      ) : null}
-
-      {isVoting && pendingVoteMove ? (
-        <section style={{ marginTop: 24, padding: 16, border: "1px solid #d97706", borderRadius: 8, background: "#fffbeb" }}>
-          <h2>Jogada em avaliação</h2>
-          <p><strong>Autor:</strong> {pendingVoteMove.author_display_name ?? "(desconhecido)"}</p>
-          <p><strong>Palavra principal:</strong> {pendingVoteMove.main_word ?? "(nula)"}</p>
-          <p><strong>Pode votar nesta tela:</strong> {canCurrentViewerVote ? "sim" : "nao"}</p>
-          <p>O board oficial permanece intacto; o tabuleiro abaixo mostra overlay visual da jogada pendente.</p>
-
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
-            <button
-              type="button"
-              onClick={() => handleSubmitVote(false)}
-              disabled={!canCurrentViewerVote || isSubmittingVote}
-              style={{ padding: "10px 14px", cursor: "pointer" }}
-            >
-              {isSubmittingVote ? "Enviando..." : "Aprovar jogada"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSubmitVote(true)}
-              disabled={!canCurrentViewerVote || isSubmittingVote}
-              style={{ padding: "10px 14px", cursor: "pointer" }}
-            >
-              {isSubmittingVote ? "Enviando..." : "Rejeitar jogada"}
-            </button>
-          </div>
-
-          {showDebug && voteResult ? (
-            <div style={{ marginTop: 16 }}>
-              <h3 style={{ marginBottom: 8 }}>Retorno bruto da votação</h3>
-              <pre
-                style={{
-                  background: "#f7f7f7",
-                  padding: 12,
-                  borderRadius: 8,
-                  overflowX: "auto",
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-{JSON.stringify(voteResult, null, 2)}
-              </pre>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
+      <VotingSection
+        isVoting={isVoting}
+        pendingVoteError={pendingVoteError}
+        pendingVoteMove={pendingVoteMove}
+        canCurrentViewerVote={canCurrentViewerVote}
+        isSubmittingVote={isSubmittingVote}
+        voteResult={voteResult}
+        showDebug={showDebug}
+        onApprove={() => handleSubmitVote(false)}
+        onReject={() => handleSubmitVote(true)}
+      />
 
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
         <h2>Jogadores</h2>
