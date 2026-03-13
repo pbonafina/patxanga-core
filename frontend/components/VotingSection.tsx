@@ -59,19 +59,30 @@ export function VotingSection({
             background: "#fffbeb",
           }}
         >
-          <h2>Jogada em avaliação</h2>
+          <h2>Jogada pendente de votação</h2>
+          <p>
+            Uma jogada enviada por outro jogador está aguardando resolução.
+          </p>
           <p>
             <strong>Autor:</strong> {pendingVoteMove.author_display_name ?? "(desconhecido)"}
           </p>
           <p>
             <strong>Palavra principal:</strong> {pendingVoteMove.main_word ?? "(nula)"}
           </p>
+
+          {canCurrentViewerVote ? (
+            <p>
+              Você pode votar nesta jogada agora.
+            </p>
+          ) : (
+            <p>
+              Você não pode votar nesta jogada nesta tela.
+            </p>
+          )}
+
           <p>
-            <strong>Pode votar nesta tela:</strong> {canCurrentViewerVote ? "sim" : "nao"}
-          </p>
-          <p>
-            O board oficial permanece intacto; o tabuleiro abaixo mostra overlay visual da
-            jogada pendente.
+            O board oficial permanece intacto; o tabuleiro abaixo mostra apenas o overlay visual
+            da jogada pendente.
           </p>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
@@ -81,7 +92,7 @@ export function VotingSection({
               disabled={!canCurrentViewerVote || isSubmittingVote}
               style={{ padding: "10px 14px", cursor: "pointer" }}
             >
-              {isSubmittingVote ? "Enviando..." : "Aprovar jogada"}
+              {isSubmittingVote ? "Enviando..." : "Aprovar"}
             </button>
 
             <button
@@ -90,7 +101,7 @@ export function VotingSection({
               disabled={!canCurrentViewerVote || isSubmittingVote}
               style={{ padding: "10px 14px", cursor: "pointer" }}
             >
-              {isSubmittingVote ? "Enviando..." : "Rejeitar jogada"}
+              {isSubmittingVote ? "Enviando..." : "Rejeitar"}
             </button>
           </div>
 
