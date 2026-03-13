@@ -1,6 +1,6 @@
 -- ============================================================
 -- PATXANGA - RPC: submit_patxanga_pass_turn()
--- Version: 1.0
+-- Version: 1.1
 -- Purpose: Pass turn without changing board/rack/bag
 -- ============================================================
 
@@ -19,9 +19,9 @@ declare
     v_next_player uuid;
     v_new_turn integer;
     v_move_id uuid;
+    v_end_result jsonb;
 begin
 
-    -- Lock match
     select *
     into v_match
     from patxanga_matches
@@ -40,7 +40,6 @@ begin
         raise exception 'Not your turn';
     end if;
 
-    -- Lock player
     select *
     into v_player
     from patxanga_players
@@ -52,7 +51,6 @@ begin
         raise exception 'Player not found';
     end if;
 
-    -- Persist move
     insert into patxanga_moves (
         match_id,
         player_id,
@@ -102,13 +100,11 @@ begin
     )
     returning id into v_move_id;
 
-    -- Mark pass state for player
     update patxanga_players
     set has_passed_last_cycle = true,
         updated_at = now()
     where id = p_player_id;
 
-    -- Find next player
     select id
     into v_next_player
     from patxanga_players
@@ -133,14 +129,12 @@ begin
 
     v_new_turn := v_match.turn_number + 1;
 
-    -- Advance turn
     update patxanga_matches
     set current_turn_player_id = v_next_player,
         turn_number = v_new_turn,
         updated_at = now()
     where id = p_match_id;
 
-    -- Replay: turn_passed
     insert into patxanga_replay_events (
         match_id,
         event_type,
@@ -159,7 +153,6 @@ begin
         now()
     );
 
-    -- Replay: turn_changed
     insert into patxanga_replay_events (
         match_id,
         event_type,
@@ -177,11 +170,15 @@ begin
         now()
     );
 
+    -- Evaluate match end after pass
+    v_end_result := public.evaluate_patxanga_match_end(p_match_id);
+
     return jsonb_build_object(
         'status', 'success',
         'move_id', v_move_id,
         'next_player', v_next_player,
-        'turn_number', v_new_turn
+        'turn_number', v_new_turn,
+        'end_state', v_end_result
     );
 
 end;

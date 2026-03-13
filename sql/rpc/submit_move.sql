@@ -1,6 +1,6 @@
 -- ============================================================
 -- PATXANGA - RPC: submit_patxanga_move()
--- Version: 1.5 (Persistent pending_vote)
+-- Version: 1.7 (Persistent pending_vote + game end)
 -- ============================================================
 
 create or replace function public.submit_patxanga_move(
@@ -33,9 +33,9 @@ declare
     v_drawn_tiles jsonb;
     v_new_bag jsonb;
     v_tiles_to_draw integer;
+    v_end_result jsonb;
 begin
 
-    -- Lock match
     select *
     into v_match
     from patxanga_matches
@@ -54,7 +54,6 @@ begin
         raise exception 'Not your turn';
     end if;
 
-    -- Lock player (PLAYER ID)
     select *
     into v_player
     from patxanga_players
@@ -66,39 +65,33 @@ begin
         raise exception 'Player not found';
     end if;
 
-    -- Validate ownership
     perform public.validate_patxanga_tile_ownership(
         v_player.rack_state,
         p_placed_tiles
     );
 
-    -- Validate alignment / geometry
     perform public.validate_patxanga_move_alignment(
         p_placed_tiles
     );
 
-    -- Hydrate placed tiles with full rack objects
     v_hydrated_placed_tiles :=
         public.hydrate_patxanga_placed_tiles(
             v_player.rack_state,
             p_placed_tiles
         );
 
-    -- Build virtual board
     v_virtual_board :=
         public.build_patxanga_virtual_board(
             v_match.board_state,
             v_hydrated_placed_tiles
         );
 
-    -- Extract words
     v_words :=
         public.extract_patxanga_words(
             v_virtual_board,
             v_hydrated_placed_tiles
         );
 
-    -- Split main / secondary words
     for v_word in
         select value from jsonb_array_elements(v_words)
     loop
@@ -109,12 +102,10 @@ begin
         end if;
     end loop;
 
-    -- Main word must have at least 2 letters
     if char_length(coalesce(v_main_word, '')) < 2 then
         raise exception 'Main word must have at least 2 letters';
     end if;
 
-    -- Validate words against dictionary
     for v_word in
         select value from jsonb_array_elements(v_words)
     loop
@@ -237,14 +228,12 @@ begin
             p_placed_tiles
         );
 
-    -- Remove tiles from rack
     v_new_rack :=
         public.remove_patxanga_tiles_from_rack(
             v_player.rack_state,
             p_placed_tiles
         );
 
-    -- Draw tiles from bag
     v_tiles_to_draw := 7 - jsonb_array_length(v_new_rack);
 
     v_draw_result :=
@@ -256,25 +245,28 @@ begin
     v_drawn_tiles := v_draw_result->'drawn_tiles';
     v_new_bag := v_draw_result->'new_bag_state';
 
-    -- Add drawn tiles to rack
     v_new_rack := v_new_rack || v_drawn_tiles;
 
-    -- Persist board + bag
     update patxanga_matches
     set board_state = v_virtual_board,
         bag_state = v_new_bag,
         updated_at = now()
     where id = p_match_id;
 
-    -- Persist player score + rack
     update patxanga_players
     set score = score + (v_score->>'total_score')::integer,
         rack_state = v_new_rack,
+        has_passed_last_cycle = false,
         updated_at = now()
     where match_id = p_match_id
       and id = p_player_id;
 
-    -- Advance turn
+    -- valid move breaks stagnation cycle for everyone
+    update patxanga_players
+    set has_passed_last_cycle = false,
+        updated_at = now()
+    where match_id = p_match_id;
+
     select id
     into v_next_player
     from patxanga_players
@@ -328,11 +320,15 @@ begin
         now()
     );
 
+    -- Evaluate match end after successful move
+    v_end_result := public.evaluate_patxanga_match_end(p_match_id);
+
     return jsonb_build_object(
         'status', 'success',
         'score', v_score,
         'next_player', v_next_player,
-        'turn_number', v_new_turn
+        'turn_number', v_new_turn,
+        'end_state', v_end_result
     );
 
 end;
