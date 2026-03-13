@@ -1,6 +1,6 @@
 -- ============================================================
 -- PATXANGA - RPC: submit_patxanga_move()
--- Version: 1.4 (Hydrated placed tiles)
+-- Version: 1.5 (Persistent pending_vote)
 -- ============================================================
 
 create or replace function public.submit_patxanga_move(
@@ -22,6 +22,10 @@ declare
     v_score jsonb;
     v_word jsonb;
     v_is_valid boolean;
+    v_has_invalid_word boolean := false;
+    v_main_word text := null;
+    v_secondary_words jsonb := '[]'::jsonb;
+    v_pending_move_id uuid;
     v_next_player uuid;
     v_new_turn integer;
     v_new_rack jsonb;
@@ -50,7 +54,7 @@ begin
         raise exception 'Not your turn';
     end if;
 
-    -- Lock player (PLAYER ID, not USER ID)
+    -- Lock player (PLAYER ID)
     select *
     into v_player
     from patxanga_players
@@ -68,7 +72,7 @@ begin
         p_placed_tiles
     );
 
-    -- Validate alignment
+    -- Validate alignment / geometry
     perform public.validate_patxanga_move_alignment(
         p_placed_tiles
     );
@@ -94,25 +98,138 @@ begin
             v_hydrated_placed_tiles
         );
 
-        -- Validate words
+    -- Split main / secondary words
     for v_word in
         select value from jsonb_array_elements(v_words)
     loop
-        if (v_word->>'type') = 'main' and char_length(coalesce(v_word->>'word', '')) < 2 then
-            raise exception 'Main word must have at least 2 letters';
-        end if;
-
-        v_is_valid := public.validate_word(v_word->>'word');
-
-        if not v_is_valid then
-            return jsonb_build_object(
-                'status', 'pending_vote',
-                'words', v_words
-            );
+        if (v_word->>'type') = 'main' then
+            v_main_word := v_word->>'word';
+        else
+            v_secondary_words := v_secondary_words || jsonb_build_array(v_word);
         end if;
     end loop;
 
-    -- Calculate score
+    -- Main word must have at least 2 letters
+    if char_length(coalesce(v_main_word, '')) < 2 then
+        raise exception 'Main word must have at least 2 letters';
+    end if;
+
+    -- Validate words against dictionary
+    for v_word in
+        select value from jsonb_array_elements(v_words)
+    loop
+        v_is_valid := public.validate_word(v_word->>'word');
+
+        if not v_is_valid then
+            v_has_invalid_word := true;
+            exit;
+        end if;
+    end loop;
+
+    -- =========================================
+    -- PERSISTENT PENDING_VOTE BRANCH
+    -- =========================================
+    if v_has_invalid_word then
+        insert into patxanga_moves (
+            match_id,
+            player_id,
+            move_type,
+            status,
+            main_word,
+            secondary_words,
+            placed_tiles,
+            board_diff,
+            used_tiles_from_rack,
+            used_blank_tile,
+            used_skip_tile,
+            used_patxanga_real,
+            patxanga_real_target_word,
+            target_player_skipped_id,
+            score_total,
+            score_breakdown,
+            is_dictionary_recognized,
+            requires_vote,
+            created_at,
+            resolved_at
+        )
+        values (
+            p_match_id,
+            p_player_id,
+            'place_word',
+            'pending_vote',
+            v_main_word,
+            v_secondary_words,
+            p_placed_tiles,
+            v_hydrated_placed_tiles,
+            p_placed_tiles,
+            exists (
+                select 1
+                from jsonb_array_elements(v_hydrated_placed_tiles) t
+                where coalesce(t->>'special_type', '') = 'wildcard'
+            ),
+            exists (
+                select 1
+                from jsonb_array_elements(v_hydrated_placed_tiles) t
+                where coalesce(t->>'special_type', '') = 'skip_turn'
+            ),
+            exists (
+                select 1
+                from jsonb_array_elements(v_hydrated_placed_tiles) t
+                where coalesce(t->>'special_type', '') in ('patxanga_real', 'PATXANGA_REAL')
+            ),
+            null,
+            null,
+            0,
+            jsonb_build_object(
+                'status', 'pending_vote',
+                'words', v_words
+            ),
+            false,
+            true,
+            now(),
+            null
+        )
+        returning id into v_pending_move_id;
+
+        update patxanga_matches
+        set status = 'voting',
+            updated_at = now()
+        where id = p_match_id;
+
+        insert into patxanga_replay_events (
+            match_id,
+            event_type,
+            event_payload,
+            turn_number,
+            created_at
+        )
+        values (
+            p_match_id,
+            'word_rejected',
+            jsonb_build_object(
+                'move_id', v_pending_move_id,
+                'player_id', p_player_id,
+                'main_word', v_main_word,
+                'words', v_words,
+                'requires_vote', true
+            ),
+            v_match.turn_number,
+            now()
+        );
+
+        return jsonb_build_object(
+            'status', 'pending_vote',
+            'move_id', v_pending_move_id,
+            'main_word', v_main_word,
+            'words', v_words,
+            'match_status', 'voting'
+        );
+    end if;
+
+    -- =========================================
+    -- SUCCESS BRANCH
+    -- =========================================
+
     v_score :=
         public.calculate_patxanga_score(
             v_words,
@@ -145,7 +262,8 @@ begin
     -- Persist board + bag
     update patxanga_matches
     set board_state = v_virtual_board,
-        bag_state = v_new_bag
+        bag_state = v_new_bag,
+        updated_at = now()
     where id = p_match_id;
 
     -- Persist player score + rack
@@ -188,7 +306,6 @@ begin
         updated_at = now()
     where id = p_match_id;
 
-    -- Replay
     insert into patxanga_replay_events (
         match_id,
         event_type,
