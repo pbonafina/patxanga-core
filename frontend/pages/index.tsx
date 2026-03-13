@@ -17,6 +17,10 @@ function renderCellLabel(cell: BoardCell): string {
   return cell.multiplier_type ?? "";
 }
 
+function buildCellKey(rowIndex: number, colIndex: number): string {
+  return `${rowIndex}-${colIndex}`;
+}
+
 function renderCellBackground(cell: BoardCell, rowIndex: number, colIndex: number): string {
   if (!cell) return "#ffffff";
   if (cell.tile?.letter) return "#f3f4f6";
@@ -46,6 +50,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
+  const [localPlacements, setLocalPlacements] = useState<Record<string, string>>({});
 
   const resolvedBootstrap = useMatchBootstrap(bootstrapData ?? undefined);
   const { isConfigured } = getSupabaseEnv();
@@ -69,6 +74,8 @@ export default function HomePage() {
     event.preventDefault();
     setIsLoading(true);
     setErrorMessage(null);
+    setSelectedTileIds([]);
+    setLocalPlacements({});
 
     try {
       const nextData = await loadMatchBootstrap({
@@ -205,13 +212,38 @@ export default function HomePage() {
             {resolvedBootstrap.boardState.flatMap((row, rowIndex) =>
               row.map((cell, colIndex) => {
                 const typedCell = cell as BoardCell;
+                const cellKey = buildCellKey(rowIndex, colIndex);
                 const label = renderCellLabel(typedCell);
                 const isCenter = rowIndex === 7 && colIndex === 7;
+                const localTileId = localPlacements[cellKey];
+                const localTile = resolvedBootstrap.playerContext?.rack_state.find((tile) => {
+                  const typedTile = tile as { id?: string; letter?: string };
+                  return typedTile.id === localTileId;
+                }) as { id?: string; letter?: string } | undefined;
+                const displayLabel = localTile?.letter ?? label;
 
                 return (
                   <div
                     key={`${rowIndex}-${colIndex}`}
                     title={`(${rowIndex + 1}, ${colIndex + 1})`}
+                    onClick={() => {
+                      if (typedCell?.tile?.letter) {
+                        return;
+                      }
+
+                      const nextTileId = selectedTileIds.find((tileId) =>
+                        !Object.values(localPlacements).includes(tileId)
+                      );
+
+                      if (!nextTileId) {
+                        return;
+                      }
+
+                      setLocalPlacements((current) => ({
+                        ...current,
+                        [cellKey]: nextTileId,
+                      }));
+                    }}
                     style={{
                       width: 38,
                       height: 38,
@@ -230,7 +262,7 @@ export default function HomePage() {
                     }}
                   >
                     <div>
-                      <div>{label}</div>
+                      <div>{displayLabel}</div>
                       <div style={{ fontSize: 8, fontWeight: 400 }}>{rowIndex + 1},{colIndex + 1}</div>
                     </div>
                   </div>
@@ -307,6 +339,13 @@ export default function HomePage() {
                 </ul>
               )}
               <p>Este estado ainda é apenas local e não envia jogada ao backend.</p>
+              <button
+                type="button"
+                onClick={() => setLocalPlacements({})}
+                style={{ padding: "8px 12px", cursor: "pointer" }}
+              >
+                Limpar preview local no board
+              </button>
             </div>
           </>
         )}
