@@ -238,4 +238,16 @@ Validado localmente pela home do frontend:
 - rack recomposto com novas pecas apos a jogada
 
 Estado confirmado deste marco:
-- ramo `accepted` de submit real de jogada ja foi validado ponta a ponta pela UI
+- ramo `accepted` de submit real de jogada ja foi validado ponta a ponta pela UI\n\n## Marco posterior: overlay visual de pending_vote na home do frontend
+
+Desde este baseline, o projeto passou a incluir:
+
+- read model `get_patxanga_pending_vote_context(...)`
+- migration `20260313143000_15_pending_vote_context_entrypoint.sql`
+- teste SQL do contexto de `pending_vote` validado localmente
+- home do frontend com overlay visual para jogada pendente durante `voting`
+
+Estado prático atual:
+- `board_state` oficial permanece intacto durante `pending_vote`
+- UI pode exibir a jogada pendente em overlay visual
+- frontend fica alinhado ao contrato de UX de `pending_vote`\n
