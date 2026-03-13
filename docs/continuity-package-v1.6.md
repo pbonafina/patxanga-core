@@ -269,3 +269,20 @@ Validado localmente pela home do frontend:
 
 Estado confirmado deste marco:
 - ramo `rejected` de `submit_patxanga_vote(...)` ja foi validado ponta a ponta pela UI
+
+## Validacao funcional posterior: aprovacao de pending_vote pela UI
+
+Validado localmente pela home do frontend:
+
+- carregamento da match em `voting` como jogador elegivel para votar
+- exibicao do contexto pendente de votacao
+- uso de `submit_patxanga_vote(...)` pela UI
+- aprovacao da jogada pendente por outro jogador
+- retorno da match para `active`
+- avanço de `turn_number`
+- avanço de `current_turn_player_id`
+- move resolvido como `accepted`
+- `board_state` oficial aplicando a jogada apos a aprovacao
+
+Estado confirmado deste marco:
+- ramo `accepted` de `submit_patxanga_vote(...)` ja foi validado ponta a ponta pela UI
