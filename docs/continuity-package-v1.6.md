@@ -137,3 +137,25 @@ Uso recomendado em sessoes futuras:
   - `docs/frontend-contract-screen-actions-v1.0.md`
   - `docs/frontend-contract-match-bootstrap-v1.0.md`
   - `docs/frontend-integration-checklist-v1.0.md`
+
+## Marco posterior: bootstrap real inicial da match
+
+Desde este baseline, o projeto passou a incluir:
+
+- RPC server-authoritative `get_patxanga_match_bootstrap(uuid, uuid)`
+- migration `20260313113000_14_match_bootstrap_entrypoint.sql`
+- teste `sql/tests/test_get_match_bootstrap.sql` validado localmente
+- frontend com provider real de bootstrap da match e fallback mock controlado
+- remoção do adapter legado `frontend/lib/matchBootstrapAdapter.ts`
+
+Estado prático atual:
+- frontend buildando com bootstrap da match preparado para backend real
+- camada ativa no frontend:
+  - `frontend/lib/backend/`
+  - `frontend/lib/supabase/`
+- continuidade recomendada de leitura para sessões de frontend:
+  - `docs/frontend-contract-rpcs-v1.0.md`
+  - `docs/frontend-contract-match-states-v1.0.md`
+  - `docs/frontend-contract-screen-actions-v1.0.md`
+  - `docs/frontend-contract-match-bootstrap-v1.0.md`
+  - `docs/frontend-integration-checklist-v1.0.md`
