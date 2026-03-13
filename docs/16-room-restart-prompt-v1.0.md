@@ -1,5 +1,21 @@
 # Room Restart Prompt v1.0
 
+Antes de qualquer análise ou proposta:
+- vou encaminhar os arquivos de leitura nesta conversa
+- leia os arquivos na ordem enviada
+- considere a enumeração abaixo como checklist de ingestão
+- aguarde receber todos os arquivos antes de concluir a leitura e antes de propor o próximo passo
+- só avance depois de confirmar que recebeu e integrou todo o conjunto
+
+Arquivos que serão encaminhados para leitura:
+1. `docs/continuity-package-v1.6.md`
+2. snapshot master vigente
+3. `docs/15-local-ops-and-collaboration-protocol.md`
+4. `docs/12-submit-move-contract.md`
+5. contratos curtos de frontend relevantes
+6. `docs/16-room-restart-prompt-v1.0.md`
+7. `docs/17-continuity-activation-brief-v1.0.md`
+
 Você está entrando na continuidade do projeto Patxanga.
 
 Leia e use, nesta ordem:
