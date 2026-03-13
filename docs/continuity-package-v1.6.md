@@ -109,6 +109,7 @@ Se qualquer dúvida estrutural surgir, pare e peça confirmação antes de gerar
 Desde este baseline, o repositório passou a incluir o documento curto:
 
 - `docs/frontend-contract-rpcs-v1.0.md`
+- `docs/frontend-contract-match-states-v1.0.md` passa a integrar a ordem de referência para sessões de frontend
 
 Uso recomendado em sessões de frontend:
 - tratar `docs/frontend-contract-rpcs-v1.0.md` como contrato curto operacional das RPCs expostas ao frontend
