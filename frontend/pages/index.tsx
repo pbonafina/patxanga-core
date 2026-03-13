@@ -321,11 +321,15 @@ export default function HomePage() {
                 const label = renderCellLabel(typedCell);
                 const isCenter = rowIndex === 7 && colIndex === 7;
                 const localTileId = localPlacements[cellKey];
-                const localTile = resolvedBootstrap.playerContext?.rack_state.find((tile) => {
-                  const typedTile = tile as { id?: string; letter?: string };
-                  return typedTile.id === localTileId;
-                }) as { id?: string; letter?: string } | undefined;
-                const displayLabel = localTile?.letter ?? label;
+
+                const rackTiles = (resolvedBootstrap.playerContext?.rack_state ?? []) as Array<{
+                  id?: string;
+                  letter?: string;
+                }>;
+
+                const localTile = rackTiles.find((tile) => tile.id === localTileId);
+                const hasLocalPreview = Boolean(localTile?.letter);
+                const displayLabel = hasLocalPreview ? (localTile?.letter ?? "") : label;
 
                 return (
                   <div
@@ -352,14 +356,14 @@ export default function HomePage() {
                     style={{
                       width: 38,
                       height: 38,
-                      border: "1px solid #bbb",
+                      border: hasLocalPreview ? "2px solid #16a34a" : "1px solid #bbb",
                       borderRadius: 4,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       fontSize: 11,
                       fontWeight: 700,
-                      background: renderCellBackground(typedCell, rowIndex, colIndex),
+                      background: hasLocalPreview ? "#dcfce7" : renderCellBackground(typedCell, rowIndex, colIndex),
                       overflow: "hidden",
                       textAlign: "center",
                       padding: 2,
