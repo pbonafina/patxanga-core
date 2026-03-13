@@ -1,6 +1,6 @@
 -- ============================================================
 -- PATXANGA - RPC: evaluate_patxanga_match_end()
--- Version: 1.0
+-- Version: 1.1
 -- Purpose: Evaluate and finalize match end conditions
 -- ============================================================
 
@@ -20,6 +20,11 @@ declare
     v_player_count integer;
     v_passed_count integer;
     v_winner_player_id uuid;
+    v_empty_rack_player_id uuid;
+    v_total_penalties integer := 0;
+    v_player record;
+    v_tile jsonb;
+    v_penalty integer;
 begin
     select *
     into v_match
@@ -31,7 +36,7 @@ begin
         raise exception 'Match not found';
     end if;
 
-    if v_match.status not in ('active') then
+    if v_match.status <> 'active' then
         return jsonb_build_object(
             'finished', false,
             'reason', 'match_not_active'
@@ -40,7 +45,6 @@ begin
 
     v_bag_remaining := coalesce((v_match.bag_state->>'remaining')::integer, 0);
 
-    -- If bag still has tiles, no end condition applies yet
     if v_bag_remaining > 0 then
         return jsonb_build_object(
             'finished', false,
@@ -48,7 +52,6 @@ begin
         );
     end if;
 
-    -- Type 1: bag empty + any player rack empty
     select exists (
         select 1
         from patxanga_players
@@ -57,7 +60,14 @@ begin
     )
     into v_any_empty_rack;
 
-    -- Type 2: bag empty + all players passed
+    select id
+    into v_empty_rack_player_id
+    from patxanga_players
+    where match_id = p_match_id
+      and jsonb_array_length(rack_state) = 0
+    order by turn_order
+    limit 1;
+
     select count(*)
     into v_player_count
     from patxanga_players
@@ -78,7 +88,44 @@ begin
         );
     end if;
 
-    -- Winner = highest score (simple rule for now)
+    -- =========================================
+    -- Final scoring adjustment by remaining tiles
+    -- =========================================
+
+    for v_player in
+        select *
+        from patxanga_players
+        where match_id = p_match_id
+        for update
+    loop
+        v_penalty := 0;
+
+        for v_tile in
+            select value
+            from jsonb_array_elements(v_player.rack_state)
+        loop
+            v_penalty := v_penalty + coalesce((v_tile->>'points')::integer, 0);
+        end loop;
+
+        if v_penalty > 0 then
+            update patxanga_players
+            set score = score - v_penalty,
+                updated_at = now()
+            where id = v_player.id;
+
+            v_total_penalties := v_total_penalties + v_penalty;
+        end if;
+    end loop;
+
+    -- Optional bonus to the player who emptied the rack
+    if v_any_empty_rack and v_empty_rack_player_id is not null and v_total_penalties > 0 then
+        update patxanga_players
+        set score = score + v_total_penalties,
+            updated_at = now()
+        where id = v_empty_rack_player_id;
+    end if;
+
+    -- Winner = highest adjusted score
     select id
     into v_winner_player_id
     from patxanga_players
@@ -107,7 +154,9 @@ begin
             'winner_player_id', v_winner_player_id,
             'bag_remaining', v_bag_remaining,
             'ended_by_empty_rack', v_any_empty_rack,
-            'ended_by_all_passed', v_all_passed
+            'ended_by_all_passed', v_all_passed,
+            'total_penalties', v_total_penalties,
+            'empty_rack_player_id', v_empty_rack_player_id
         ),
         v_match.turn_number,
         now()
@@ -117,7 +166,9 @@ begin
         'finished', true,
         'winner_player_id', v_winner_player_id,
         'ended_by_empty_rack', v_any_empty_rack,
-        'ended_by_all_passed', v_all_passed
+        'ended_by_all_passed', v_all_passed,
+        'total_penalties', v_total_penalties,
+        'empty_rack_player_id', v_empty_rack_player_id
     );
 end;
 $$;
