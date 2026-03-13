@@ -553,3 +553,54 @@ Leitura correta:
 - este requisito e de UX/gameplay
 - nao substitui o fluxo de posicionamento no tabuleiro
 - deve entrar no desenho da primeira tela de jogo orientada a produto\n
+
+## Marco posterior: primeira composicao de tela jogavel orientada a produto
+
+Foi aberta a primeira composicao visual de tela jogavel sem substituir a home sandbox existente.
+
+Estado consolidado:
+- a home continua existindo como sandbox operacional e de validacao
+- foi criada uma composicao mais orientada a gameplay na camada de frontend
+- o foco visual passou a privilegiar tabuleiro, rack e acao principal da jogada
+- a sandbox tecnica permanece acessivel via debug e nao como experiencia principal
+
+Leitura correta:
+- este marco nao fecha a UX final do jogo
+- este marco abre a primeira camada real de tela jogavel
+- a direcao correta passa a ser evoluir essa composicao de gameplay, e nao voltar a expandir a sandbox
+
+## Marco posterior: rack jogavel simplificado e reordenacao local
+
+A tela jogavel passou a ter um rack mais proximo de pecas de jogo e menos de cartoes tecnicos.
+
+Estado consolidado:
+- tiles do rack foram simplificados visualmente
+- selecao passou a depender mais de estado visual e menos de texto
+- o rack passou a suportar reordenacao local no frontend
+- a primeira versao de reordenacao foi validada
+- em seguida a interacao foi evoluida para drag and drop local no rack
+
+Garantias:
+- a reordenacao e apenas visual/local
+- nao altera contrato do backend
+- nao altera estado persistido do rack no servidor
+- nao reabre os contratos funcionais ja validados
+
+Leitura correta:
+- drag and drop local do rack e um ganho de UX/gameplay
+- a ordem visual ajuda o jogador a montar mentalmente a palavra antes de posicionar no tabuleiro
+- este comportamento ainda pode ser refinado visualmente, mas a capacidade funcional ja foi adicionada
+
+## Estado mais recente da frente de produto
+
+No ponto atual do projeto:
+- backend funcional principal segue validado
+- wildcard com `declared_letter` segue validado ponta a ponta
+- a tela jogavel inicial ja existe
+- o rack ja suporta drag and drop local
+- a sandbox continua util, mas nao deve voltar a ser o centro do trabalho de UX
+
+Prioridade recomendada para a proxima sala:
+- continuar a evolucao da primeira tela de jogo orientada a produto
+- revisar a composicao visual final de tabuleiro, rack, acoes e indicadores de estado
+- manter a sandbox apenas como camada secundaria de apoio operacional
