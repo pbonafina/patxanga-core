@@ -5,6 +5,7 @@ import { getSupabaseEnv } from "../lib/supabase/env";
 import type { MatchBootstrap } from "../types/match";
 import { VotingSection } from "../components/VotingSection";
 import { BoardSection } from "../components/BoardSection";
+import { RackSection } from "../components/RackSection";
 
 type BoardCell = {
   tile?: {
@@ -327,6 +328,14 @@ export default function HomePage() {
     }));
   }
 
+  function handleToggleTile(tileId: string) {
+    setSelectedTileIds((current) =>
+      current.includes(tileId)
+        ? current.filter((id) => id !== tileId)
+        : [...current, tileId]
+    );
+  }
+
   async function handleSubmitVote(voteReject: boolean) {
     if (!pendingVoteMove?.move_id) {
       setErrorMessage("move_id pendente nao disponivel.");
@@ -529,83 +538,13 @@ export default function HomePage() {
       ) : null}
 
       {isActive ? (
-      <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-        <h2>Rack do jogador resolvido</h2>
-
-        {!resolvedBootstrap.playerContext ? (
-          <p>player_context ainda nao carregado.</p>
-        ) : resolvedBootstrap.playerContext.rack_state.length === 0 ? (
-          <p>Rack vazio.</p>
-        ) : (
-          <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-              {resolvedBootstrap.playerContext.rack_state.map((tile, index) => {
-                const typedTile = tile as {
-                  id?: string;
-                  letter?: string;
-                  points?: number;
-                  is_special?: boolean;
-                  special_type?: string | null;
-                };
-
-                const tileId = typedTile.id ?? `tile-${index}`;
-                const isSelected = selectedTileIds.includes(tileId);
-
-                return (
-                  <button
-                    key={tileId}
-                    type="button"
-                    onClick={() => {
-                      setSelectedTileIds((current) =>
-                        current.includes(tileId)
-                          ? current.filter((id) => id !== tileId)
-                          : [...current, tileId]
-                      );
-                    }}
-                    style={{
-                      padding: 12,
-                      border: isSelected ? "2px solid #2563eb" : "1px solid #bbb",
-                      borderRadius: 8,
-                      background: isSelected ? "#eef6ff" : "#fafafa",
-                      textAlign: "left",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <p><strong>letter:</strong> <span style={{ fontSize: 20 }}>{typedTile.letter ?? "(nulo)"}</span></p>
-                    <p><strong>points:</strong> {typedTile.points ?? 0}</p>
-                    {showDebug ? <p><strong>id:</strong> {typedTile.id ?? "(nulo)"}</p> : null}
-                    <p><strong>is_special:</strong> {typedTile.is_special ? "true" : "false"}</p>
-                    <p><strong>special_type:</strong> {typedTile.special_type ?? "(nulo)"}</p>
-                    <p><strong>tipo visual:</strong> {typedTile.is_special ? "peca especial" : "peca normal"}</p>
-                    <p><strong>selecionada:</strong> {isSelected ? "sim" : "nao"}</p>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div style={{ marginTop: 16, padding: 12, border: "1px dashed #bbb", borderRadius: 8 }}>
-              <h3 style={{ marginTop: 0 }}>Preview local de selecao</h3>
-              {selectedTileIds.length === 0 ? (
-                <p>Nenhuma peça selecionada.</p>
-              ) : (
-                <ul>
-                  {selectedTileIds.map((tileId) => (
-                    <li key={tileId}>{tileId}</li>
-                  ))}
-                </ul>
-              )}
-              <p>Este estado ainda é apenas local e não envia jogada ao backend.</p>
-              <button
-                type="button"
-                onClick={() => setLocalPlacements({})}
-                style={{ padding: "8px 12px", cursor: "pointer" }}
-              >
-                Limpar preview local no board
-              </button>
-            </div>
-          </>
-        )}
-      </section>
+      <RackSection
+        playerContext={resolvedBootstrap.playerContext}
+        selectedTileIds={selectedTileIds}
+        showDebug={showDebug}
+        onToggleTile={handleToggleTile}
+        onClearPreview={() => setLocalPlacements({})}
+      />
       ) : null}
 
       {isActive ? (
