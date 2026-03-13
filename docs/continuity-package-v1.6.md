@@ -457,3 +457,39 @@ Leitura correta:
 - o continuity package resume o estado operacional e as decisoes
 - o historico de commits e o `project-log.md` mostram a trilha real de execucao
 - em caso de divergencia, tratar o branch e os commits ja pushados como fonte de verdade mais forte
+
+## Releitura do estado atual da home e mudanca de prioridade
+
+Leitura consolidada apos revisao visual da tela em browser:
+
+- a home atual evoluiu bem como tela operacional de validacao
+- a integracao real frontend-backend ja esta funcional
+- os fluxos principais de gameplay e votacao ja foram validados
+- a home atual ja nao e monolitica e foi bastante modularizada
+- apesar disso, a experiencia visual ainda se aproxima mais de sandbox operacional do que de tela final de jogo
+
+Diagnostico de produto:
+- a tela atual ainda expõe estrutura de paineis e blocos tecnicos demais
+- o fluxo principal de gameplay ainda nao aparece como composicao visual dominante
+- tabuleiro, rack e acao principal ainda nao estao organizados como uma mesa de jogo de producao
+- a tela atual deve ser entendida como base funcional de validacao e nao como layout final do jogo
+
+Decisao de prioridade:
+- nao tratar a home atual como candidata direta a tela final de producao
+- manter a home atual como tela operacional/sandbox util para validacao, depuracao e testes de integracao
+- abrir como proxima frente uma primeira tela de jogo orientada a produto
+
+Objetivo da proxima fase:
+- construir uma tela centrada em gameplay
+- priorizar visualmente:
+  - tabuleiro
+  - rack/deck do jogador
+  - acao principal do turno
+  - bloco de votacao apenas quando necessario
+- reduzir fortemente detalhes tecnicos visiveis por padrao
+- manter debug como camada secundaria, opcional e nao central
+
+Implicacao pratica:
+- o proximo passo principal nao deve ser apenas continuar polindo paineis da home atual
+- o proximo passo principal deve ser desenhar e implementar a primeira composicao de tela jogavel com foco de produto
+- a home atual permanece util como apoio operacional durante essa transicao
