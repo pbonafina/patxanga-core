@@ -493,3 +493,27 @@ Implicacao pratica:
 - o proximo passo principal nao deve ser apenas continuar polindo paineis da home atual
 - o proximo passo principal deve ser desenhar e implementar a primeira composicao de tela jogavel com foco de produto
 - a home atual permanece util como apoio operacional durante essa transicao
+
+## Requisito prioritario da proxima fase: declaracao de letra para peca especial sem letra fixa
+
+Este requisito deve ser tratado como prioritario antes da consolidacao da primeira tela de jogo orientada a produto.
+
+Regra funcional:
+- quando o jogador usar uma peca especial sem letra fixa na face, ele deve declarar qual letra essa peca representara naquela jogada
+- sem essa declaracao, a palavra formada fica ambigua e nao pode ser tratada como jogada completa de producao
+
+Motivos:
+- validar corretamente a palavra submetida
+- persistir corretamente a jogada aceita
+- permitir leitura correta do board em cruzamentos futuros
+- permitir votacao e revisao da jogada com informacao completa
+
+Implicacoes tecnicas:
+- o frontend deve exigir a escolha da letra para a peca especial antes da confirmacao da jogada
+- o payload da jogada deve carregar `declared_letter` para essa peca
+- o backend deve tratar `declared_letter` como obrigatorio nesse caso
+- a letra declarada deve ser a referencia efetiva para validacao, persistencia e leitura futura da celula no board
+
+Diretriz de prioridade:
+- este requisito deve entrar antes do refinamento avancado da primeira tela jogavel de produto
+- a proxima fase nao deve considerar o fluxo principal suficientemente fechado sem essa cobertura
