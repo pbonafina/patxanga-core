@@ -9,10 +9,17 @@ Antes de qualquer análise ou proposta:
 
 Arquivos que serão encaminhados para leitura:
 1. `docs/continuity-package-v1.6.md`
-2. snapshot master vigente
+2. snapshot master vigente (`docs/99-context-snapshot-master-v1.6.md`)
 3. `docs/15-local-ops-and-collaboration-protocol.md`
 4. `docs/12-submit-move-contract.md`
-5. contratos curtos de frontend relevantes
+5. contratos curtos de frontend relevantes:
+   - `docs/frontend-contract-match-bootstrap-v1.0.md`
+   - `docs/frontend-contract-match-states-v1.0.md`
+   - `docs/frontend-contract-pending-vote-ux-v1.0.md`
+   - `docs/frontend-contract-rpcs-v1.0.md`
+   - `docs/frontend-contract-screen-actions-v1.0.md`
+   - `docs/frontend-backend-operational-contract-v1.0.md`
+   - `docs/frontend-integration-checklist-v1.0.md`
 6. `docs/16-room-restart-prompt-v1.0.md`
 7. `docs/17-continuity-activation-brief-v1.0.md`
 
@@ -20,10 +27,17 @@ Você está entrando na continuidade do projeto Patxanga.
 
 Leia e use, nesta ordem:
 1. `docs/continuity-package-v1.6.md`
-2. snapshot master vigente
+2. snapshot master vigente (`docs/99-context-snapshot-master-v1.6.md`)
 3. `docs/15-local-ops-and-collaboration-protocol.md`
 4. `docs/12-submit-move-contract.md`
-5. contratos curtos de frontend relevantes
+5. contratos curtos de frontend relevantes:
+   - `docs/frontend-contract-match-bootstrap-v1.0.md`
+   - `docs/frontend-contract-match-states-v1.0.md`
+   - `docs/frontend-contract-pending-vote-ux-v1.0.md`
+   - `docs/frontend-contract-rpcs-v1.0.md`
+   - `docs/frontend-contract-screen-actions-v1.0.md`
+   - `docs/frontend-backend-operational-contract-v1.0.md`
+   - `docs/frontend-integration-checklist-v1.0.md`
 6. `docs/16-room-restart-prompt-v1.0.md`
 7. `docs/17-continuity-activation-brief-v1.0.md`
 
