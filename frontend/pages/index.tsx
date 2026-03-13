@@ -62,8 +62,9 @@ export default function HomePage() {
   const [voteResult, setVoteResult] = useState<unknown | null>(null);
   const [isSubmittingVote, setIsSubmittingVote] = useState(false);
   const [pendingVoteContext, setPendingVoteContext] = useState<unknown | null>(null);
-  const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
+  const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
   const [localPlacements, setLocalPlacements] = useState<Record<string, string>>({});
+  const [localDeclaredLetters, setLocalDeclaredLetters] = useState<Record<string, string>>({});
   const [showDebug, setShowDebug] = useState(false);
 
   const resolvedBootstrap = useMatchBootstrap(bootstrapData ?? undefined);
@@ -105,6 +106,7 @@ export default function HomePage() {
             id?: string;
             letter?: string;
             is_special?: boolean;
+            special_type?: string | null;
           };
 
           return typedTile.id === tileId;
@@ -113,6 +115,7 @@ export default function HomePage() {
               id?: string;
               letter?: string;
               is_special?: boolean;
+              special_type?: string | null;
             }
           | undefined;
 
@@ -120,11 +123,14 @@ export default function HomePage() {
           return null;
         }
 
+        const isWildcard = (tile.special_type ?? "").toLowerCase() == "wildcard";
+        const declaredLetter = isWildcard ? (localDeclaredLetters[cellKey] ?? null) : null;
+
         return {
           tile_id: tile.id,
           row: rowIndex + 1,
           col: colIndex + 1,
-          declared_letter: tile.is_special ? tile.letter ?? null : null,
+          declared_letter: declaredLetter,
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null)
@@ -132,7 +138,7 @@ export default function HomePage() {
         if (a.row !== b.row) return a.row - b.row;
         return a.col - b.col;
       });
-  }, [localPlacements, resolvedBootstrap.playerContext]);
+  }, [localDeclaredLetters, localPlacements, resolvedBootstrap.playerContext]);
 
 
   const pendingVoteMove = useMemo(() => {
@@ -199,8 +205,9 @@ export default function HomePage() {
     setSubmitResult(null);
     setVoteResult(null);
     setPendingVoteError(null);
-    setSelectedTileIds([]);
+    setSelectedTileId(null);
     setLocalPlacements({});
+    setLocalDeclaredLetters({});
 
     try {
       const nextData = await loadMatchBootstrap({
@@ -270,8 +277,9 @@ export default function HomePage() {
 
       await refreshPendingVoteContext(refreshedData.matchId, playerIdInput, refreshedData.status);
 
-      setSelectedTileIds([]);
+      setSelectedTileId(null);
       setLocalPlacements({});
+      setLocalDeclaredLetters({});
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Falha ao enviar jogada."
@@ -313,46 +321,14 @@ export default function HomePage() {
     setPendingVoteError(null);
   }
 
-  function handlePlaceTile(cellKey: string, typedCell: BoardCell) {
-    if (typedCell?.tile?.letter) {
-      return;
-    }
-
-    const nextTileId = selectedTileIds.find((tileId) =>
-      !Object.values(localPlacements).includes(tileId)
-    );
-
-    if (!nextTileId) {
-      return;
-    }
-
-    setLocalPlacements((current) => ({
-      ...current,
-      [cellKey]: nextTileId,
-    }));
-  }
-
-  function handleToggleTile(tileId: string) {
-    setSelectedTileIds((current) =>
-      current.includes(tileId)
-        ? current.filter((id) => id !== tileId)
-        : [...current, tileId]
-    );
-  }
-
   async function handleSubmitVote(voteReject: boolean) {
     if (!pendingVoteMove?.move_id) {
-      setErrorMessage("move_id pendente nao disponivel.");
+      setErrorMessage("move_id pendente de votacao nao disponivel.");
       return;
     }
 
     if (!pendingVoteRequestPlayer?.player_id) {
-      setErrorMessage("player_id do votante nao disponivel.");
-      return;
-    }
-
-    if (!canCurrentViewerVote) {
-      setErrorMessage("Autor da jogada pendente nao pode votar.");
+      setErrorMessage("player_id do solicitante de voto nao disponivel.");
       return;
     }
 
@@ -365,7 +341,7 @@ export default function HomePage() {
       const client = getSupabaseBrowserClient();
 
       if (!client) {
-        throw new Error("Supabase client not configured in frontend environment.");
+        throw new Error("Supabase client indisponivel no frontend.");
       }
 
       const { data, error } = await client.rpc("submit_patxanga_vote", {
@@ -399,6 +375,94 @@ export default function HomePage() {
       setIsSubmittingVote(false);
     }
   }
+
+  function handlePlaceTile(cellKey: string, typedCell: BoardCell) {
+    if (typedCell?.tile?.letter) {
+      return;
+    }
+
+    if (localPlacements[cellKey]) {
+      setLocalPlacements((current) => {
+        const next = { ...current };
+        delete next[cellKey];
+        return next;
+      });
+
+      setLocalDeclaredLetters((current) => {
+        const next = { ...current };
+        delete next[cellKey];
+        return next;
+      });
+
+      return;
+    }
+
+    if (!selectedTileId) {
+      return;
+    }
+
+    if (Object.values(localPlacements).includes(selectedTileId)) {
+      return;
+    }
+
+    const rackTile = (resolvedBootstrap.playerContext?.rack_state ?? []).find((item) => {
+      const typedTile = item as {
+        id?: string;
+        special_type?: string | null;
+      };
+
+      return typedTile.id === selectedTileId;
+    }) as
+      | {
+          id?: string;
+          special_type?: string | null;
+        }
+      | undefined;
+
+    if (!rackTile?.id) {
+      return;
+    }
+
+    const isWildcard = (rackTile.special_type ?? "").toLowerCase() === "wildcard";
+    let declaredLetter: string | null = null;
+
+    if (isWildcard) {
+      const input = window.prompt("Qual letra esta peca especial deve representar?", "");
+      const normalized = input?.trim().toUpperCase() ?? "";
+
+      if (normalized.length !== 1) {
+        return;
+      }
+
+      declaredLetter = normalized;
+    }
+
+    setLocalPlacements((current) => ({
+      ...current,
+      [cellKey]: selectedTileId,
+    }));
+
+    setLocalDeclaredLetters((current) => {
+      const next = { ...current };
+
+      if (declaredLetter) {
+        next[cellKey] = declaredLetter;
+      } else {
+        delete next[cellKey];
+      }
+
+      return next;
+    });
+
+    setSelectedTileId(null);
+  }
+
+  function handleToggleTile(tileId: string) {
+    setSelectedTileId((current) => (current === tileId ? null : tileId));
+  }
+
+
+
 
   return (
     <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 1100, margin: "0 auto" }}>
@@ -490,8 +554,9 @@ export default function HomePage() {
       <BoardSection
         boardState={resolvedBootstrap.boardState}
         localPlacements={localPlacements}
+        localDeclaredLetters={localDeclaredLetters}
         pendingVoteTilesByCell={pendingVoteTilesByCell}
-        selectedTileIds={selectedTileIds}
+        selectedTileId={selectedTileId}
         playerRackState={resolvedBootstrap.playerContext?.rack_state ?? []}
         buildCellKey={buildCellKey}
         renderCellLabel={renderCellLabel}
@@ -503,10 +568,14 @@ export default function HomePage() {
       {isActive ? (
       <RackSection
         playerContext={resolvedBootstrap.playerContext}
-        selectedTileIds={selectedTileIds}
+        selectedTileId={selectedTileId}
         showDebug={showDebug}
         onToggleTile={handleToggleTile}
-        onClearPreview={() => setLocalPlacements({})}
+        onClearPreview={() => {
+          setLocalPlacements({});
+          setLocalDeclaredLetters({});
+          setSelectedTileId(null);
+        }}
       />
       ) : null}
 

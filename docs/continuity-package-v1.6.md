@@ -517,3 +517,21 @@ Implicacoes tecnicas:
 Diretriz de prioridade:
 - este requisito deve entrar antes do refinamento avancado da primeira tela jogavel de produto
 - a proxima fase nao deve considerar o fluxo principal suficientemente fechado sem essa cobertura
+
+## Marco posterior: wildcard com declared_letter validado ponta a ponta
+
+Foi fechado o requisito funcional prioritario da peca especial sem letra fixa.
+
+Estado validado:
+- backend exige `declared_letter` para tile `wildcard`
+- `declared_letter` e normalizado no backend
+- frontend passou a exigir a letra ao posicionar wildcard
+- preview local do board mostra a letra declarada
+- clique em casa com preview local remove a peca do board e limpa o estado local correspondente
+- submit real com wildcard voltou a funcionar sem quebrar os fluxos existentes
+- em palavra nao reconhecida, o fluxo continua corretamente para `pending_vote`
+
+Leitura correta:
+- o requisito funcional de wildcard ficou coberto
+- a UX atual ainda e minima
+- refinamentos futuros podem substituir o `prompt()` por interacao melhor, mas sem reabrir o contrato funcional

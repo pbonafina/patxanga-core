@@ -8,13 +8,15 @@ type BoardCell = {
 type RackTile = {
   id?: string;
   letter?: string;
+  special_type?: string | null;
 };
 
 type BoardSectionProps = {
   boardState: unknown[];
   localPlacements: Record<string, string>;
+  localDeclaredLetters: Record<string, string>;
   pendingVoteTilesByCell: Record<string, { letter?: string }>;
-  selectedTileIds: string[];
+  selectedTileId: string | null;
   playerRackState: unknown[];
   buildCellKey: (rowIndex: number, colIndex: number) => string;
   renderCellLabel: (cell: BoardCell) => string;
@@ -29,8 +31,9 @@ type BoardSectionProps = {
 export function BoardSection({
   boardState,
   localPlacements,
+  localDeclaredLetters,
   pendingVoteTilesByCell,
-  selectedTileIds,
+  selectedTileId,
   playerRackState,
   buildCellKey,
   renderCellLabel,
@@ -40,15 +43,16 @@ export function BoardSection({
   if (boardState.length === 0) {
     return (
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-        <h2>Board (read-only)</h2>
-        <p>Board ainda nao carregado.</p>
+        <h2>Tabuleiro</h2>
+        <p>Tabuleiro ainda não carregado.</p>
       </section>
     );
   }
 
   return (
     <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-      <h2>Board (read-only)</h2>
+      <h2>Tabuleiro</h2>
+      <p>Selecione uma peça no rack e clique em uma casa vazia para posicioná-la.</p>
 
       <div
         style={{
@@ -70,10 +74,14 @@ export function BoardSection({
             const rackTiles = (playerRackState ?? []) as RackTile[];
             const localTile = rackTiles.find((tile) => tile.id === localTileId);
             const pendingVoteTile = pendingVoteTilesByCell[cellKey];
-            const hasLocalPreview = Boolean(localTile?.letter);
+            const localPreviewLetter =
+              (localTile?.special_type ?? "").toLowerCase() === "wildcard"
+                ? (localDeclaredLetters[cellKey] ?? "?")
+                : (localTile?.letter ?? "");
+            const hasLocalPreview = Boolean(localTile);
             const hasPendingVoteOverlay = Boolean(pendingVoteTile?.letter);
             const displayLabel = hasLocalPreview
-              ? (localTile?.letter ?? "")
+              ? localPreviewLetter
               : hasPendingVoteOverlay
                 ? (pendingVoteTile?.letter ?? "")
                 : label;
@@ -104,7 +112,7 @@ export function BoardSection({
                   textAlign: "center",
                   padding: 2,
                   boxShadow: isCenter ? "inset 0 0 0 2px #c99a00" : "none",
-                  cursor: selectedTileIds.length > 0 ? "pointer" : "default",
+                  cursor: hasLocalPreview || Boolean(selectedTileId) ? "pointer" : "default",
                 }}
               >
                 <div>

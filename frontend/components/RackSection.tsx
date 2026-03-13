@@ -10,7 +10,7 @@ type RackSectionProps = {
   playerContext: {
     rack_state: unknown[];
   } | null | undefined;
-  selectedTileIds: string[];
+  selectedTileId: string | null;
   showDebug: boolean;
   onToggleTile: (tileId: string) => void;
   onClearPreview: () => void;
@@ -18,17 +18,17 @@ type RackSectionProps = {
 
 export function RackSection({
   playerContext,
-  selectedTileIds,
+  selectedTileId,
   showDebug,
   onToggleTile,
   onClearPreview,
 }: RackSectionProps) {
   return (
     <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-      <h2>Rack do jogador resolvido</h2>
+      <h2>Rack do jogador</h2>
 
       {!playerContext ? (
-        <p>player_context ainda nao carregado.</p>
+        <p>Contexto do jogador ainda não carregado.</p>
       ) : playerContext.rack_state.length === 0 ? (
         <p>Rack vazio.</p>
       ) : (
@@ -37,7 +37,7 @@ export function RackSection({
             {playerContext.rack_state.map((tile, index) => {
               const typedTile = tile as RackTile;
               const tileId = typedTile.id ?? `tile-${index}`;
-              const isSelected = selectedTileIds.includes(tileId);
+              const isSelected = selectedTileId === tileId;
 
               return (
                 <button
@@ -53,36 +53,45 @@ export function RackSection({
                     cursor: "pointer",
                   }}
                 >
-                  <p><strong>letter:</strong> <span style={{ fontSize: 20 }}>{typedTile.letter ?? "(nulo)"}</span></p>
-                  <p><strong>points:</strong> {typedTile.points ?? 0}</p>
-                  {showDebug ? <p><strong>id:</strong> {typedTile.id ?? "(nulo)"}</p> : null}
-                  <p><strong>is_special:</strong> {typedTile.is_special ? "true" : "false"}</p>
-                  <p><strong>special_type:</strong> {typedTile.special_type ?? "(nulo)"}</p>
-                  <p><strong>tipo visual:</strong> {typedTile.is_special ? "peca especial" : "peca normal"}</p>
-                  <p><strong>selecionada:</strong> {isSelected ? "sim" : "nao"}</p>
+                  <p>
+                    <strong>Peça:</strong>{" "}
+                    <span style={{ fontSize: 20 }}>
+                      {typedTile.letter ?? (typedTile.special_type === "wildcard" ? "★" : "(vazio)")}
+                    </span>
+                  </p>
+                  <p><strong>Pontos:</strong> {typedTile.points ?? 0}</p>
+                  <p><strong>Selecionada:</strong> {isSelected ? "sim" : "não"}</p>
+
+                  {typedTile.special_type === "wildcard" ? (
+                    <p><strong>Tipo:</strong> coringa sem letra fixa</p>
+                  ) : null}
+
+                  {showDebug ? (
+                    <>
+                      <p><strong>id:</strong> {typedTile.id ?? "(não disponível)"}</p>
+                      <p><strong>is_special:</strong> {typedTile.is_special ? "true" : "false"}</p>
+                      <p><strong>special_type:</strong> {typedTile.special_type ?? "(nulo)"}</p>
+                    </>
+                  ) : null}
                 </button>
               );
             })}
           </div>
 
           <div style={{ marginTop: 16, padding: 12, border: "1px dashed #bbb", borderRadius: 8 }}>
-            <h3 style={{ marginTop: 0 }}>Preview local de selecao</h3>
-            {selectedTileIds.length === 0 ? (
-              <p>Nenhuma peça selecionada.</p>
+            <h3 style={{ marginTop: 0 }}>Seleção atual</h3>
+            {selectedTileId ? (
+              <p>Há uma peça ativa pronta para posicionar no tabuleiro.</p>
             ) : (
-              <ul>
-                {selectedTileIds.map((tileId) => (
-                  <li key={tileId}>{tileId}</li>
-                ))}
-              </ul>
+              <p>Nenhuma peça selecionada.</p>
             )}
-            <p>Este estado ainda é apenas local e não envia jogada ao backend.</p>
+            <p>Para remover uma peça já posicionada localmente, clique nela no tabuleiro.</p>
             <button
               type="button"
               onClick={onClearPreview}
               style={{ padding: "8px 12px", cursor: "pointer" }}
             >
-              Limpar preview local no board
+              Limpar jogada local
             </button>
           </div>
         </>
