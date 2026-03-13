@@ -120,3 +120,20 @@ Uso recomendado em sessões de frontend:
   - `docs/12-submit-move-contract.md` — Version 1.2 (Frozen)
   - protocolo local/operacional vigente
 
+## Marco de implementacao posterior a este pacote
+
+Desde este baseline, o repositório passou a incluir uma base real de frontend em:
+
+- `frontend/`
+
+Stack adotada:
+- Next.js com Pages Router
+
+Uso recomendado em sessoes futuras:
+- tratar `frontend/` como baseline inicial de implementacao do frontend
+- manter leitura conjunta com:
+  - `docs/frontend-contract-rpcs-v1.0.md`
+  - `docs/frontend-contract-match-states-v1.0.md`
+  - `docs/frontend-contract-screen-actions-v1.0.md`
+  - `docs/frontend-contract-match-bootstrap-v1.0.md`
+  - `docs/frontend-integration-checklist-v1.0.md`
