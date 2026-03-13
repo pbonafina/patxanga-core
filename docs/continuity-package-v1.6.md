@@ -286,3 +286,16 @@ Validado localmente pela home do frontend:
 
 Estado confirmado deste marco:
 - ramo `accepted` de `submit_patxanga_vote(...)` ja foi validado ponta a ponta pela UI
+
+## Marco posterior: acabamento visual inicial do board na home
+
+Desde este baseline, a home do frontend passou a refletir o direcionamento visual do board definitivo:
+
+- casas `NM` renderizadas em branco
+- coordenadas removidas do tabuleiro
+- casas especiais preservadas apenas por diferenciação visual
+- overlays relevantes de gameplay mantidos
+
+Estado prático atual:
+- board da home ficou menos técnico e mais próximo de produto
+- renderização continua compatível com submit real, `pending_vote` e votação
