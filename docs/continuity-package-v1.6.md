@@ -209,3 +209,18 @@ Estado prático atual:
 - frontend ja alcanca a fronteira do contrato real de jogada
 - submit real ainda nao foi ligado
 - backend continua como fonte oficial de validacao e aplicacao
+
+## Marco posterior: submit real inicial de jogada no frontend
+
+Desde este baseline, a home do frontend passou a incluir:
+
+- geracao local de `p_placed_tiles`
+- uso de `player_id` resolvido pelo bootstrap oficial
+- chamada real de `submit_patxanga_move(...)`
+- exibicao do retorno bruto da RPC
+- recarga do bootstrap oficial apos a resposta
+
+Estado prático atual:
+- frontend ja executa submit real inicial de jogada contra o backend local
+- fluxo ainda e controlado e simples, mas ja cruza a fronteira real da engine
+- backend permanece server-authoritative para validacao, aplicacao e transicao de estado
