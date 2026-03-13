@@ -58,6 +58,7 @@ export default function HomePage() {
   const [pendingVoteContext, setPendingVoteContext] = useState<unknown | null>(null);
   const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
   const [localPlacements, setLocalPlacements] = useState<Record<string, string>>({});
+  const [showDebug, setShowDebug] = useState(false);
 
   const resolvedBootstrap = useMatchBootstrap(bootstrapData ?? undefined);
   const { isConfigured } = getSupabaseEnv();
@@ -416,16 +417,29 @@ export default function HomePage() {
       </section>
 
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-        <h2>Estado resolvido</h2>
+        <h2>Estado da partida</h2>
         <p><strong>Status:</strong> {stateLabel}</p>
         <p><strong>match_id:</strong> {resolvedBootstrap.matchId || "(vazio)"}</p>
-        <p><strong>player_id resolvido:</strong> {resolvedBootstrap.playerId || "(nulo)"}</p>
-        <p><strong>current_turn_player_id:</strong> {resolvedBootstrap.currentTurnPlayerId || "(nulo)"}</p>
-        <p><strong>winner_player_id:</strong> {resolvedBootstrap.winnerPlayerId || "(nulo)"}</p>
-        <p><strong>started_at:</strong> {resolvedBootstrap.startedAt || "(nulo)"}</p>
-        <p><strong>finished_at:</strong> {resolvedBootstrap.finishedAt || "(nulo)"}</p>
-        <p><strong>turn_number:</strong> {resolvedBootstrap.turnNumber}</p>
-        <p><strong>players_summary:</strong> {resolvedBootstrap.playersSummary.length}</p>
+        <p><strong>jogadores:</strong> {resolvedBootstrap.playersSummary.length}</p>
+
+        <button
+          type="button"
+          onClick={() => setShowDebug((current) => !current)}
+          style={{ marginTop: 12, padding: "8px 12px", cursor: "pointer" }}
+        >
+          {showDebug ? "Ocultar detalhes técnicos" : "Mostrar detalhes técnicos"}
+        </button>
+
+        {showDebug ? (
+          <div style={{ marginTop: 12 }}>
+            <p><strong>player_id resolvido:</strong> {resolvedBootstrap.playerId || "(nulo)"}</p>
+            <p><strong>current_turn_player_id:</strong> {resolvedBootstrap.currentTurnPlayerId || "(nulo)"}</p>
+            <p><strong>winner_player_id:</strong> {resolvedBootstrap.winnerPlayerId || "(nulo)"}</p>
+            <p><strong>started_at:</strong> {resolvedBootstrap.startedAt || "(nulo)"}</p>
+            <p><strong>finished_at:</strong> {resolvedBootstrap.finishedAt || "(nulo)"}</p>
+            <p><strong>turn_number:</strong> {resolvedBootstrap.turnNumber}</p>
+          </div>
+        ) : null}
       </section>
 
 
@@ -464,7 +478,7 @@ export default function HomePage() {
             </button>
           </div>
 
-          {voteResult ? (
+          {showDebug && voteResult ? (
             <div style={{ marginTop: 16 }}>
               <h3 style={{ marginBottom: 8 }}>Retorno bruto da votação</h3>
               <pre
@@ -650,7 +664,7 @@ export default function HomePage() {
                   >
                     <p><strong>letter:</strong> <span style={{ fontSize: 20 }}>{typedTile.letter ?? "(nulo)"}</span></p>
                     <p><strong>points:</strong> {typedTile.points ?? 0}</p>
-                    <p><strong>id:</strong> {typedTile.id ?? "(nulo)"}</p>
+                    {showDebug ? <p><strong>id:</strong> {typedTile.id ?? "(nulo)"}</p> : null}
                     <p><strong>is_special:</strong> {typedTile.is_special ? "true" : "false"}</p>
                     <p><strong>special_type:</strong> {typedTile.special_type ?? "(nulo)"}</p>
                     <p><strong>tipo visual:</strong> {typedTile.is_special ? "peca especial" : "peca normal"}</p>
@@ -685,7 +699,7 @@ export default function HomePage() {
       </section>
 
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-        <h2>Preview de p_placed_tiles</h2>
+        {showDebug ? <h2>Preview de p_placed_tiles</h2> : <h2 style={{ display: "none" }}>Preview de p_placed_tiles</h2>}
 
         {placedTilesPreview.length === 0 ? (
           <p>Nenhuma peça posicionada localmente no board.</p>
@@ -706,7 +720,6 @@ export default function HomePage() {
           </>
         )}
       </section>
-
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
         <h2>Submit real de jogada</h2>
 
@@ -725,7 +738,7 @@ export default function HomePage() {
           </span>
         </div>
 
-        {submitResult ? (
+        {showDebug && submitResult ? (
           <div style={{ marginTop: 16 }}>
             <h3 style={{ marginBottom: 8 }}>Retorno bruto da RPC</h3>
             <pre
