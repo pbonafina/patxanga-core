@@ -1,7 +1,7 @@
 Leia atentamente, nesta ordem:
 
 1) CONTEXT SNAPSHOT MASTER v1.6
-2) SUBMIT MOVE CONTRACT v1.1
+2) docs/12-submit-move-contract.md — Version 1.2 (Frozen)
 3) Operational Log Policy
 4) Handoff Protocol
 
@@ -102,4 +102,18 @@ Natureza da pendência:
 - limitação operacional de geração de arquivo longo nesta sala
 - não representa bloqueio técnico do produto
 
-Se qualquer dúvida estrutural surgir, pare e peça confirmação antes de gerar código.
+Se qualquer dúvida estrutural surgir, pare e peça confirmação antes de gerar código e aguarde eu anexar o segundo arquivo antes de qualquer coisa.
+
+## Atualização documental posterior a este pacote
+
+Desde este baseline, o repositório passou a incluir o documento curto:
+
+- `docs/frontend-contract-rpcs-v1.0.md`
+
+Uso recomendado em sessões de frontend:
+- tratar `docs/frontend-contract-rpcs-v1.0.md` como contrato curto operacional das RPCs expostas ao frontend
+- manter leitura conjunta com:
+  - snapshot master vigente
+  - `docs/12-submit-move-contract.md` — Version 1.2 (Frozen)
+  - protocolo local/operacional vigente
+
