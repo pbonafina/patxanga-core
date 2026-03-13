@@ -159,3 +159,22 @@ Estado prático atual:
   - `docs/frontend-contract-screen-actions-v1.0.md`
   - `docs/frontend-contract-match-bootstrap-v1.0.md`
   - `docs/frontend-integration-checklist-v1.0.md`
+
+## Validacao funcional posterior: bootstrap real frontend-backend
+
+Validado localmente em fluxo real pela UI:
+
+- frontend em Next.js Pages Router carregando `.env.local`
+- provider real do frontend consultando Supabase local
+- RPC `get_patxanga_match_bootstrap(uuid, uuid)` respondendo corretamente
+- resolucao server-authoritative de `player_id` a partir de `match_id + user_id`
+- UI exibindo corretamente:
+  - `status`
+  - `match_id`
+  - `player_id` resolvido
+  - `current_turn_player_id`
+  - `turn_number`
+  - `players_summary`
+
+Estado confirmado deste marco:
+- primeiro bootstrap real da match validado ponta a ponta entre frontend e backend local
