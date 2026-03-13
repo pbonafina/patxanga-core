@@ -72,6 +72,7 @@ export default function HomePage() {
   const isWaiting = resolvedBootstrap.status === "waiting";
   const isActive = resolvedBootstrap.status === "active";
   const isVoting = resolvedBootstrap.status === "voting";
+  const isFinished = resolvedBootstrap.status === "finished";
 
   const stateLabel = useMemo(() => {
     switch (resolvedBootstrap.status) {
@@ -522,9 +523,18 @@ export default function HomePage() {
 
       {isWaiting ? (
         <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-          <h2>Lobby / aguardando inicio</h2>
-          <p>A partida ainda nao entrou em modo ativo.</p>
-          <p>Quando a match estiver pronta e iniciada, o board e o rack jogavel aparecerao aqui.</p>
+          <h2>Lobby / aguardando início</h2>
+          <p>Esta match ainda não começou.</p>
+          <p>Assim que a partida entrar em modo ativo, o board e o rack jogável aparecerão aqui.</p>
+        </section>
+      ) : null}
+
+      {isFinished ? (
+        <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
+          <h2>Partida encerrada</h2>
+          <p>Esta match já foi concluída.</p>
+          <p><strong>winner_player_id:</strong> {resolvedBootstrap.winnerPlayerId || "(nulo)"}</p>
+          <p><strong>finished_at:</strong> {resolvedBootstrap.finishedAt || "(nulo)"}</p>
         </section>
       ) : null}
 
