@@ -299,3 +299,126 @@ Desde este baseline, a home do frontend passou a refletir o direcionamento visua
 Estado prático atual:
 - board da home ficou menos técnico e mais próximo de produto
 - renderização continua compatível com submit real, `pending_vote` e votação
+
+## Plano recomendado das proximas fases
+
+### Fase 1 — estabilizacao estrutural do frontend
+Objetivo:
+- reduzir risco de regressao
+- sair da dependencia de uma home muito grande
+- preparar o frontend para evolucao mais rapida
+
+Etapas:
+- extrair `VotingSection`
+- extrair `BoardSection`
+- extrair `RackSection`
+- extrair `PlayersSection`
+- manter `pages/index.tsx` como orquestradora de estado e fluxo
+- preservar comportamento atual sem mudar contratos
+
+Criterio de saida:
+- `index.tsx` deixa de concentrar o grosso do JSX
+- build continua passando
+- fluxos `active` e `voting` continuam funcionando sem mudanca funcional
+
+### Fase 2 — acabamento de UX da partida
+Objetivo:
+- transformar a tela de prova funcional em tela mais proxima de produto
+
+Etapas:
+- reduzir ainda mais ruido tecnico visivel por padrao
+- manter debug apenas em modo opcional
+- consolidar estilo visual do board
+- consolidar estilo visual do rack
+- melhorar textos de estado e acoes
+- diferenciar com clareza:
+  - turno atual
+  - jogada pendente
+  - acao disponivel ao jogador
+- revisar visual de overlays e destaques
+
+Criterio de saida:
+- tela fica compreensivel sem leitura tecnica
+- jogador entende o que pode fazer em cada estado
+
+### Fase 3 — fechamento do fluxo de votacao como feature de produto
+Objetivo:
+- sair de UI minima de votacao para fluxo de votacao utilizavel
+
+Etapas:
+- revisar UX de autor x votante
+- deixar explicito quando o autor nao pode votar
+- tornar mais claro o resultado apos aprovacao/rejeicao
+- decidir comportamento visual pos-voto
+- revisar se o contexto pendente precisa mostrar:
+  - palavra principal
+  - palavras secundarias
+  - autor
+  - pecas em overlay
+- validar multiplos ciclos de votacao seguidos
+
+Criterio de saida:
+- votacao fica legivel, previsivel e consistente
+- fluxo nao parece mais interno ou experimental
+
+### Fase 4 — amadurecimento dos estados fora do miolo principal
+Objetivo:
+- cobrir estados do produto que ainda estao menos trabalhados no frontend
+
+Etapas:
+- melhorar UX de `waiting`
+- melhorar entrada e saida de lobby
+- revisar `finished`
+- revisar comportamento de resume
+- revisar presenca/ausencia
+- revisar forfeit
+- revisar mensagens de transicao de estado
+
+Criterio de saida:
+- frontend deixa de estar forte so em `active` e `voting`
+- estados laterais ficam coerentes com o restante do produto
+
+### Fase 5 — consolidacao de contratos de frontend
+Objetivo:
+- reduzir ambiguidades futuras
+- fixar decisoes que hoje ainda estao espalhadas entre codigo e conversa
+
+Etapas:
+- consolidar contrato visual do board definitivo
+- consolidar contrato de UX de votacao
+- consolidar contrato de acoes por estado
+- alinhar documentos curtos com implementacao real
+- atualizar continuidade ao fim de marcos relevantes, nao de microajustes
+
+Criterio de saida:
+- proxima sala encontra regras explicitas
+- menos dependencia de memoria operacional
+
+### Fase 6 — preparacao para uma primeira versao apresentavel
+Objetivo:
+- deixar a aplicacao pronta para demonstracao interna consistente
+
+Etapas:
+- revisar organizacao visual geral
+- revisar textos e nomenclatura
+- reduzir areas claramente de teste
+- garantir fluxo feliz completo:
+  - carregar match
+  - jogar
+  - cair em votacao
+  - votar
+  - seguir jogando
+  - encerrar partida
+- revisar navegacao minima necessaria
+
+Criterio de saida:
+- primeira versao demonstravel sem parecer painel tecnico
+
+### Ordem recomendada de execucao
+1. Extrair `VotingSection`
+2. Extrair `BoardSection`
+3. Extrair `RackSection`
+4. Refinar UX de votacao
+5. Refinar UX de `waiting` e `finished`
+6. Consolidar contratos e documentacao
+7. Polimento de produto
