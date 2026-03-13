@@ -70,6 +70,51 @@ export default function HomePage() {
     }
   }, [resolvedBootstrap.status]);
 
+  const placedTilesPreview = useMemo(() => {
+    if (!resolvedBootstrap.playerContext) {
+      return [];
+    }
+
+    return Object.entries(localPlacements)
+      .map(([cellKey, tileId]) => {
+        const [rowIndexText, colIndexText] = cellKey.split("-");
+        const rowIndex = Number(rowIndexText);
+        const colIndex = Number(colIndexText);
+
+        const tile = resolvedBootstrap.playerContext?.rack_state.find((item) => {
+          const typedTile = item as {
+            id?: string;
+            letter?: string;
+            is_special?: boolean;
+          };
+
+          return typedTile.id === tileId;
+        }) as
+          | {
+              id?: string;
+              letter?: string;
+              is_special?: boolean;
+            }
+          | undefined;
+
+        if (!tile?.id) {
+          return null;
+        }
+
+        return {
+          tile_id: tile.id,
+          row: rowIndex + 1,
+          col: colIndex + 1,
+          declared_letter: tile.is_special ? tile.letter ?? null : null,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+      .sort((a, b) => {
+        if (a.row !== b.row) return a.row - b.row;
+        return a.col - b.col;
+      });
+  }, [localPlacements, resolvedBootstrap.playerContext]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
@@ -347,6 +392,29 @@ export default function HomePage() {
                 Limpar preview local no board
               </button>
             </div>
+          </>
+        )}
+      </section>
+
+      <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
+        <h2>Preview de p_placed_tiles</h2>
+
+        {placedTilesPreview.length === 0 ? (
+          <p>Nenhuma peça posicionada localmente no board.</p>
+        ) : (
+          <>
+            <p>Payload local compatível com o contrato de submit de jogada:</p>
+            <pre
+              style={{
+                background: "#f7f7f7",
+                padding: 12,
+                borderRadius: 8,
+                overflowX: "auto",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+{JSON.stringify(placedTilesPreview, null, 2)}
+            </pre>
           </>
         )}
       </section>
