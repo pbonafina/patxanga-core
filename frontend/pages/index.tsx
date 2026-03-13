@@ -1,7 +1,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useMatchBootstrap } from "../hooks/useMatchBootstrap";
-import { loadMatchBootstrap } from "../lib/matchBootstrapAdapter";
-import type { MatchBootstrap, MatchStatus } from "../types/match";
+import { loadMatchBootstrap } from "../lib/backend/loadMatchBootstrap";
+import type { MatchBootstrap } from "../types/match";
 
 export default function HomePage() {
   const [matchIdInput, setMatchIdInput] = useState("");
@@ -45,7 +45,7 @@ export default function HomePage() {
   return (
     <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 840, margin: "0 auto" }}>
       <h1>Patxanga Frontend</h1>
-      <p>Bootstrap inicial da match com adapter isolado para futura integração real.</p>
+      <p>Bootstrap inicial da match com serviço isolado para futura integração real.</p>
 
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
         <h2>Carregar match</h2>
@@ -62,7 +62,7 @@ export default function HomePage() {
           </label>
 
           <label style={{ display: "grid", gap: 6 }}>
-            <span>player_id (opcional neste adapter)</span>
+            <span>player_id (opcional neste serviço)</span>
             <input
               value={playerIdInput}
               onChange={(event) => setPlayerIdInput(event.target.value)}
@@ -92,14 +92,12 @@ export default function HomePage() {
       </section>
 
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-        <h2>Regras do adapter atual</h2>
+        <h2>Estado do serviço atual</h2>
         <ul>
-          <li>match_id vazio → waiting</li>
-          <li>match_id terminando em <code>v</code> → voting</li>
-          <li>match_id terminando em <code>f</code> → finished</li>
-          <li>qualquer outro valor → active</li>
+          <li>A página depende de uma função estável de carregamento.</li>
+          <li>O provider atual ainda é mockado.</li>
+          <li>O próximo passo será trocar o provider mock por backend real.</li>
         </ul>
-        <p>O próximo passo é substituir este adapter por carregamento real no backend.</p>
       </section>
     </main>
   );
