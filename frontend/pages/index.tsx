@@ -14,7 +14,8 @@ type BoardCell = {
 function renderCellLabel(cell: BoardCell): string {
   if (!cell) return "";
   if (cell.tile?.letter) return cell.tile.letter;
-  return cell.multiplier_type ?? "";
+  const multiplier = cell.multiplier_type ?? "";
+  return multiplier === "NM" ? "" : multiplier;
 }
 
 function buildCellKey(rowIndex: number, colIndex: number): string {
@@ -51,6 +52,7 @@ export default function HomePage() {
   const [isSubmittingMove, setIsSubmittingMove] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitResult, setSubmitResult] = useState<unknown | null>(null);
+  const [pendingVoteError, setPendingVoteError] = useState<string | null>(null);
   const [voteResult, setVoteResult] = useState<unknown | null>(null);
   const [isSubmittingVote, setIsSubmittingVote] = useState(false);
   const [pendingVoteContext, setPendingVoteContext] = useState<unknown | null>(null);
@@ -182,6 +184,9 @@ export default function HomePage() {
     event.preventDefault();
     setIsLoading(true);
     setErrorMessage(null);
+    setSubmitResult(null);
+    setVoteResult(null);
+    setPendingVoteError(null);
     setSelectedTileIds([]);
     setLocalPlacements({});
 
@@ -268,6 +273,7 @@ export default function HomePage() {
   async function refreshPendingVoteContext(matchId: string, userId: string, status: string) {
     if (status !== "voting") {
       setPendingVoteContext(null);
+      setPendingVoteError(null);
       return;
     }
 
@@ -276,15 +282,23 @@ export default function HomePage() {
 
     if (!client) {
       setPendingVoteContext(null);
+      setPendingVoteError("Supabase client indisponivel para carregar pending_vote.");
       return;
     }
 
-    const { data } = await client.rpc("get_patxanga_pending_vote_context", {
+    const { data, error } = await client.rpc("get_patxanga_pending_vote_context", {
       p_match_id: matchId,
       p_user_id: userId,
     });
 
+    if (error) {
+      setPendingVoteContext(null);
+      setPendingVoteError(error.message);
+      return;
+    }
+
     setPendingVoteContext(data ?? null);
+    setPendingVoteError(null);
   }
 
   async function handleSubmitVote(voteReject: boolean) {
@@ -414,6 +428,13 @@ export default function HomePage() {
         <p><strong>players_summary:</strong> {resolvedBootstrap.playersSummary.length}</p>
       </section>
 
+
+      {resolvedBootstrap.status === "voting" && pendingVoteError ? (
+        <section style={{ marginTop: 24, padding: 16, border: "1px solid #b00020", borderRadius: 8, background: "#fff5f5" }}>
+          <h2>Erro ao carregar contexto de votação</h2>
+          <p>{pendingVoteError}</p>
+        </section>
+      ) : null}
 
       {resolvedBootstrap.status === "voting" && pendingVoteMove ? (
         <section style={{ marginTop: 24, padding: 16, border: "1px solid #d97706", borderRadius: 8, background: "#fffbeb" }}>
@@ -575,7 +596,7 @@ export default function HomePage() {
                   >
                     <div>
                       <div>{displayLabel}</div>
-                      <div style={{ fontSize: 8, fontWeight: 400 }}>{rowIndex + 1},{colIndex + 1}</div>
+                      
                     </div>
                   </div>
                 );
