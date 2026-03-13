@@ -428,3 +428,32 @@ Criterio de saida:
 2. Refinar UX de `waiting` e `finished`
 3. Consolidar contratos e documentacao
 4. Polimento de produto
+
+## Uso do versionamento para retomada segura
+
+Este projeto esta sendo conduzido com commits pequenos, frequentes e tematicos.
+
+Regra operacional adotada:
+- todo marco relevante deve, idealmente:
+  - passar em build e/ou validacao pertinente
+  - ser commitado
+  - ser pushado
+  - ser registrado via `logstep.sh`
+  - ser refletido no continuity package quando altera o estado operacional do projeto
+
+Como isso ajuda uma proxima sala:
+- localizar rapidamente o ultimo marco estavel
+- diferenciar experimento local de mudanca consolidada
+- entender a sequencia real de evolucao
+- retomar a partir do ultimo ponto seguro, e nao de memoria de conversa
+
+Ordem recomendada de confianca para retomada:
+1. estado atual do branch
+2. commits recentes
+3. `project-log.md`
+4. `docs/continuity-package-v1.6.md`
+
+Leitura correta:
+- o continuity package resume o estado operacional e as decisoes
+- o historico de commits e o `project-log.md` mostram a trilha real de execucao
+- em caso de divergencia, tratar o branch e os commits ja pushados como fonte de verdade mais forte
