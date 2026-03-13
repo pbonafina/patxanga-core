@@ -534,4 +534,22 @@ Estado validado:
 Leitura correta:
 - o requisito funcional de wildcard ficou coberto
 - a UX atual ainda e minima
-- refinamentos futuros podem substituir o `prompt()` por interacao melhor, mas sem reabrir o contrato funcional
+- refinamentos futuros podem substituir o `prompt()` por interacao melhor, mas sem reabrir o contrato funcional\n\n## Requisito de UX para a primeira tela jogavel: reordenacao local do rack
+
+A primeira tela de jogo orientada a produto deve permitir que o jogador reorganize visualmente as pecas do proprio rack antes de leva-las ao tabuleiro.
+
+Objetivo:
+- permitir leitura melhor das combinacoes possiveis
+- permitir montagem mental da palavra ainda no rack
+- aproximar a experiencia de jogo do comportamento esperado em jogos de palavra com pecas
+
+Escopo esperado:
+- reordenacao apenas local/visual do rack
+- sem alterar estado persistido do backend
+- sem impacto no contrato funcional de submit
+- a ordem visual reorganizada deve servir apenas como apoio de gameplay e usabilidade
+
+Leitura correta:
+- este requisito e de UX/gameplay
+- nao substitui o fluxo de posicionamento no tabuleiro
+- deve entrar no desenho da primeira tela de jogo orientada a produto\n

@@ -33,7 +33,7 @@ export function RackSection({
         <p>Rack vazio.</p>
       ) : (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
             {playerContext.rack_state.map((tile, index) => {
               const typedTile = tile as RackTile;
               const tileId = typedTile.id ?? `tile-${index}`;
@@ -45,26 +45,29 @@ export function RackSection({
                   type="button"
                   onClick={() => onToggleTile(tileId)}
                   style={{
-                    padding: 12,
+                    width: 50,
+                    height: 50,
+                    padding: 6,
                     border: isSelected ? "2px solid #2563eb" : "1px solid #bbb",
                     borderRadius: 8,
                     background: isSelected ? "#eef6ff" : "#fafafa",
-                    textAlign: "left",
+                    textAlign: "center",
                     cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 0,
+                    position: "relative",
                   }}
                 >
-                  <p>
-                    <strong>Peça:</strong>{" "}
-                    <span style={{ fontSize: 20 }}>
-                      {typedTile.letter ?? (typedTile.special_type === "wildcard" ? "★" : "(vazio)")}
+                  <div style={{ display: "flex", alignItems: "flex-end", lineHeight: 1 }}>
+                    <span style={{ fontSize: 24, fontWeight: 700 }}>
+                      {typedTile.letter ?? (typedTile.special_type === "wildcard" ? "★" : "")}
                     </span>
-                  </p>
-                  <p><strong>Pontos:</strong> {typedTile.points ?? 0}</p>
-                  <p><strong>Selecionada:</strong> {isSelected ? "sim" : "não"}</p>
-
-                  {typedTile.special_type === "wildcard" ? (
-                    <p><strong>Tipo:</strong> coringa sem letra fixa</p>
-                  ) : null}
+                    <span style={{ fontSize: 10, opacity: 0.8, marginLeft: 3, transform: "translateY(2px)" }}>
+                      {typedTile.points ?? 0}
+                    </span>
+                  </div>
 
                   {showDebug ? (
                     <>
