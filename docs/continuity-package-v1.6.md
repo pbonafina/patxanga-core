@@ -58,4 +58,48 @@ Não quebre replay.
 Não ignore fluxo de pending_vote.
 Não troque player_id por user_id no estado interno da partida.
 
+
+## Observação operacional importante desta etapa
+
+Durante a tentativa de consolidar o documento `frontend-backend-operational-contract-v1.0.md`,
+foi observado um limite prático de geração/renderização de conteúdo longo nesta sala.
+
+Sintoma:
+- a resposta é truncada repetidamente no mesmo ponto
+- o conteúdo deixa de chegar como documento único
+- passam a surgir blocos separados e incompletos
+
+Conclusão:
+- o problema é operacional da sala/interface, não do backend do projeto
+
+Regra de trabalho a partir daqui:
+- evitar gerar documentos longos em bloco único nesta sala
+- preferir documentos menores e segmentados
+- quando necessário, quebrar artefatos grandes em múltiplos arquivos
+- registrar sempre o ponto exato onde a geração foi interrompida
+
+## Estado do projeto nesta etapa
+
+O backend do Patxanga encontra-se amplamente validado, incluindo:
+
+- gameplay core
+- pending_vote
+- votação accept/reject
+- pass turn
+- exchange tiles
+- fim de partida
+- penalidade final
+- lobby direct
+- convites
+- resume
+- forfeit
+- listagens mínimas para frontend
+
+Pendência atual:
+- consolidação documental do contrato operacional frontend-backend
+
+Natureza da pendência:
+- limitação operacional de geração de arquivo longo nesta sala
+- não representa bloqueio técnico do produto
+
 Se qualquer dúvida estrutural surgir, pare e peça confirmação antes de gerar código.
