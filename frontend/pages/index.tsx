@@ -230,6 +230,46 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
+      <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
+        <h2>Rack do jogador resolvido</h2>
+
+        {!resolvedBootstrap.playerContext ? (
+          <p>player_context ainda nao carregado.</p>
+        ) : resolvedBootstrap.playerContext.rack_state.length === 0 ? (
+          <p>Rack vazio.</p>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+            {resolvedBootstrap.playerContext.rack_state.map((tile, index) => {
+              const typedTile = tile as {
+                id?: string;
+                letter?: string;
+                points?: number;
+                is_special?: boolean;
+                special_type?: string | null;
+              };
+
+              return (
+                <div
+                  key={typedTile.id ?? `tile-${index}`}
+                  style={{
+                    padding: 12,
+                    border: "1px solid #bbb",
+                    borderRadius: 8,
+                    background: "#fafafa",
+                  }}
+                >
+                  <p><strong>letter:</strong> {typedTile.letter ?? "(nulo)"}</p>
+                  <p><strong>points:</strong> {typedTile.points ?? 0}</p>
+                  <p><strong>id:</strong> {typedTile.id ?? "(nulo)"}</p>
+                  <p><strong>is_special:</strong> {typedTile.is_special ? "true" : "false"}</p>
+                  <p><strong>special_type:</strong> {typedTile.special_type ?? "(nulo)"}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </main>
   );
 }
