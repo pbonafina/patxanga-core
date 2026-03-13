@@ -309,10 +309,13 @@ Objetivo:
 - preparar o frontend para evolucao mais rapida
 
 Etapas:
-- extrair `VotingSection`
-- extrair `BoardSection`
-- extrair `RackSection`
-- extrair `PlayersSection`
+- [feito] extrair `VotingSection`
+- [feito] extrair `BoardSection`
+- [feito] extrair `RackSection`
+- [feito] extrair `PlayersSection`
+- [feito] extrair `MatchStatusPanel`
+- [pendente] extrair `MoveSubmitSection`
+- [pendente] extrair `MatchLoadSection` se ainda houver ganho claro
 - manter `pages/index.tsx` como orquestradora de estado e fluxo
 - preservar comportamento atual sem mudar contratos
 
@@ -320,6 +323,11 @@ Criterio de saida:
 - `index.tsx` deixa de concentrar o grosso do JSX
 - build continua passando
 - fluxos `active` e `voting` continuam funcionando sem mudanca funcional
+
+Estado atual da fase:
+- Fase 1 avancou de forma consistente
+- os blocos mais sensiveis e volumosos da home ja foram separados
+- proximo alvo natural: `MoveSubmitSection`
 
 ### Fase 2 — acabamento de UX da partida
 Objetivo:
@@ -415,10 +423,8 @@ Criterio de saida:
 - primeira versao demonstravel sem parecer painel tecnico
 
 ### Ordem recomendada de execucao
-1. Extrair `VotingSection`
-2. Extrair `BoardSection`
-3. Extrair `RackSection`
-4. Refinar UX de votacao
-5. Refinar UX de `waiting` e `finished`
-6. Consolidar contratos e documentacao
-7. Polimento de produto
+1. Extrair `MoveSubmitSection`
+2. Refinar UX de votacao
+3. Refinar UX de `waiting` e `finished`
+4. Consolidar contratos e documentacao
+5. Polimento de produto
