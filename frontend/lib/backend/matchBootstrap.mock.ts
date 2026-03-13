@@ -27,6 +27,33 @@ export const mockMatchBootstrapService: MatchBootstrapService = {
         status === "waiting" || status === "finished" ? null : normalizedPlayerId,
       winnerPlayerId: status === "finished" ? normalizedPlayerId : null,
       finishedAt: status === "finished" ? new Date().toISOString() : null,
+      startedAt: status === "waiting" ? null : new Date().toISOString(),
+      turnNumber: status === "waiting" ? 0 : 1,
+      boardState: [],
+      playerContext: normalizedPlayerId
+        ? {
+            player_id: normalizedPlayerId,
+            user_id: normalizedPlayerId,
+            display_name: "Mock Player",
+            rack_state: [],
+            score: 0,
+            seat_index: 1,
+            turn_order: 1,
+            has_forfeited: false,
+          }
+        : null,
+      playersSummary: normalizedPlayerId
+        ? [
+            {
+              player_id: normalizedPlayerId,
+              display_name: "Mock Player",
+              score: 0,
+              seat_index: 1,
+              turn_order: 1,
+              has_forfeited: false,
+            },
+          ]
+        : [],
     };
   },
 };

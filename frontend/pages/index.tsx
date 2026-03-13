@@ -51,18 +51,16 @@ export default function HomePage() {
   }
 
   return (
-    <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 840, margin: "0 auto" }}>
+    <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 960, margin: "0 auto" }}>
       <h1>Patxanga Frontend</h1>
-      <p>Bootstrap inicial da match com camada de serviço preparada para backend real.</p>
+      <p>Bootstrap da match com fallback mock e provider real preparado.</p>
 
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
         <h2>Ambiente</h2>
+        <p><strong>Modo atual:</strong> {isConfigured ? "provider real habilitado" : "fallback mock ativo"}</p>
         <p>
-          <strong>Modo atual:</strong> {isConfigured ? "provider real habilitado" : "fallback mock ativo"}
-        </p>
-        <p>
-          Para ativar o provider real, preencher <code>frontend/.env.local</code> com
-          <code> NEXT_PUBLIC_SUPABASE_URL </code> e <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.
+          No provider real, o campo abaixo ainda usa temporariamente <strong>user_id</strong> no input
+          para resolver o bootstrap server-authoritative e receber de volta o <strong>player_id</strong> real.
         </p>
       </section>
 
@@ -75,17 +73,17 @@ export default function HomePage() {
             <input
               value={matchIdInput}
               onChange={(event) => setMatchIdInput(event.target.value)}
-              placeholder="ex: match-123, match-v, match-f"
+              placeholder="ex: UUID da match"
               style={{ padding: 8 }}
             />
           </label>
 
           <label style={{ display: "grid", gap: 6 }}>
-            <span>player_id (opcional neste estágio)</span>
+            <span>user_id da sessao (temporario neste bootstrap real)</span>
             <input
               value={playerIdInput}
               onChange={(event) => setPlayerIdInput(event.target.value)}
-              placeholder="ex: player-abc"
+              placeholder="ex: UUID do usuario"
               style={{ padding: 8 }}
             />
           </label>
@@ -110,10 +108,13 @@ export default function HomePage() {
         <h2>Estado resolvido</h2>
         <p><strong>Status:</strong> {stateLabel}</p>
         <p><strong>match_id:</strong> {resolvedBootstrap.matchId || "(vazio)"}</p>
-        <p><strong>player_id:</strong> {resolvedBootstrap.playerId || "(nulo)"}</p>
+        <p><strong>player_id resolvido:</strong> {resolvedBootstrap.playerId || "(nulo)"}</p>
         <p><strong>current_turn_player_id:</strong> {resolvedBootstrap.currentTurnPlayerId || "(nulo)"}</p>
         <p><strong>winner_player_id:</strong> {resolvedBootstrap.winnerPlayerId || "(nulo)"}</p>
+        <p><strong>started_at:</strong> {resolvedBootstrap.startedAt || "(nulo)"}</p>
         <p><strong>finished_at:</strong> {resolvedBootstrap.finishedAt || "(nulo)"}</p>
+        <p><strong>turn_number:</strong> {resolvedBootstrap.turnNumber}</p>
+        <p><strong>players_summary:</strong> {resolvedBootstrap.playersSummary.length}</p>
       </section>
     </main>
   );

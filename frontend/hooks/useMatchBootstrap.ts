@@ -10,6 +10,11 @@ export function useMatchBootstrap(initialData?: Partial<MatchBootstrap>) {
       currentTurnPlayerId: initialData?.currentTurnPlayerId ?? null,
       winnerPlayerId: initialData?.winnerPlayerId ?? null,
       finishedAt: initialData?.finishedAt ?? null,
+      startedAt: initialData?.startedAt ?? null,
+      turnNumber: initialData?.turnNumber ?? 0,
+      boardState: initialData?.boardState ?? [],
+      playerContext: initialData?.playerContext ?? null,
+      playersSummary: initialData?.playersSummary ?? [],
     }),
     [initialData]
   );
