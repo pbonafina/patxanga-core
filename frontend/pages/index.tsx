@@ -4,6 +4,7 @@ import { loadMatchBootstrap } from "../lib/backend/loadMatchBootstrap";
 import { getSupabaseEnv } from "../lib/supabase/env";
 import type { MatchBootstrap } from "../types/match";
 import { VotingSection } from "../components/VotingSection";
+import { BoardSection } from "../components/BoardSection";
 
 type BoardCell = {
   tile?: {
@@ -307,6 +308,25 @@ export default function HomePage() {
     setPendingVoteError(null);
   }
 
+  function handlePlaceTile(cellKey: string, typedCell: BoardCell) {
+    if (typedCell?.tile?.letter) {
+      return;
+    }
+
+    const nextTileId = selectedTileIds.find((tileId) =>
+      !Object.values(localPlacements).includes(tileId)
+    );
+
+    if (!nextTileId) {
+      return;
+    }
+
+    setLocalPlacements((current) => ({
+      ...current,
+      [cellKey]: nextTileId,
+    }));
+  }
+
   async function handleSubmitVote(voteReject: boolean) {
     if (!pendingVoteMove?.move_id) {
       setErrorMessage("move_id pendente nao disponivel.");
@@ -495,94 +515,17 @@ export default function HomePage() {
       </section>
 
       {(isActive || isVoting) ? (
-      <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-        <h2>Board (read-only)</h2>
-
-        {resolvedBootstrap.boardState.length === 0 ? (
-          <p>Board ainda nao carregado.</p>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(15, 38px)",
-              gap: 2,
-              alignItems: "center",
-              justifyContent: "start",
-            }}
-          >
-            {resolvedBootstrap.boardState.flatMap((row, rowIndex) =>
-              row.map((cell, colIndex) => {
-                const typedCell = cell as BoardCell;
-                const cellKey = buildCellKey(rowIndex, colIndex);
-                const label = renderCellLabel(typedCell);
-                const isCenter = rowIndex === 7 && colIndex === 7;
-                const localTileId = localPlacements[cellKey];
-
-                const rackTiles = (resolvedBootstrap.playerContext?.rack_state ?? []) as Array<{
-                  id?: string;
-                  letter?: string;
-                }>;
-
-                const localTile = rackTiles.find((tile) => tile.id === localTileId);
-                const pendingVoteTile = pendingVoteTilesByCell[cellKey];
-                const hasLocalPreview = Boolean(localTile?.letter);
-                const hasPendingVoteOverlay = Boolean(pendingVoteTile?.letter);
-                const displayLabel = hasLocalPreview
-                  ? (localTile?.letter ?? "")
-                  : hasPendingVoteOverlay
-                    ? (pendingVoteTile?.letter ?? "")
-                    : label;
-
-                return (
-                  <div
-                    key={`${rowIndex}-${colIndex}`}
-                    title={`(${rowIndex + 1}, ${colIndex + 1})`}
-                    onClick={() => {
-                      if (typedCell?.tile?.letter) {
-                        return;
-                      }
-
-                      const nextTileId = selectedTileIds.find((tileId) =>
-                        !Object.values(localPlacements).includes(tileId)
-                      );
-
-                      if (!nextTileId) {
-                        return;
-                      }
-
-                      setLocalPlacements((current) => ({
-                        ...current,
-                        [cellKey]: nextTileId,
-                      }));
-                    }}
-                    style={{
-                      width: 38,
-                      height: 38,
-                      border: hasLocalPreview ? "2px solid #16a34a" : hasPendingVoteOverlay ? "2px dashed #b45309" : "1px solid #bbb",
-                      borderRadius: 4,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      background: hasLocalPreview ? "#dcfce7" : renderCellBackground(typedCell, rowIndex, colIndex),
-                      overflow: "hidden",
-                      textAlign: "center",
-                      padding: 2,
-                      boxShadow: isCenter ? "inset 0 0 0 2px #c99a00" : "none",
-                    }}
-                  >
-                    <div>
-                      <div>{displayLabel}</div>
-                      
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        )}
-      </section>
+      <BoardSection
+        boardState={resolvedBootstrap.boardState}
+        localPlacements={localPlacements}
+        pendingVoteTilesByCell={pendingVoteTilesByCell}
+        selectedTileIds={selectedTileIds}
+        playerRackState={resolvedBootstrap.playerContext?.rack_state ?? []}
+        buildCellKey={buildCellKey}
+        renderCellLabel={renderCellLabel}
+        renderCellBackground={renderCellBackground}
+        onPlaceTile={handlePlaceTile}
+      />
       ) : null}
 
       {isActive ? (
