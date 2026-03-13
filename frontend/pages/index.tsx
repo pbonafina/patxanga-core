@@ -51,6 +51,8 @@ export default function HomePage() {
   const [isSubmittingMove, setIsSubmittingMove] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitResult, setSubmitResult] = useState<unknown | null>(null);
+  const [voteResult, setVoteResult] = useState<unknown | null>(null);
+  const [isSubmittingVote, setIsSubmittingVote] = useState(false);
   const [pendingVoteContext, setPendingVoteContext] = useState<unknown | null>(null);
   const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
   const [localPlacements, setLocalPlacements] = useState<Record<string, string>>({});
@@ -123,6 +125,8 @@ export default function HomePage() {
     const context = pendingVoteContext as
       | {
           pending_move?: {
+            move_id?: string;
+            player_id?: string;
             board_diff?: Array<{
               row?: number;
               col?: number;
@@ -136,6 +140,28 @@ export default function HomePage() {
 
     return context?.pending_move ?? null;
   }, [pendingVoteContext]);
+
+  const pendingVoteRequestPlayer = useMemo(() => {
+    const context = pendingVoteContext as
+      | {
+          request_player?: {
+            player_id?: string;
+            user_id?: string;
+            display_name?: string;
+          } | null;
+        }
+      | null;
+
+    return context?.request_player ?? null;
+  }, [pendingVoteContext]);
+
+  const canCurrentViewerVote = useMemo(() => {
+    if (!pendingVoteMove || !pendingVoteRequestPlayer?.player_id) {
+      return false;
+    }
+
+    return pendingVoteMove.player_id !== pendingVoteRequestPlayer.player_id;
+  }, [pendingVoteMove, pendingVoteRequestPlayer]);
 
   const pendingVoteTilesByCell = useMemo(() => {
     const result: Record<string, { letter?: string }> = {};
@@ -167,20 +193,7 @@ export default function HomePage() {
 
       setBootstrapData(nextData);
 
-      if (nextData.status === "voting") {
-        const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
-        const client = getSupabaseBrowserClient();
-
-        if (client) {
-          const { data } = await client.rpc("get_patxanga_pending_vote_context", {
-            p_match_id: nextData.matchId,
-            p_user_id: playerIdInput,
-          });
-          setPendingVoteContext(data ?? null);
-        }
-      } else {
-        setPendingVoteContext(null);
-      }
+      await refreshPendingVoteContext(nextData.matchId, playerIdInput, nextData.status);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Falha ao carregar bootstrap da match."
@@ -238,15 +251,7 @@ export default function HomePage() {
 
       setBootstrapData(refreshedData);
 
-      if (refreshedData.status === "voting") {
-        const { data: pendingData } = await client.rpc("get_patxanga_pending_vote_context", {
-          p_match_id: refreshedData.matchId,
-          p_user_id: playerIdInput,
-        });
-        setPendingVoteContext(pendingData ?? null);
-      } else {
-        setPendingVoteContext(null);
-      }
+      await refreshPendingVoteContext(refreshedData.matchId, playerIdInput, refreshedData.status);
 
       setSelectedTileIds([]);
       setLocalPlacements({});
@@ -256,6 +261,89 @@ export default function HomePage() {
       );
     } finally {
       setIsSubmittingMove(false);
+    }
+  }
+
+
+  async function refreshPendingVoteContext(matchId: string, userId: string, status: string) {
+    if (status !== "voting") {
+      setPendingVoteContext(null);
+      return;
+    }
+
+    const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
+    const client = getSupabaseBrowserClient();
+
+    if (!client) {
+      setPendingVoteContext(null);
+      return;
+    }
+
+    const { data } = await client.rpc("get_patxanga_pending_vote_context", {
+      p_match_id: matchId,
+      p_user_id: userId,
+    });
+
+    setPendingVoteContext(data ?? null);
+  }
+
+  async function handleSubmitVote(voteReject: boolean) {
+    if (!pendingVoteMove?.move_id) {
+      setErrorMessage("move_id pendente nao disponivel.");
+      return;
+    }
+
+    if (!pendingVoteRequestPlayer?.player_id) {
+      setErrorMessage("player_id do votante nao disponivel.");
+      return;
+    }
+
+    if (!canCurrentViewerVote) {
+      setErrorMessage("Autor da jogada pendente nao pode votar.");
+      return;
+    }
+
+    setIsSubmittingVote(true);
+    setErrorMessage(null);
+    setVoteResult(null);
+
+    try {
+      const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
+      const client = getSupabaseBrowserClient();
+
+      if (!client) {
+        throw new Error("Supabase client not configured in frontend environment.");
+      }
+
+      const { data, error } = await client.rpc("submit_patxanga_vote", {
+        p_move_id: pendingVoteMove.move_id,
+        p_voter_player_id: pendingVoteRequestPlayer.player_id,
+        p_vote_reject: voteReject,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setVoteResult(data ?? null);
+
+      const refreshedData = await loadMatchBootstrap({
+        matchId: matchIdInput,
+        playerId: playerIdInput,
+      });
+
+      setBootstrapData(refreshedData);
+      await refreshPendingVoteContext(
+        refreshedData.matchId,
+        playerIdInput,
+        refreshedData.status
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Falha ao enviar voto."
+      );
+    } finally {
+      setIsSubmittingVote(false);
     }
   }
 
@@ -332,7 +420,45 @@ export default function HomePage() {
           <h2>Jogada em avaliação</h2>
           <p><strong>Autor:</strong> {pendingVoteMove.author_display_name ?? "(desconhecido)"}</p>
           <p><strong>Palavra principal:</strong> {pendingVoteMove.main_word ?? "(nula)"}</p>
+          <p><strong>Pode votar nesta tela:</strong> {canCurrentViewerVote ? "sim" : "nao"}</p>
           <p>O board oficial permanece intacto; o tabuleiro abaixo mostra overlay visual da jogada pendente.</p>
+
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+            <button
+              type="button"
+              onClick={() => handleSubmitVote(false)}
+              disabled={!canCurrentViewerVote || isSubmittingVote}
+              style={{ padding: "10px 14px", cursor: "pointer" }}
+            >
+              {isSubmittingVote ? "Enviando..." : "Aprovar jogada"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSubmitVote(true)}
+              disabled={!canCurrentViewerVote || isSubmittingVote}
+              style={{ padding: "10px 14px", cursor: "pointer" }}
+            >
+              {isSubmittingVote ? "Enviando..." : "Rejeitar jogada"}
+            </button>
+          </div>
+
+          {voteResult ? (
+            <div style={{ marginTop: 16 }}>
+              <h3 style={{ marginBottom: 8 }}>Retorno bruto da votação</h3>
+              <pre
+                style={{
+                  background: "#f7f7f7",
+                  padding: 12,
+                  borderRadius: 8,
+                  overflowX: "auto",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+{JSON.stringify(voteResult, null, 2)}
+              </pre>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
