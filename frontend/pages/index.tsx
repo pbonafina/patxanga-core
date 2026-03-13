@@ -17,9 +17,13 @@ function renderCellLabel(cell: BoardCell): string {
   return cell.multiplier_type ?? "";
 }
 
-function renderCellBackground(cell: BoardCell): string {
+function renderCellBackground(cell: BoardCell, rowIndex: number, colIndex: number): string {
   if (!cell) return "#ffffff";
   if (cell.tile?.letter) return "#f3f4f6";
+
+  if (rowIndex === 7 && colIndex === 7) {
+    return "#fff4cc";
+  }
 
   switch (cell.multiplier_type) {
     case "PT":
@@ -201,6 +205,7 @@ export default function HomePage() {
               row.map((cell, colIndex) => {
                 const typedCell = cell as BoardCell;
                 const label = renderCellLabel(typedCell);
+                const isCenter = rowIndex === 7 && colIndex === 7;
 
                 return (
                   <div
@@ -216,13 +221,17 @@ export default function HomePage() {
                       justifyContent: "center",
                       fontSize: 11,
                       fontWeight: 700,
-                      background: renderCellBackground(typedCell),
+                      background: renderCellBackground(typedCell, rowIndex, colIndex),
                       overflow: "hidden",
                       textAlign: "center",
                       padding: 2,
+                      boxShadow: isCenter ? "inset 0 0 0 2px #c99a00" : "none",
                     }}
                   >
-                    {label}
+                    <div>
+                      <div>{label}</div>
+                      <div style={{ fontSize: 8, fontWeight: 400 }}>{rowIndex + 1},{colIndex + 1}</div>
+                    </div>
                   </div>
                 );
               })
@@ -259,11 +268,12 @@ export default function HomePage() {
                     background: "#fafafa",
                   }}
                 >
-                  <p><strong>letter:</strong> {typedTile.letter ?? "(nulo)"}</p>
+                  <p><strong>letter:</strong> <span style={{ fontSize: 20 }}>{typedTile.letter ?? "(nulo)"}</span></p>
                   <p><strong>points:</strong> {typedTile.points ?? 0}</p>
                   <p><strong>id:</strong> {typedTile.id ?? "(nulo)"}</p>
                   <p><strong>is_special:</strong> {typedTile.is_special ? "true" : "false"}</p>
                   <p><strong>special_type:</strong> {typedTile.special_type ?? "(nulo)"}</p>
+                  <p><strong>tipo visual:</strong> {typedTile.is_special ? "peca especial" : "peca normal"}</p>
                 </div>
               );
             })}
