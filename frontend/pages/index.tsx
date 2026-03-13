@@ -402,20 +402,20 @@ export default function HomePage() {
 
   return (
     <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 1100, margin: "0 auto" }}>
-      <h1>Patxanga Frontend</h1>
-      <p>Bootstrap da match com fallback mock e provider real preparado.</p>
+      <h1>Patxanga</h1>
+      <p>Interface local da partida conectada ao backend da aplicação.</p>
 
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-        <h2>Ambiente</h2>
-        <p><strong>Modo atual:</strong> {isConfigured ? "provider real habilitado" : "fallback mock ativo"}</p>
+        <h2>Conexão</h2>
+        <p><strong>Modo atual:</strong> {isConfigured ? "conectado ao backend real" : "modo local de fallback"}</p>
         <p>
-          No provider real, o campo abaixo ainda usa temporariamente <strong>user_id</strong> no input
-          para resolver o bootstrap server-authoritative e receber de volta o <strong>player_id</strong> real.
+          Nesta etapa, o segundo campo ainda usa temporariamente o <strong>user_id</strong> da sessão
+          para localizar o jogador correto da partida.
         </p>
       </section>
 
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-        <h2>Carregar match</h2>
+        <h2>Abrir partida</h2>
 
         <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
           <label style={{ display: "grid", gap: 6 }}>
@@ -443,7 +443,7 @@ export default function HomePage() {
             disabled={isLoading}
             style={{ width: 220, padding: "10px 14px", cursor: "pointer" }}
           >
-            {isLoading ? "Carregando..." : "Carregar bootstrap"}
+            {isLoading ? "Carregando..." : "Abrir partida"}
           </button>
         </form>
 
@@ -524,7 +524,7 @@ export default function HomePage() {
       {isWaiting ? (
         <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
           <h2>Lobby / aguardando início</h2>
-          <p>Esta match ainda não começou.</p>
+          <p>Esta partida ainda não começou.</p>
           <p>Assim que a partida entrar em modo ativo, o board e o rack jogável aparecerão aqui.</p>
         </section>
       ) : null}
@@ -532,9 +532,9 @@ export default function HomePage() {
       {isFinished ? (
         <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
           <h2>Partida encerrada</h2>
-          <p>Esta match já foi concluída.</p>
-          <p><strong>winner_player_id:</strong> {resolvedBootstrap.winnerPlayerId || "(nulo)"}</p>
-          <p><strong>finished_at:</strong> {resolvedBootstrap.finishedAt || "(nulo)"}</p>
+          <p>Esta partida já foi concluída.</p>
+          <p><strong>Vencedor:</strong> {resolvedBootstrap.winnerPlayerId || "(não disponível)"}</p>
+          <p><strong>Encerrada em:</strong> {resolvedBootstrap.finishedAt || "(não disponível)"}</p>
         </section>
       ) : null}
 
