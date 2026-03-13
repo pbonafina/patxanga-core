@@ -51,6 +51,7 @@ export default function HomePage() {
   const [isSubmittingMove, setIsSubmittingMove] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitResult, setSubmitResult] = useState<unknown | null>(null);
+  const [pendingVoteContext, setPendingVoteContext] = useState<unknown | null>(null);
   const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
   const [localPlacements, setLocalPlacements] = useState<Record<string, string>>({});
 
@@ -117,6 +118,40 @@ export default function HomePage() {
       });
   }, [localPlacements, resolvedBootstrap.playerContext]);
 
+
+  const pendingVoteMove = useMemo(() => {
+    const context = pendingVoteContext as
+      | {
+          pending_move?: {
+            board_diff?: Array<{
+              row?: number;
+              col?: number;
+              letter?: string;
+            }>;
+            author_display_name?: string;
+            main_word?: string;
+          } | null;
+        }
+      | null;
+
+    return context?.pending_move ?? null;
+  }, [pendingVoteContext]);
+
+  const pendingVoteTilesByCell = useMemo(() => {
+    const result: Record<string, { letter?: string }> = {};
+
+    const boardDiff = pendingVoteMove?.board_diff ?? [];
+    for (const tile of boardDiff) {
+      const row = typeof tile.row === "number" ? tile.row - 1 : -1;
+      const col = typeof tile.col === "number" ? tile.col - 1 : -1;
+      if (row >= 0 && col >= 0) {
+        result[buildCellKey(row, col)] = { letter: tile.letter };
+      }
+    }
+
+    return result;
+  }, [pendingVoteMove]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
@@ -131,6 +166,21 @@ export default function HomePage() {
       });
 
       setBootstrapData(nextData);
+
+      if (nextData.status === "voting") {
+        const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
+        const client = getSupabaseBrowserClient();
+
+        if (client) {
+          const { data } = await client.rpc("get_patxanga_pending_vote_context", {
+            p_match_id: nextData.matchId,
+            p_user_id: playerIdInput,
+          });
+          setPendingVoteContext(data ?? null);
+        }
+      } else {
+        setPendingVoteContext(null);
+      }
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Falha ao carregar bootstrap da match."
@@ -187,6 +237,17 @@ export default function HomePage() {
       });
 
       setBootstrapData(refreshedData);
+
+      if (refreshedData.status === "voting") {
+        const { data: pendingData } = await client.rpc("get_patxanga_pending_vote_context", {
+          p_match_id: refreshedData.matchId,
+          p_user_id: playerIdInput,
+        });
+        setPendingVoteContext(pendingData ?? null);
+      } else {
+        setPendingVoteContext(null);
+      }
+
       setSelectedTileIds([]);
       setLocalPlacements({});
     } catch (error) {
@@ -265,6 +326,16 @@ export default function HomePage() {
         <p><strong>players_summary:</strong> {resolvedBootstrap.playersSummary.length}</p>
       </section>
 
+
+      {resolvedBootstrap.status === "voting" && pendingVoteMove ? (
+        <section style={{ marginTop: 24, padding: 16, border: "1px solid #d97706", borderRadius: 8, background: "#fffbeb" }}>
+          <h2>Jogada em avaliação</h2>
+          <p><strong>Autor:</strong> {pendingVoteMove.author_display_name ?? "(desconhecido)"}</p>
+          <p><strong>Palavra principal:</strong> {pendingVoteMove.main_word ?? "(nula)"}</p>
+          <p>O board oficial permanece intacto; o tabuleiro abaixo mostra overlay visual da jogada pendente.</p>
+        </section>
+      ) : null}
+
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
         <h2>Jogadores</h2>
 
@@ -328,8 +399,14 @@ export default function HomePage() {
                 }>;
 
                 const localTile = rackTiles.find((tile) => tile.id === localTileId);
+                const pendingVoteTile = pendingVoteTilesByCell[cellKey];
                 const hasLocalPreview = Boolean(localTile?.letter);
-                const displayLabel = hasLocalPreview ? (localTile?.letter ?? "") : label;
+                const hasPendingVoteOverlay = Boolean(pendingVoteTile?.letter);
+                const displayLabel = hasLocalPreview
+                  ? (localTile?.letter ?? "")
+                  : hasPendingVoteOverlay
+                    ? (pendingVoteTile?.letter ?? "")
+                    : label;
 
                 return (
                   <div
@@ -356,7 +433,7 @@ export default function HomePage() {
                     style={{
                       width: 38,
                       height: 38,
-                      border: hasLocalPreview ? "2px solid #16a34a" : "1px solid #bbb",
+                      border: hasLocalPreview ? "2px solid #16a34a" : hasPendingVoteOverlay ? "2px dashed #b45309" : "1px solid #bbb",
                       borderRadius: 4,
                       display: "flex",
                       alignItems: "center",
