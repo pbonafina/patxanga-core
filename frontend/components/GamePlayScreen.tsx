@@ -35,6 +35,7 @@ type GamePlayScreenProps = {
   localDeclaredLetters: Record<string, string>;
   pendingVoteTilesByCell: Record<string, { letter?: string }>;
   selectedTileId: string | null;
+  selectedTileIds: string[];
   playerRackState: unknown[];
 
   placedTilesPreview: unknown[];
@@ -86,6 +87,7 @@ export function GamePlayScreen({
   localDeclaredLetters,
   pendingVoteTilesByCell,
   selectedTileId,
+  selectedTileIds,
   playerRackState,
 
   placedTilesPreview,
@@ -120,6 +122,7 @@ export function GamePlayScreen({
   const totalPlayers = playersSummary.length;
   const placedTileCount = placedTilesPreview.length;
   const isPlayersTurn = isActive;
+  const selectedGroupCount = selectedTileIds.length;
 
   const statusTone = isActive
     ? { label: "Sua mesa está pronta", color: "#166534", background: "#dcfce7", border: "#86efac" }
@@ -209,6 +212,20 @@ export function GamePlayScreen({
             >
               {placedTileCount} peça{placedTileCount === 1 ? "" : "s"} em preparo
             </span>
+
+            {selectedGroupCount > 0 ? (
+              <span
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 999,
+                  background: "#dbeafe",
+                  fontSize: 13,
+                  color: "#1d4ed8",
+                }}
+              >
+                grupo com {selectedGroupCount} peça{selectedGroupCount === 1 ? "" : "s"}
+              </span>
+            ) : null}
 
             {isVoting ? (
               <span
@@ -318,7 +335,7 @@ export function GamePlayScreen({
             >
               <RackSection
                 rackTiles={playerRackState}
-                selectedTileId={selectedTileId}
+                selectedTileIds={selectedTileIds}
                 showDebug={showDebug}
                 isPlayersTurn={isPlayersTurn}
                 onToggleTile={onToggleTile}

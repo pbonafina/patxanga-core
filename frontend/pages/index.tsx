@@ -64,6 +64,7 @@ export default function HomePage() {
   const [isSubmittingVote, setIsSubmittingVote] = useState(false);
   const [pendingVoteContext, setPendingVoteContext] = useState<unknown | null>(null);
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
+  const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
   const [localPlacements, setLocalPlacements] = useState<Record<string, string>>({});
   const [localDeclaredLetters, setLocalDeclaredLetters] = useState<Record<string, string>>({});
   const [localRackOrder, setLocalRackOrder] = useState<string[]>([]);
@@ -245,6 +246,7 @@ export default function HomePage() {
     setVoteResult(null);
     setPendingVoteError(null);
     setSelectedTileId(null);
+    setSelectedTileIds([]);
     setLocalPlacements({});
     setLocalDeclaredLetters({});
 
@@ -317,6 +319,7 @@ export default function HomePage() {
       await refreshPendingVoteContext(refreshedData.matchId, playerIdInput, refreshedData.status);
 
       setSelectedTileId(null);
+      setSelectedTileIds([]);
       setLocalPlacements({});
       setLocalDeclaredLetters({});
     } catch (error) {
@@ -497,7 +500,17 @@ export default function HomePage() {
   }
 
   function handleToggleTile(tileId: string) {
-    setSelectedTileId((current) => (current === tileId ? null : tileId));
+    setSelectedTileIds((current) => {
+      if (current.includes(tileId)) {
+        const next = current.filter((id) => id !== tileId);
+        setSelectedTileId((previous) => (previous === tileId ? (next[0] ?? null) : previous));
+        return next;
+      }
+
+      const next = [...current, tileId];
+      setSelectedTileId((previous) => previous ?? tileId);
+      return next;
+    });
   }
 
 
@@ -572,6 +585,7 @@ export default function HomePage() {
         localDeclaredLetters={localDeclaredLetters}
         pendingVoteTilesByCell={pendingVoteTilesByCell}
         selectedTileId={selectedTileId}
+        selectedTileIds={selectedTileIds}
         playerRackState={orderedPlayerRackState}
         placedTilesPreview={placedTilesPreview}
         canSubmitMove={placedTilesPreview.length > 0 && Boolean(resolvedBootstrap.playerId)}
@@ -591,9 +605,32 @@ export default function HomePage() {
           setLocalPlacements({});
           setLocalDeclaredLetters({});
           setSelectedTileId(null);
+          setSelectedTileIds([]);
         }}
         onReorderTile={(draggedTileId, targetTileId) => {
           setLocalRackOrder((current) => {
+            const selectedSet = new Set(selectedTileIds);
+            const shouldMoveGroup =
+              selectedTileIds.length > 1 &&
+              selectedSet.has(draggedTileId) &&
+              !selectedSet.has(targetTileId);
+
+            if (shouldMoveGroup) {
+              const group = current.filter((tileId) => selectedSet.has(tileId));
+              const rest = current.filter((tileId) => !selectedSet.has(tileId));
+              const targetIndex = rest.indexOf(targetTileId);
+
+              if (targetIndex === -1) {
+                return current;
+              }
+
+              return [
+                ...rest.slice(0, targetIndex),
+                ...group,
+                ...rest.slice(targetIndex),
+              ];
+            }
+
             const draggedIndex = current.indexOf(draggedTileId);
             const targetIndex = current.indexOf(targetTileId);
 
@@ -651,7 +688,7 @@ export default function HomePage() {
       {isActive ? (
       <RackSection
         rackTiles={orderedPlayerRackState}
-        selectedTileId={selectedTileId}
+        selectedTileIds={selectedTileIds}
         showDebug={showDebug}
         isPlayersTurn={isActive}
         onToggleTile={handleToggleTile}
@@ -659,6 +696,7 @@ export default function HomePage() {
           setLocalPlacements({});
           setLocalDeclaredLetters({});
           setSelectedTileId(null);
+          setSelectedTileIds([]);
         }}
         onReorderTile={(draggedTileId, targetTileId) => {
           setLocalRackOrder((current) => {

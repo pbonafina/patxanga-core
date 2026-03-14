@@ -10,7 +10,7 @@ type RackTile = {
 
 type RackSectionProps = {
   rackTiles: unknown[];
-  selectedTileId: string | null;
+  selectedTileIds: string[];
   showDebug: boolean;
   isPlayersTurn: boolean;
   onToggleTile: (tileId: string) => void;
@@ -52,7 +52,7 @@ function formatCountdown(totalSeconds: number) {
 
 export function RackSection({
   rackTiles,
-  selectedTileId,
+  selectedTileIds,
   showDebug,
   isPlayersTurn,
   onToggleTile,
@@ -95,6 +95,7 @@ export function RackSection({
   const countdown = useMemo(() => formatCountdown(countdownSeconds), [countdownSeconds]);
   const digits = countdown.split("");
   const isAlert = isPlayersTurn && countdownSeconds <= 10;
+  const selectedCount = selectedTileIds.length;
 
   const rackFrameStyle = isPlayersTurn
     ? {
@@ -136,6 +137,14 @@ export function RackSection({
                 ? "É sua vez de montar e enviar a jogada."
                 : "Você pode preparar as peças enquanto aguarda sua vez."}
             </div>
+            <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
+              Clique para selecionar várias peças. Arraste uma das selecionadas para mover o grupo.
+            </div>
+            {selectedCount > 0 ? (
+              <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
+                {selectedCount} peça{selectedCount === 1 ? "" : "s"} selecionada{selectedCount === 1 ? "" : "s"}
+              </div>
+            ) : null}
           </div>
 
           <div
@@ -202,7 +211,7 @@ export function RackSection({
             {rackTiles.map((tile, index) => {
               const typedTile = tile as RackTile;
               const tileId = typedTile.id ?? `tile-${index}`;
-              const isSelected = selectedTileId === tileId;
+              const isSelected = selectedTileIds.includes(tileId);
 
               return (
                 <button
@@ -279,7 +288,13 @@ export function RackSection({
             })}
           </div>
 
-          <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+          <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ fontSize: 13, color: "#6b7280" }}>
+              {selectedCount > 1
+                ? "Arraste qualquer peça destacada para mover o grupo."
+                : "Selecione mais de uma peça para testar o movimento em grupo."}
+            </div>
+
             <button
               type="button"
               onClick={onClearPreview}
