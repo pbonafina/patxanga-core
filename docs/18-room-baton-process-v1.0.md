@@ -145,11 +145,12 @@ continuidade: analise antes de alterar, confirme estado real antes de concluir,
 preserve seguranca, rastreabilidade, documentacao, versionamento e validacao, e
 trabalhe de forma incremental, sem atalhos e sem assumir contexto nao
 verificado. Peca explicitamente o arquivo `docs/18-room-baton-package-current.md`
-para receber diretivas, contexto operacional e status atualizado do projeto. So
-depois disso VOCE deve validar branch, commits recentes, `../project-log.md` e
-os comandos/arquivos complementares de inicializacao. O arquivo deve ser
-atualizado sempre que o operador solicitar ou sempre que houver mudanca
-relevante suficiente para impactar a retomada segura.
+para receber diretivas, contexto operacional e status atualizado do projeto e,
+no ambiente local deste operador, solicite que ele rode o comando `cd ~/patxanga-bootstrap/patxanga-core && open -a TextEdit docs/18-room-baton-package-current.md`
+para abrir o arquivo no Mac. So depois disso VOCE deve validar branch, commits
+recentes, `../project-log.md` e os comandos/arquivos complementares de
+inicializacao. O arquivo deve ser atualizado sempre que o operador solicitar ou
+sempre que houver mudanca relevante suficiente para impactar a retomada segura.
 
 Obrigacao operacional da IA:
 - reapresentar essa frase periodicamente na propria conversa com o operador

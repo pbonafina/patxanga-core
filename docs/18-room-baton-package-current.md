@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-03-14 15:06:01
+Generated at: 2026-03-14 16:30:12
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -42,7 +42,11 @@ So depois disso voce podera pedir os comandos e arquivos complementares necessar
  M .gitignore
  M docs/18-room-baton-package-current.md
  M docs/18-room-baton-process-v1.0.md
+ M docs/frontend-rack-composition-implementation-plan-v1.0.md
+ M docs/frontend-rack-composition-ux-v1.0.md
  M frontend/components/BoardSection.tsx
+ M frontend/components/RackSection.tsx
+ M frontend/pages/index.tsx
  M generate-room-baton-package.sh
  M sql/migrations/001_initial_schema.sql
  M sql/rpc/create_match.sql
@@ -94,7 +98,8 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-1ddb5a6 (HEAD -> develop, origin/develop) Adiciona processo e pacote unico de passagem de bastao
+4b181f0 (HEAD -> develop, origin/develop) Refina frase oficial de passagem de bastao
+1ddb5a6 Adiciona processo e pacote unico de passagem de bastao
 9092d55 Refina regra de lacuna entre duas pecas selecionadas
 71716b1 Normaliza superficie local de composicao do rack
 5aa2663 Adiciona plano de implementacao da composicao local do rack
@@ -108,14 +113,10 @@ aa64609 Destaca turno ativo no rack com cronometro visual
 2fa2cd6 Ajustado room restart prompt para aguardar todos os arquivos
 8dea51e Atualizado kit de continuidade com tela jogavel e drag and drop
 a48c292 Adicionado drag and drop local no rack
-7313577 Simplificada tela jogavel com foco em acoes
 ```
 
 ### tail -n 60 ../project-log.md
 ```
-## 2026-03-13 18:41
-- Fechado suporte funcional de wildcard com declared_letter no backend e frontend, validado ate pending_vote.
-
 ## 2026-03-13 18:47
 - Atualizado room restart prompt com recomendacao de iniciar pela primeira tela de jogo orientada a produto.
 
@@ -172,6 +173,9 @@ a48c292 Adicionado drag and drop local no rack
 
 ## 2026-03-14 14:53
 - Adicionado processo e pacote unico de passagem de bastao
+
+## 2026-03-14 15:06
+- Refinada frase oficial de passagem de bastao
 
 ```
 
@@ -2352,14 +2356,13 @@ Conjunto de pecas reais retornadas pelo backend em `rack_state`.
 ### 5.2 Superficie local de composicao
 Camada de UX onde o frontend pode organizar visualmente:
 - pecas reais do rack oficial
-- lacunas locais
-- espacos extras locais
+- slots locais permanentes de composicao
 
-### 5.3 Lacuna local
-Espaco visual criado no frontend para representar uma posicao
-que o jogador deseja deixar em aberto durante sua montagem mental.
+### 5.3 Slot local permanente
+Espaco visual local, sempre disponivel na superficie de composicao,
+usado para dar folga de montagem mental ao jogador.
 
-A lacuna local:
+O slot local permanente:
 - nao e uma peca real
 - nao existe no backend
 - nao entra no submit
@@ -2368,7 +2371,7 @@ A lacuna local:
 - nao altera `rack_state` oficial
 
 ### 5.4 Letra de rascunho
-Letra digitada pelo jogador dentro de uma lacuna local apenas como lembrete.
+Letra digitada pelo jogador dentro de um slot local apenas como lembrete.
 
 A letra de rascunho:
 - nao e `declared_letter` de backend
@@ -2376,14 +2379,16 @@ A letra de rascunho:
 - nao altera o jogo real
 - nao pode ser enviada como parte da jogada oficial
 
-### 5.5 Espacos extras locais
-Posicoes adicionais de composicao visual no rack para permitir manobra,
-reordenacao e planejamento mental da palavra.
+### 5.5 Associacao local com o tabuleiro
+Associacao local, explicita e reversivel entre um slot de composicao
+e uma peca/casa do tabuleiro escolhida pelo jogador.
 
-Esses espacos:
-- sao locais
-- nao representam aumento real do rack
-- nao alteram o backend
+Essa associacao:
+- e apenas local
+- nao reserva a peca do tabuleiro
+- nao reserva a casa do tabuleiro
+- nao altera o backend
+- pode se tornar invalida se o tabuleiro mudar antes da jogada
 
 ## 6. Comportamentos permitidos
 
@@ -2391,37 +2396,35 @@ O frontend pode permitir:
 - reordenar pecas reais localmente
 - selecionar uma ou mais pecas localmente
 - mover grupos locais dentro da superficie do rack
-- criar lacunas locais
-- mover lacunas locais
-- remover lacunas locais
-- digitar uma letra de rascunho na lacuna
-- usar espacos extras locais como apoio de composicao
+- usar slots locais permanentes como apoio de composicao
+- digitar letra de rascunho em slots locais
+- associar localmente um slot a uma peca/casa do tabuleiro
+- remover ou refazer essa associacao local
 
-## 7. Regra de insercao de lacuna
+## 7. Regra de composicao com slots permanentes
 
-A UX desejada deve criar lacuna entre duas pecas reais escolhidas
-na composicao local do jogador.
+A UX desejada deve oferecer slots locais permanentes de composicao,
+sempre disponiveis no rack local do jogador.
 
 Leitura correta:
 - o jogador organiza pecas reais no rack
-- o jogador seleciona exatamente duas pecas reais como referencias
-- o frontend cria a lacuna entre essas duas pecas na ordem local atual
-- a lacuna pode receber uma letra de rascunho
+- o jogador move pecas livremente entre pecas reais e slots locais
+- um slot vazio pode receber letra de rascunho
+- depois, se desejar, o jogador pode associar localmente esse slot
+  a uma peca/casa do tabuleiro
 - a composicao inteira continua movel dentro do rack local
 
 Leitura incorreta:
-- criar lacuna a partir de uma peca unica com lado implicito
-- criar lacuna com regra ambigua de esquerda/direita
-- criar lacuna ja vinculada ao tabuleiro
-
-Enquanto essa UX completa nao estiver pronta, implementacoes intermediarias
-podem existir, desde que nao violem os limites deste contrato.
+- depender de criar lacuna dinamica para cada montagem
+- tratar slot local como peca oficial
+- criar vinculo inicial automatico entre slot e tabuleiro
+- tratar associacao local como reserva oficial do board
 
 
 ## 8. Relacao com o tabuleiro
 
 A composicao local do rack pode refletir a intencao do jogador
-de usar uma letra ja existente no tabuleiro.
+de usar uma letra ou casa ja existente no tabuleiro.
 
 Mas essa intencao:
 - e apenas local
@@ -2431,7 +2434,8 @@ Mas essa intencao:
 - pode ficar invalida antes do turno do jogador
 
 Portanto:
-- a letra escolhida na lacuna e apenas lembrete estrategico
+- a letra digitada no slot e apenas lembrete estrategico
+- a associacao local com o tabuleiro e apenas referencia de composicao
 - o jogador pode precisar revisar sua composicao depois
 
 ## 9. Relacao com submit de jogada
@@ -2440,9 +2444,9 @@ O submit oficial continua obedecendo o contrato vigente de `submit_patxanga_move
 
 Logo:
 - apenas pecas reais colocadas entram em `p_placed_tiles`
-- lacunas locais nao entram em `p_placed_tiles`
+- slots locais nao entram em `p_placed_tiles`
 - letras de rascunho nao entram em `p_placed_tiles`
-- espacos extras locais nao entram em `p_placed_tiles`
+- associacoes locais com o tabuleiro nao entram em `p_placed_tiles`
 
 ## 10. Relacao com o estado local temporario
 
@@ -2491,8 +2495,9 @@ Nesta fase do projeto:
 
 Esta frente pode ser considerada coerente quando:
 - o jogador conseguir reorganizar pecas livremente no rack local
-- o jogador conseguir abrir lacunas locais entre posicoes da composicao
+- o jogador conseguir usar slots locais permanentes de composicao
 - o jogador conseguir usar letras de rascunho como lembrete
+- o jogador conseguir associar localmente slots ao tabuleiro sem afetar o backend
 - o jogador entender que isso nao altera o jogo real
 - o fluxo continuar compativel com o backend atual
 
@@ -2538,9 +2543,10 @@ Nao entra neste plano:
 
 Ao fim desta frente, o jogador deve conseguir:
 - reorganizar pecas reais no rack local
-- inserir lacunas locais entre posicoes da composicao
-- mover lacunas junto da composicao local
-- escrever letras de rascunho nas lacunas
+- usar slots locais permanentes de composicao
+- mover pecas livremente entre pecas reais e slots locais
+- escrever letras de rascunho nos slots
+- associar localmente slots ao tabuleiro sem contaminar o submit
 - continuar enviando jogadas reais sem contaminar o submit
 
 
@@ -2550,18 +2556,19 @@ Ao fim desta frente, o jogador deve conseguir:
 Responsabilidades nesta frente:
 - manter estado local da superficie de composicao do rack
 - coordenar selecao de pecas reais
-- coordenar lacunas locais
-- coordenar drafts locais de letras nas lacunas
+- coordenar slots locais permanentes
+- coordenar drafts locais de letras nos slots
+- coordenar associacoes locais opcionais entre slot e tabuleiro
 - preservar geracao correta de `placedTilesPreview`
-- garantir que lacunas nao entrem em submit
+- garantir que slots nao entrem em submit
 
 ### 4.2 `frontend/components/RackSection.tsx`
 Responsabilidades nesta frente:
-- renderizar pecas reais e lacunas locais na mesma superficie visual
+- renderizar pecas reais e slots locais na mesma superficie visual
 - permitir reordenacao local coerente
-- permitir edicao da letra de rascunho
-- permitir remocao local de lacunas
+- permitir edicao da letra de rascunho nos slots
 - manter clareza visual entre item real e item local
+- manter manipulacao simples e previsivel no rack
 
 ### 4.3 `frontend/components/GamePlayScreen.tsx`
 Responsabilidades nesta frente:
@@ -2576,23 +2583,25 @@ Modelo recomendado:
 - itens locais heterogeneos
 - cada item pode ser:
   - peca real
-  - lacuna local
+  - slot local permanente
 
 Exemplo conceitual:
 - `{ kind: "tile", tileId: "..." }`
-- `{ kind: "gap", gapId: "..." }`
+- `{ kind: "slot", slotId: "slot-1" }`
 
 Estado adicional:
-- drafts por lacuna
+- drafts por slot
+- associacao opcional do slot ao tabuleiro
 - selecao atual de pecas reais
 - ordem local da superficie de composicao
 
 ## 6. Invariantes obrigatorios
 
 - peca real continua identificada por `tileId`
-- lacuna local continua sem existencia no backend
-- submit oficial continua ignorando lacunas
+- slot local continua sem existencia no backend
+- submit oficial continua ignorando slots
 - submit oficial continua ignorando drafts
+- submit oficial continua ignorando associacoes locais com o tabuleiro
 - `placedTilesPreview` continua derivado apenas de pecas reais colocadas no board
 - reidratacao oficial pode descartar estado local temporario
 
@@ -2606,41 +2615,62 @@ Objetivo:
 Saida esperada:
 - rack local aceita itens reais e lacunas
 
-### Etapa 2 — inserir lacuna entre duas pecas selecionadas
+### Etapa 2 — slots locais permanentes de composicao
 Objetivo:
-- permitir criacao de lacuna entre duas pecas reais escolhidas na composicao local
-- eliminar ambiguidade de criar lacuna a esquerda/direita de uma peca unica
-- deixar de depender apenas de “adicionar lacuna no fim”
+- substituir lacunas dinamicas por slots locais permanentes
+- manter sempre folga de composicao no rack local
+- simplificar a montagem mental sem depender de criacao pontual de lacuna
 
 Saida esperada:
-- jogador consegue selecionar exatamente duas pecas reais
-- jogador consegue abrir lacuna entre essas duas pecas na ordem local atual
-- a lacuna nasce sem vinculo inicial com o tabuleiro
+- jogador ve slots locais permanentes no rack
+- jogador move pecas reais livremente entre pecas e slots
+- slots nascem sem vinculo inicial com o tabuleiro
 
-### Etapa 3 — mover lacunas e grupos de forma coerente
+### Etapa 3 — reordenacao fluida com slots e pecas
 Objetivo:
 - manter reordenacao local funcionando com itens mistos
 - preservar reordenacao em grupo para pecas reais selecionadas
+- tornar a manipulacao no rack previsivel e user friendly
 
 Saida esperada:
 - grupo de pecas continua movel
-- lacuna continua movel
+- slots continuam moviveis
 - nenhuma dessas operacoes afeta backend
 
-### Etapa 4 — preservar submit oficial
+### Etapa 4 — rascunho local nos slots
 Objetivo:
-- garantir que lacunas e drafts nunca contaminem o submit real
+- permitir letra de rascunho em slot local
+- manter esse rascunho 100% fora do submit oficial
+
+Saida esperada:
+- slot pode receber letra de rascunho
+- draft continua apenas local
+
+### Etapa 5 — associacao local do slot ao tabuleiro
+Objetivo:
+- permitir que o jogador clique em um slot local e depois em uma peca/casa do tabuleiro
+- registrar essa associacao apenas no frontend
+- manter a associacao reversivel e nao oficial
+
+Saida esperada:
+- slot pode guardar associacao local com o tabuleiro
+- associacao continua fora do backend
+
+### Etapa 6 — preservar submit oficial
+Objetivo:
+- garantir que slots, drafts e associacoes locais nunca contaminem o submit real
 
 Saida esperada:
 - `placedTilesPreview` permanece correto
 - submit continua aceitando apenas pecas reais
 
-### Etapa 5 — refino visual minimo
+### Etapa 7 — refino visual minimo
 Objetivo:
 - diferenciar melhor:
   - peca real
-  - lacuna local
+  - slot local
   - letra de rascunho
+  - associacao local com o tabuleiro
 - manter legibilidade da mesa de composicao
 
 ## 8. Fora de escopo neste plano
@@ -2649,6 +2679,7 @@ Nao entra nesta implementacao:
 - drag rack -> board
 - reserva de letra do tabuleiro
 - reserva de casa do tabuleiro
+- associacao local tratada como reserva oficial
 - alteracao do contrato de wildcard
 - alteracao do submit oficial
 - alteracao do backend
@@ -2656,12 +2687,13 @@ Nao entra nesta implementacao:
 
 ## 9. Riscos que devem ser evitados
 
-- misturar item local de lacuna com peca real
+- misturar slot local com peca real
 - quebrar selecao multipla ja validada
 - quebrar reordenacao em grupo ja validada
-- deixar lacuna entrar em `placedTilesPreview`
+- deixar slot entrar em `placedTilesPreview`
 - deixar draft local interferir em wildcard real
 - acoplar composicao local ao board oficial
+- tratar associacao local com o tabuleiro como estado oficial
 
 ## 10. Checklist de validacao
 
@@ -2674,10 +2706,11 @@ Nao entra nesta implementacao:
 - selecao simples continua funcionando
 - selecao multipla continua funcionando
 - reordenacao em grupo continua funcionando
-- lacuna pode ser criada entre duas pecas reais selecionadas
-- lacuna pode receber letra de rascunho
-- lacuna nasce sem vinculo inicial com o tabuleiro
-- submit continua ignorando lacunas
+- slots locais permanentes existem na composicao
+- slots podem receber letra de rascunho
+- slots nascem sem vinculo inicial com o tabuleiro
+- associacao local do slot ao tabuleiro nao altera backend
+- submit continua ignorando slots locais
 - submit continua ignorando drafts
 
 ## 11. Fechamento correto desta frente
@@ -2848,11 +2881,12 @@ continuidade: analise antes de alterar, confirme estado real antes de concluir,
 preserve seguranca, rastreabilidade, documentacao, versionamento e validacao, e
 trabalhe de forma incremental, sem atalhos e sem assumir contexto nao
 verificado. Peca explicitamente o arquivo `docs/18-room-baton-package-current.md`
-para receber diretivas, contexto operacional e status atualizado do projeto. So
-depois disso VOCE deve validar branch, commits recentes, `../project-log.md` e
-os comandos/arquivos complementares de inicializacao. O arquivo deve ser
-atualizado sempre que o operador solicitar ou sempre que houver mudanca
-relevante suficiente para impactar a retomada segura.
+para receber diretivas, contexto operacional e status atualizado do projeto e,
+no ambiente local deste operador, solicite que ele rode o comando `cd ~/patxanga-bootstrap/patxanga-core && open -a TextEdit docs/18-room-baton-package-current.md`
+para abrir o arquivo no Mac. So depois disso VOCE deve validar branch, commits
+recentes, `../project-log.md` e os comandos/arquivos complementares de
+inicializacao. O arquivo deve ser atualizado sempre que o operador solicitar ou
+sempre que houver mudanca relevante suficiente para impactar a retomada segura.
 
 Obrigacao operacional da IA:
 - reapresentar essa frase periodicamente na propria conversa com o operador
@@ -2868,4 +2902,4 @@ Fim do documento.
 
 ## FRASE PADRAO DE PASSAGEM DE BASTAO
 
-ATENCAO: VOCE esta assumindo a continuidade do projeto Patxanga, no qual a continuidade e condicao imutavel da atuacao. Aja como responsavel tecnico de continuidade: analise antes de alterar, confirme estado real antes de concluir, preserve seguranca, rastreabilidade, documentacao, versionamento e validacao, e trabalhe de forma incremental, sem atalhos e sem assumir contexto nao verificado. Peca explicitamente o arquivo docs/18-room-baton-package-current.md para receber diretivas, contexto operacional e status atualizado do projeto. So depois disso VOCE deve validar branch, commits recentes, ../project-log.md e os comandos/arquivos complementares de inicializacao. O arquivo deve ser atualizado sempre que o operador solicitar ou sempre que houver mudanca relevante suficiente para impactar a retomada segura.
+ATENCAO: VOCE esta assumindo a continuidade do projeto Patxanga, no qual a continuidade e condicao imutavel da atuacao. Aja como responsavel tecnico de continuidade: analise antes de alterar, confirme estado real antes de concluir, preserve seguranca, rastreabilidade, documentacao, versionamento e validacao, e trabalhe de forma incremental, sem atalhos e sem assumir contexto nao verificado. Peca explicitamente o arquivo docs/18-room-baton-package-current.md para receber diretivas, contexto operacional e status atualizado do projeto e, no ambiente local deste operador, solicite que ele rode o comando cd ~/patxanga-bootstrap/patxanga-core && open -a TextEdit docs/18-room-baton-package-current.md para abrir o arquivo no Mac. So depois disso VOCE deve validar branch, commits recentes, ../project-log.md e os comandos/arquivos complementares de inicializacao. O arquivo deve ser atualizado sempre que o operador solicitar ou sempre que houver mudanca relevante suficiente para impactar a retomada segura.
