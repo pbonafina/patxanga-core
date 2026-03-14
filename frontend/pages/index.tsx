@@ -68,6 +68,8 @@ export default function HomePage() {
   const [localPlacements, setLocalPlacements] = useState<Record<string, string>>({});
   const [localDeclaredLetters, setLocalDeclaredLetters] = useState<Record<string, string>>({});
   const [localRackOrder, setLocalRackOrder] = useState<string[]>([]);
+  const [localRackGapDrafts, setLocalRackGapDrafts] = useState<Record<string, string>>({});
+  const [nextRackGapSerial, setNextRackGapSerial] = useState(1);
   const [showDebug, setShowDebug] = useState(false);
 
   const resolvedBootstrap = useMatchBootstrap(bootstrapData ?? undefined);
@@ -210,6 +212,8 @@ export default function HomePage() {
       .filter((id): id is string => Boolean(id));
 
     setLocalRackOrder(nextIds);
+    setLocalRackGapDrafts({});
+    setNextRackGapSerial(1);
   }, [resolvedBootstrap.playerContext]);
 
   const orderedPlayerRackState = useMemo(() => {
@@ -217,7 +221,7 @@ export default function HomePage() {
       id?: string;
     }>;
 
-    if (rackState.length === 0) {
+    if (rackState.length === 0 && localRackOrder.length === 0) {
       return [];
     }
 
@@ -228,15 +232,25 @@ export default function HomePage() {
     );
 
     const ordered = localRackOrder
-      .map((tileId) => byId.get(tileId))
-      .filter((tile): tile is { id?: string } => Boolean(tile));
+      .map((itemId) => {
+        if (itemId.startsWith("__gap__:")) {
+          return {
+            kind: "gap" as const,
+            gapId: itemId,
+            draftLetter: localRackGapDrafts[itemId] ?? "",
+          };
+        }
+
+        return byId.get(itemId) ?? null;
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
 
     const missing = rackState.filter(
       (tile) => tile.id && !localRackOrder.includes(tile.id)
     );
 
     return [...ordered, ...missing];
-  }, [localRackOrder, resolvedBootstrap.playerContext]);
+  }, [localRackGapDrafts, localRackOrder, resolvedBootstrap.playerContext]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -249,6 +263,8 @@ export default function HomePage() {
     setSelectedTileIds([]);
     setLocalPlacements({});
     setLocalDeclaredLetters({});
+    setLocalRackGapDrafts({});
+    setNextRackGapSerial(1);
 
     try {
       const nextData = await loadMatchBootstrap({
@@ -322,6 +338,8 @@ export default function HomePage() {
       setSelectedTileIds([]);
       setLocalPlacements({});
       setLocalDeclaredLetters({});
+      setLocalRackGapDrafts({});
+      setNextRackGapSerial(1);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Falha ao enviar jogada."
@@ -513,6 +531,33 @@ export default function HomePage() {
     });
   }
 
+  function handleAddRackGap() {
+    const gapId = `__gap__:${nextRackGapSerial}`;
+    setNextRackGapSerial((current) => current + 1);
+    setLocalRackOrder((current) => [...current, gapId]);
+    setLocalRackGapDrafts((current) => ({
+      ...current,
+      [gapId]: "",
+    }));
+  }
+
+  function handleRemoveRackGap(gapId: string) {
+    setLocalRackOrder((current) => current.filter((itemId) => itemId !== gapId));
+    setLocalRackGapDrafts((current) => {
+      const next = { ...current };
+      delete next[gapId];
+      return next;
+    });
+  }
+
+  function handleChangeRackGapDraft(gapId: string, nextValue: string) {
+    const normalized = nextValue.trim().slice(0, 1).toUpperCase();
+    setLocalRackGapDrafts((current) => ({
+      ...current,
+      [gapId]: normalized,
+    }));
+  }
+
 
 
 
@@ -578,6 +623,7 @@ export default function HomePage() {
         isFinished={isFinished}
         winnerPlayerId={resolvedBootstrap.winnerPlayerId}
         finishedAt={resolvedBootstrap.finishedAt}
+        viewerPlayerId={resolvedBootstrap.playerId}
         playersSummary={resolvedBootstrap.playersSummary}
         currentTurnPlayerId={resolvedBootstrap.currentTurnPlayerId}
         boardState={resolvedBootstrap.boardState}
@@ -607,6 +653,9 @@ export default function HomePage() {
           setSelectedTileId(null);
           setSelectedTileIds([]);
         }}
+        onAddRackGap={handleAddRackGap}
+        onRemoveRackGap={handleRemoveRackGap}
+        onChangeRackGapDraft={handleChangeRackGapDraft}
         onReorderTile={(draggedTileId, targetTileId) => {
           setLocalRackOrder((current) => {
             const selectedSet = new Set(selectedTileIds);
@@ -698,6 +747,9 @@ export default function HomePage() {
           setSelectedTileId(null);
           setSelectedTileIds([]);
         }}
+        onAddGap={handleAddRackGap}
+        onRemoveGap={handleRemoveRackGap}
+        onChangeGapDraft={handleChangeRackGapDraft}
         onReorderTile={(draggedTileId, targetTileId) => {
           setLocalRackOrder((current) => {
             const draggedIndex = current.indexOf(draggedTileId);

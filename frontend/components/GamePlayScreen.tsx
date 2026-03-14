@@ -24,6 +24,7 @@ type GamePlayScreenProps = {
   isFinished: boolean;
   winnerPlayerId: string | null;
   finishedAt: string | null;
+  viewerPlayerId: string | null;
   playersSummary: Array<{
     player_id: string;
     display_name: string;
@@ -61,6 +62,9 @@ type GamePlayScreenProps = {
   onToggleTile: (tileId: string) => void;
   onClearPreview: () => void;
   onReorderTile: (draggedTileId: string, targetTileId: string) => void;
+  onAddRackGap: () => void;
+  onRemoveRackGap: (gapId: string) => void;
+  onChangeRackGapDraft: (gapId: string, nextValue: string) => void;
   onSubmitMove: () => void;
   onApprove: () => void;
   onReject: () => void;
@@ -79,6 +83,7 @@ export function GamePlayScreen({
   isFinished,
   winnerPlayerId,
   finishedAt,
+  viewerPlayerId,
   playersSummary,
   currentTurnPlayerId,
 
@@ -109,6 +114,9 @@ export function GamePlayScreen({
   onToggleTile,
   onClearPreview,
   onReorderTile,
+  onAddRackGap,
+  onRemoveRackGap,
+  onChangeRackGapDraft,
   onSubmitMove,
   onApprove,
   onReject,
@@ -121,11 +129,17 @@ export function GamePlayScreen({
 
   const totalPlayers = playersSummary.length;
   const placedTileCount = placedTilesPreview.length;
-  const isPlayersTurn = isActive;
+  const isPlayersTurn =
+    Boolean(viewerPlayerId) &&
+    Boolean(currentTurnPlayerId) &&
+    viewerPlayerId === currentTurnPlayerId &&
+    isActive;
   const selectedGroupCount = selectedTileIds.length;
 
   const statusTone = isActive
-    ? { label: "Sua mesa está pronta", color: "#166534", background: "#dcfce7", border: "#86efac" }
+    ? isPlayersTurn
+      ? { label: "Sua vez de jogar", color: "#166534", background: "#dcfce7", border: "#86efac" }
+      : { label: "Aguardando o outro jogador", color: "#374151", background: "#f3f4f6", border: "#d1d5db" }
     : isVoting
       ? { label: "A mesa está em votação", color: "#92400e", background: "#fef3c7", border: "#fcd34d" }
       : isFinished
@@ -341,6 +355,9 @@ export function GamePlayScreen({
                 onToggleTile={onToggleTile}
                 onClearPreview={onClearPreview}
                 onReorderTile={onReorderTile}
+                onAddGap={onAddRackGap}
+                onRemoveGap={onRemoveRackGap}
+                onChangeGapDraft={onChangeRackGapDraft}
               />
 
               <div
@@ -354,27 +371,33 @@ export function GamePlayScreen({
                 }}
               >
                 <div style={{ color: "#4b5563", fontSize: 14 }}>
-                  {placedTileCount > 0
-                    ? `Jogada preparada com ${placedTileCount} peça${placedTileCount === 1 ? "" : "s"}.`
-                    : "Selecione peças do rack e monte sua jogada no tabuleiro."}
+                  {isPlayersTurn
+                    ? placedTileCount > 0
+                      ? `Jogada preparada com ${placedTileCount} peça${placedTileCount === 1 ? "" : "s"}.`
+                      : "Selecione peças do rack e clique no tabuleiro para montar a jogada."
+                    : "Você pode reorganizar o rack, mas a confirmação da jogada só libera no seu turno."}
                 </div>
 
                 <button
                   type="button"
                   onClick={onSubmitMove}
-                  disabled={!canSubmitMove || isSubmittingMove}
+                  disabled={!isPlayersTurn || !canSubmitMove || isSubmittingMove}
                   style={{
                     padding: "12px 18px",
-                    cursor: !canSubmitMove || isSubmittingMove ? "not-allowed" : "pointer",
+                    cursor: !isPlayersTurn || !canSubmitMove || isSubmittingMove ? "not-allowed" : "pointer",
                     borderRadius: 12,
                     border: "1px solid #1d4ed8",
-                    background: !canSubmitMove || isSubmittingMove ? "#bfdbfe" : "#2563eb",
+                    background: !isPlayersTurn || !canSubmitMove || isSubmittingMove ? "#bfdbfe" : "#2563eb",
                     color: "#ffffff",
                     fontWeight: 700,
                     minWidth: 170,
                   }}
                 >
-                  {isSubmittingMove ? "Enviando..." : "Confirmar jogada"}
+                  {isSubmittingMove
+                    ? "Enviando..."
+                    : isPlayersTurn
+                      ? "Confirmar jogada"
+                      : "Aguardar turno"}
                 </button>
               </div>
             </div>
