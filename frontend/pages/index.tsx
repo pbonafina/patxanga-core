@@ -18,6 +18,10 @@ type BoardCell = {
   multiplier_type?: string | null;
 } | null;
 
+type RackCompositionItem =
+  | { kind: "tile"; tileId: string }
+  | { kind: "gap"; gapId: string };
+
 function renderCellLabel(cell: BoardCell): string {
   if (!cell) return "";
   if (cell.tile?.letter) return cell.tile.letter;
@@ -67,7 +71,7 @@ export default function HomePage() {
   const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
   const [localPlacements, setLocalPlacements] = useState<Record<string, string>>({});
   const [localDeclaredLetters, setLocalDeclaredLetters] = useState<Record<string, string>>({});
-  const [localRackOrder, setLocalRackOrder] = useState<string[]>([]);
+  const [localRackComposition, setLocalRackComposition] = useState<RackCompositionItem[]>([]);
   const [localRackGapDrafts, setLocalRackGapDrafts] = useState<Record<string, string>>({});
   const [nextRackGapSerial, setNextRackGapSerial] = useState(1);
   const [showDebug, setShowDebug] = useState(false);
@@ -211,7 +215,7 @@ export default function HomePage() {
       })
       .filter((id): id is string => Boolean(id));
 
-    setLocalRackOrder(nextIds);
+    setLocalRackComposition(nextIds.map((tileId) => ({ kind: "tile" as const, tileId })));
     setLocalRackGapDrafts({});
     setNextRackGapSerial(1);
   }, [resolvedBootstrap.playerContext]);
@@ -221,7 +225,7 @@ export default function HomePage() {
       id?: string;
     }>;
 
-    if (rackState.length === 0 && localRackOrder.length === 0) {
+    if (rackState.length === 0 && localRackComposition.length === 0) {
       return [];
     }
 
@@ -231,26 +235,32 @@ export default function HomePage() {
         .map((tile) => [tile.id as string, tile])
     );
 
-    const ordered = localRackOrder
-      .map((itemId) => {
-        if (itemId.startsWith("__gap__:")) {
+    const ordered = localRackComposition
+      .map((item) => {
+        if (item.kind === "gap") {
           return {
             kind: "gap" as const,
-            gapId: itemId,
-            draftLetter: localRackGapDrafts[itemId] ?? "",
+            gapId: item.gapId,
+            draftLetter: localRackGapDrafts[item.gapId] ?? "",
           };
         }
 
-        return byId.get(itemId) ?? null;
+        return byId.get(item.tileId) ?? null;
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
 
+    const knownTileIds = new Set(
+      localRackComposition
+        .filter((item): item is Extract<RackCompositionItem, { kind: "tile" }> => item.kind === "tile")
+        .map((item) => item.tileId)
+    );
+
     const missing = rackState.filter(
-      (tile) => tile.id && !localRackOrder.includes(tile.id)
+      (tile) => tile.id && !knownTileIds.has(tile.id)
     );
 
     return [...ordered, ...missing];
-  }, [localRackGapDrafts, localRackOrder, resolvedBootstrap.playerContext]);
+  }, [localRackComposition, localRackGapDrafts, resolvedBootstrap.playerContext]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -534,7 +544,7 @@ export default function HomePage() {
   function handleAddRackGap() {
     const gapId = `__gap__:${nextRackGapSerial}`;
     setNextRackGapSerial((current) => current + 1);
-    setLocalRackOrder((current) => [...current, gapId]);
+    setLocalRackComposition((current) => [...current, { kind: "gap", gapId }]);
     setLocalRackGapDrafts((current) => ({
       ...current,
       [gapId]: "",
@@ -542,7 +552,9 @@ export default function HomePage() {
   }
 
   function handleRemoveRackGap(gapId: string) {
-    setLocalRackOrder((current) => current.filter((itemId) => itemId !== gapId));
+    setLocalRackComposition((current) =>
+      current.filter((item) => !(item.kind === "gap" && item.gapId === gapId))
+    );
     setLocalRackGapDrafts((current) => {
       const next = { ...current };
       delete next[gapId];
@@ -657,7 +669,10 @@ export default function HomePage() {
         onRemoveRackGap={handleRemoveRackGap}
         onChangeRackGapDraft={handleChangeRackGapDraft}
         onReorderTile={(draggedTileId, targetTileId) => {
-          setLocalRackOrder((current) => {
+          setLocalRackComposition((current) => {
+            const getId = (item: RackCompositionItem) =>
+              item.kind === "tile" ? item.tileId : item.gapId;
+
             const selectedSet = new Set(selectedTileIds);
             const shouldMoveGroup =
               selectedTileIds.length > 1 &&
@@ -665,9 +680,13 @@ export default function HomePage() {
               !selectedSet.has(targetTileId);
 
             if (shouldMoveGroup) {
-              const group = current.filter((tileId) => selectedSet.has(tileId));
-              const rest = current.filter((tileId) => !selectedSet.has(tileId));
-              const targetIndex = rest.indexOf(targetTileId);
+              const group = current.filter(
+                (item) => item.kind === "tile" && selectedSet.has(item.tileId)
+              );
+              const rest = current.filter(
+                (item) => !(item.kind === "tile" && selectedSet.has(item.tileId))
+              );
+              const targetIndex = rest.findIndex((item) => getId(item) === targetTileId);
 
               if (targetIndex === -1) {
                 return current;
@@ -680,8 +699,8 @@ export default function HomePage() {
               ];
             }
 
-            const draggedIndex = current.indexOf(draggedTileId);
-            const targetIndex = current.indexOf(targetTileId);
+            const draggedIndex = current.findIndex((item) => getId(item) === draggedTileId);
+            const targetIndex = current.findIndex((item) => getId(item) === targetTileId);
 
             if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) {
               return current;
@@ -751,9 +770,12 @@ export default function HomePage() {
         onRemoveGap={handleRemoveRackGap}
         onChangeGapDraft={handleChangeRackGapDraft}
         onReorderTile={(draggedTileId, targetTileId) => {
-          setLocalRackOrder((current) => {
-            const draggedIndex = current.indexOf(draggedTileId);
-            const targetIndex = current.indexOf(targetTileId);
+          setLocalRackComposition((current) => {
+            const getId = (item: RackCompositionItem) =>
+              item.kind === "tile" ? item.tileId : item.gapId;
+
+            const draggedIndex = current.findIndex((item) => getId(item) === draggedTileId);
+            const targetIndex = current.findIndex((item) => getId(item) === targetTileId);
 
             if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) {
               return current;
