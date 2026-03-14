@@ -65,6 +65,11 @@ type GamePlayScreenProps = {
   onReject: () => void;
 };
 
+function formatFinishedAt(value: string | null): string {
+  if (!value) return "(não disponível)";
+  return value;
+}
+
 export function GamePlayScreen({
   stateLabel,
   isWaiting,
@@ -108,28 +113,148 @@ export function GamePlayScreen({
 }: GamePlayScreenProps) {
   const gameplayEnabled = isActive || isVoting;
 
+  const currentTurnPlayerName =
+    playersSummary.find((player) => player.player_id === currentTurnPlayerId)?.display_name ??
+    "aguardando definição";
+
+  const totalPlayers = playersSummary.length;
+  const placedTileCount = placedTilesPreview.length;
+
+  const statusTone = isActive
+    ? { label: "Sua mesa está pronta", color: "#166534", background: "#dcfce7", border: "#86efac" }
+    : isVoting
+      ? { label: "A mesa está em votação", color: "#92400e", background: "#fef3c7", border: "#fcd34d" }
+      : isFinished
+        ? { label: "Partida encerrada", color: "#991b1b", background: "#fee2e2", border: "#fca5a5" }
+        : { label: "Aguardando início", color: "#374151", background: "#f3f4f6", border: "#d1d5db" };
+
   return (
     <section
       style={{
         marginTop: 24,
         padding: 20,
         border: "1px solid #d6d6d6",
-        borderRadius: 12,
-        background: "#fcfcfc",
+        borderRadius: 16,
+        background: "linear-gradient(180deg, #ffffff 0%, #fafaf9 100%)",
+        boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
       }}
     >
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "stretch",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 18,
+        }}
+      >
+        <div
+          style={{
+            flex: "1 1 320px",
+            minWidth: 280,
+            padding: 14,
+            borderRadius: 14,
+            border: `1px solid ${statusTone.border}`,
+            background: statusTone.background,
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: statusTone.color }}>
+            {stateLabel}
+          </div>
+          <div style={{ marginTop: 8, fontSize: 22, fontWeight: 700, color: "#111827" }}>
+            {statusTone.label}
+          </div>
+          <div style={{ marginTop: 8, fontSize: 14, color: "#374151" }}>
+            Turno atual: <strong>{currentTurnPlayerName}</strong>
+          </div>
+        </div>
+
+        <div
+          style={{
+            flex: "0 1 320px",
+            minWidth: 260,
+            padding: 14,
+            borderRadius: 14,
+            border: "1px solid #e5e7eb",
+            background: "#ffffff",
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#6b7280" }}>
+            Mesa
+          </div>
+
+          <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <span
+              style={{
+                padding: "6px 10px",
+                borderRadius: 999,
+                background: "#f3f4f6",
+                fontSize: 13,
+                color: "#111827",
+              }}
+            >
+              {totalPlayers} jogador{totalPlayers === 1 ? "" : "es"}
+            </span>
+
+            <span
+              style={{
+                padding: "6px 10px",
+                borderRadius: 999,
+                background: placedTileCount > 0 ? "#dbeafe" : "#f3f4f6",
+                fontSize: 13,
+                color: "#111827",
+              }}
+            >
+              {placedTileCount} peça{placedTileCount === 1 ? "" : "s"} em preparo
+            </span>
+
+            {isVoting ? (
+              <span
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 999,
+                  background: "#fef3c7",
+                  fontSize: 13,
+                  color: "#92400e",
+                }}
+              >
+                votação pendente
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
       {isWaiting ? (
-        <div style={{ marginBottom: 16 }}>
-          <p style={{ margin: 0 }}>A partida ainda não começou.</p>
+        <div
+          style={{
+            marginBottom: 18,
+            padding: 16,
+            borderRadius: 14,
+            border: "1px solid #e5e7eb",
+            background: "#ffffff",
+            color: "#374151",
+          }}
+        >
+          A partida ainda não começou. Assim que ela for iniciada, a mesa de jogo será liberada.
         </div>
       ) : null}
 
       {isFinished ? (
-        <div style={{ marginBottom: 16 }}>
-          <p style={{ margin: 0 }}>
-            A partida foi encerrada. Vencedor: {winnerPlayerId || "(não disponível)"}.
-            {" "}Encerrada em: {finishedAt || "(não disponível)"}.
-          </p>
+        <div
+          style={{
+            marginBottom: 18,
+            padding: 16,
+            borderRadius: 14,
+            border: "1px solid #fecaca",
+            background: "#fff7f7",
+            color: "#7f1d1d",
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>Resultado final</div>
+          <div>Vencedor: <strong>{winnerPlayerId || "(não disponível)"}</strong></div>
+          <div>Encerrada em: <strong>{formatFinishedAt(finishedAt)}</strong></div>
         </div>
       ) : null}
 
@@ -147,87 +272,49 @@ export function GamePlayScreen({
 
       {gameplayEnabled ? (
         <>
-          <div style={{ position: "relative", width: 630 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginTop: 18,
+            }}
+          >
             <div
               style={{
-                position: "absolute",
-                top: -10,
-                left: 18,
-                zIndex: 2,
+                width: "100%",
+                maxWidth: 690,
+                padding: 16,
+                borderRadius: 18,
+                background: "#f8fafc",
+                border: "1px solid #e5e7eb",
+                boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.8)",
               }}
             >
-              <div
-                title={
-                  isActive
-                    ? "Partida ativa"
-                    : isVoting
-                      ? "Aguardando votação"
-                      : isFinished
-                        ? "Partida encerrada"
-                        : isWaiting
-                          ? "Aguardando início"
-                          : "Estado desconhecido"
-                }
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: 3,
-                  border: "1px solid #666",
-                  background: isActive
-                    ? "#22c55e"
-                    : isVoting
-                      ? "#eab308"
-                      : isFinished
-                        ? "#ef4444"
-                        : "#9ca3af",
-                }}
+              <BoardSection
+                boardState={boardState}
+                localPlacements={localPlacements}
+                localDeclaredLetters={localDeclaredLetters}
+                pendingVoteTilesByCell={pendingVoteTilesByCell}
+                selectedTileId={selectedTileId}
+                playerRackState={playerRackState}
+                buildCellKey={buildCellKey}
+                renderCellLabel={renderCellLabel}
+                renderCellBackground={renderCellBackground}
+                onPlaceTile={onPlaceTile}
               />
             </div>
-
-            <div
-              style={{
-                position: "absolute",
-                top: -10,
-                right: 18,
-                display: "flex",
-                gap: 6,
-                zIndex: 2,
-              }}
-            >
-              {playersSummary.map((player) => {
-                const isCurrentTurn = player.player_id === currentTurnPlayerId;
-                return (
-                  <div
-                    key={player.player_id}
-                    title={player.display_name}
-                    style={{
-                      width: 14,
-                      height: 14,
-                      borderRadius: 3,
-                      border: isCurrentTurn ? "2px solid #111827" : "1px solid #666",
-                      background: isCurrentTurn ? "#60a5fa" : "#d1d5db",
-                    }}
-                  />
-                );
-              })}
-            </div>
-
-            <BoardSection
-              boardState={boardState}
-              localPlacements={localPlacements}
-              localDeclaredLetters={localDeclaredLetters}
-              pendingVoteTilesByCell={pendingVoteTilesByCell}
-              selectedTileId={selectedTileId}
-              playerRackState={playerRackState}
-              buildCellKey={buildCellKey}
-              renderCellLabel={renderCellLabel}
-              renderCellBackground={renderCellBackground}
-              onPlaceTile={onPlaceTile}
-            />
           </div>
 
           {isActive ? (
-            <>
+            <div
+              style={{
+                marginTop: 18,
+                padding: 18,
+                borderRadius: 16,
+                border: "1px solid #e5e7eb",
+                background: "#ffffff",
+              }}
+            >
               <RackSection
                 rackTiles={playerRackState}
                 selectedTileId={selectedTileId}
@@ -237,17 +324,41 @@ export function GamePlayScreen({
                 onReorderTile={onReorderTile}
               />
 
-              <div style={{ marginTop: 20, display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  marginTop: 18,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ color: "#4b5563", fontSize: 14 }}>
+                  {placedTileCount > 0
+                    ? `Jogada preparada com ${placedTileCount} peça${placedTileCount === 1 ? "" : "s"}.`
+                    : "Selecione peças do rack e monte sua jogada no tabuleiro."}
+                </div>
+
                 <button
                   type="button"
                   onClick={onSubmitMove}
                   disabled={!canSubmitMove || isSubmittingMove}
-                  style={{ padding: "10px 14px", cursor: "pointer" }}
+                  style={{
+                    padding: "12px 18px",
+                    cursor: !canSubmitMove || isSubmittingMove ? "not-allowed" : "pointer",
+                    borderRadius: 12,
+                    border: "1px solid #1d4ed8",
+                    background: !canSubmitMove || isSubmittingMove ? "#bfdbfe" : "#2563eb",
+                    color: "#ffffff",
+                    fontWeight: 700,
+                    minWidth: 170,
+                  }}
                 >
                   {isSubmittingMove ? "Enviando..." : "Confirmar jogada"}
                 </button>
               </div>
-            </>
+            </div>
           ) : null}
         </>
       ) : null}

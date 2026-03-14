@@ -37,60 +37,85 @@ export function VotingSection({
       {pendingVoteError ? (
         <section
           style={{
-            marginTop: 24,
+            marginBottom: 18,
             padding: 16,
-            border: "1px solid #b00020",
-            borderRadius: 8,
+            border: "1px solid #fca5a5",
+            borderRadius: 14,
             background: "#fff5f5",
           }}
         >
-          <h2>Erro ao carregar contexto de votação</h2>
-          <p>{pendingVoteError}</p>
+          <div style={{ fontWeight: 700, color: "#991b1b", marginBottom: 6 }}>
+            Erro ao carregar a votação
+          </div>
+          <div style={{ color: "#7f1d1d" }}>{pendingVoteError}</div>
         </section>
       ) : null}
 
       {pendingVoteMove ? (
         <section
           style={{
-            marginTop: 24,
+            marginBottom: 18,
             padding: 16,
-            border: "1px solid #d97706",
-            borderRadius: 8,
+            border: "1px solid #fcd34d",
+            borderRadius: 14,
             background: "#fffbeb",
           }}
         >
-          <h2>Jogada pendente de votação</h2>
-          <p>
-            Uma jogada enviada por outro jogador está aguardando resolução.
-          </p>
-          <p>
-            <strong>Autor:</strong> {pendingVoteMove.author_display_name ?? "(desconhecido)"}
-          </p>
-          <p>
-            <strong>Palavra principal:</strong> {pendingVoteMove.main_word ?? "(nula)"}
-          </p>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#92400e" }}>
+                Votação em andamento
+              </div>
+              <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700, color: "#111827" }}>
+                Jogada aguardando decisão da mesa
+              </div>
+              <div style={{ marginTop: 8, color: "#4b5563" }}>
+                Autor: <strong>{pendingVoteMove.author_display_name ?? "(desconhecido)"}</strong>
+              </div>
+              <div style={{ marginTop: 4, color: "#4b5563" }}>
+                Palavra principal: <strong>{pendingVoteMove.main_word ?? "(não disponível)"}</strong>
+              </div>
+              <div style={{ marginTop: 8, color: "#6b7280", fontSize: 14 }}>
+                O tabuleiro oficial continua intacto até a votação ser resolvida.
+              </div>
+            </div>
 
-          {canCurrentViewerVote ? (
-            <p>
-              Você pode votar nesta jogada agora.
-            </p>
-          ) : (
-            <p>
-              Você não pode votar nesta jogada nesta tela.
-            </p>
-          )}
+            <div
+              style={{
+                padding: "6px 10px",
+                borderRadius: 999,
+                background: canCurrentViewerVote ? "#dcfce7" : "#e5e7eb",
+                color: canCurrentViewerVote ? "#166534" : "#4b5563",
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
+              {canCurrentViewerVote ? "voto disponível" : "voto indisponível"}
+            </div>
+          </div>
 
-          <p>
-            O board oficial permanece intacto; o tabuleiro abaixo mostra apenas o overlay visual
-            da jogada pendente.
-          </p>
-
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 14 }}>
             <button
               type="button"
               onClick={onApprove}
               disabled={!canCurrentViewerVote || isSubmittingVote}
-              style={{ padding: "10px 14px", cursor: "pointer" }}
+              style={{
+                padding: "10px 14px",
+                cursor: !canCurrentViewerVote || isSubmittingVote ? "not-allowed" : "pointer",
+                borderRadius: 10,
+                border: "1px solid #15803d",
+                background: !canCurrentViewerVote || isSubmittingVote ? "#bbf7d0" : "#16a34a",
+                color: "#ffffff",
+                fontWeight: 700,
+              }}
             >
               {isSubmittingVote ? "Enviando..." : "Aprovar"}
             </button>
@@ -99,7 +124,15 @@ export function VotingSection({
               type="button"
               onClick={onReject}
               disabled={!canCurrentViewerVote || isSubmittingVote}
-              style={{ padding: "10px 14px", cursor: "pointer" }}
+              style={{
+                padding: "10px 14px",
+                cursor: !canCurrentViewerVote || isSubmittingVote ? "not-allowed" : "pointer",
+                borderRadius: 10,
+                border: "1px solid #b45309",
+                background: !canCurrentViewerVote || isSubmittingVote ? "#fde68a" : "#d97706",
+                color: "#ffffff",
+                fontWeight: 700,
+              }}
             >
               {isSubmittingVote ? "Enviando..." : "Rejeitar"}
             </button>
