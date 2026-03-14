@@ -200,7 +200,7 @@ OUT="docs/18-room-baton-package-current.md"
 
   echo "## FRASE PADRAO DE PASSAGEM DE BASTAO"
   echo
-  echo "Ao abrir nova sala, informe que ela esta assumindo a continuidade do projeto Patxanga, que a continuidade e condicao imutavel da atuacao, peca o arquivo unico de passagem de bastao e mantenha esse arquivo atualizado sempre que o operador solicitar ou sempre que houver mudanca relevante suficiente para impactar a retomada segura."
+  echo "ATENCAO: VOCE esta assumindo a continuidade do projeto Patxanga, no qual a continuidade e condicao imutavel da atuacao. Aja como responsavel tecnico de continuidade: analise antes de alterar, confirme estado real antes de concluir, preserve seguranca, rastreabilidade, documentacao, versionamento e validacao, e trabalhe de forma incremental, sem atalhos e sem assumir contexto nao verificado. Peca explicitamente o arquivo docs/18-room-baton-package-current.md para receber diretivas, contexto operacional e status atualizado do projeto. So depois disso VOCE deve validar branch, commits recentes, ../project-log.md e os comandos/arquivos complementares de inicializacao. O arquivo deve ser atualizado sempre que o operador solicitar ou sempre que houver mudanca relevante suficiente para impactar a retomada segura."
 } > "$OUT"
 
 echo "Arquivo gerado em $OUT"

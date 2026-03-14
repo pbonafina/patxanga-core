@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-03-14 14:51:22
+Generated at: 2026-03-14 15:06:01
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -40,19 +40,19 @@ So depois disso voce podera pedir os comandos e arquivos complementares necessar
 ```
 ## develop...origin/develop
  M .gitignore
+ M docs/18-room-baton-package-current.md
+ M docs/18-room-baton-process-v1.0.md
  M frontend/components/BoardSection.tsx
+ M generate-room-baton-package.sh
  M sql/migrations/001_initial_schema.sql
  M sql/rpc/create_match.sql
  M sql/rpc/join_match.sql
 ?? .DS_Store
 ?? docs/.DS_Store
 ?? docs/15-pacote-final-colagem-v1.2-ultra-blindado.md
-?? docs/18-room-baton-package-current.md
-?? docs/18-room-baton-process-v1.0.md
 ?? docs/frontend-backend-operational-contract-v1.0.md
 ?? frontend/.env.local
 ?? generate-continuity-package.sh
-?? generate-room-baton-package.sh
 ?? sql/tests/test_direct_invite_decline.sql
 ?? sql/tests/test_direct_invite_flow.sql
 ?? sql/tests/test_exchange_tiles.sql
@@ -94,7 +94,8 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-9092d55 (HEAD -> develop, origin/develop) Refina regra de lacuna entre duas pecas selecionadas
+1ddb5a6 (HEAD -> develop, origin/develop) Adiciona processo e pacote unico de passagem de bastao
+9092d55 Refina regra de lacuna entre duas pecas selecionadas
 71716b1 Normaliza superficie local de composicao do rack
 5aa2663 Adiciona plano de implementacao da composicao local do rack
 f0f8022 Adiciona contrato de UX para composicao local do rack
@@ -108,14 +109,10 @@ aa64609 Destaca turno ativo no rack com cronometro visual
 8dea51e Atualizado kit de continuidade com tela jogavel e drag and drop
 a48c292 Adicionado drag and drop local no rack
 7313577 Simplificada tela jogavel com foco em acoes
-c33d9b0 Ajustado rack para tiles quadrados e registrado requisito de reordenacao
 ```
 
 ### tail -n 60 ../project-log.md
 ```
-## 2026-03-13 17:52
-- Atualizada continuidade com requisito prioritario de declaracao de letra para peca especial sem letra fixa.
-
 ## 2026-03-13 18:41
 - Fechado suporte funcional de wildcard com declared_letter no backend e frontend, validado ate pending_vote.
 
@@ -172,6 +169,9 @@ c33d9b0 Ajustado rack para tiles quadrados e registrado requisito de reordenacao
 
 ## 2026-03-14 14:06
 - Refinada regra de lacuna entre duas pecas selecionadas
+
+## 2026-03-14 14:53
+- Adicionado processo e pacote unico de passagem de bastao
 
 ```
 
@@ -2840,12 +2840,24 @@ Casos tipicos de atualizacao:
 
 ## 9. Passagem de bastao padrao
 
-Ao abrir nova sala:
-- informar que a sala esta assumindo a continuidade do projeto Patxanga
-- informar que a continuidade e condicao imutavel da atuacao
-- pedir o arquivo unico de passagem de bastao
-- so depois validar branch, commits recentes, `../project-log.md` e comandos
-  complementares de inicializacao
+Frase oficial:
+
+ATENCAO: VOCE esta assumindo a continuidade do projeto Patxanga, no qual a
+continuidade e condicao imutavel da atuacao. Aja como responsavel tecnico de
+continuidade: analise antes de alterar, confirme estado real antes de concluir,
+preserve seguranca, rastreabilidade, documentacao, versionamento e validacao, e
+trabalhe de forma incremental, sem atalhos e sem assumir contexto nao
+verificado. Peca explicitamente o arquivo `docs/18-room-baton-package-current.md`
+para receber diretivas, contexto operacional e status atualizado do projeto. So
+depois disso VOCE deve validar branch, commits recentes, `../project-log.md` e
+os comandos/arquivos complementares de inicializacao. O arquivo deve ser
+atualizado sempre que o operador solicitar ou sempre que houver mudanca
+relevante suficiente para impactar a retomada segura.
+
+Obrigacao operacional da IA:
+- reapresentar essa frase periodicamente na propria conversa com o operador
+- reapresentar essa frase obrigatoriamente apos marcos importantes
+- considerar essa reapresentacao parte imutavel do protocolo de continuidade
 
 ## 10. Fechamento
 
@@ -2856,4 +2868,4 @@ Fim do documento.
 
 ## FRASE PADRAO DE PASSAGEM DE BASTAO
 
-Ao abrir nova sala, informe que ela esta assumindo a continuidade do projeto Patxanga, que a continuidade e condicao imutavel da atuacao, peca o arquivo unico de passagem de bastao e mantenha esse arquivo atualizado sempre que o operador solicitar ou sempre que houver mudanca relevante suficiente para impactar a retomada segura.
+ATENCAO: VOCE esta assumindo a continuidade do projeto Patxanga, no qual a continuidade e condicao imutavel da atuacao. Aja como responsavel tecnico de continuidade: analise antes de alterar, confirme estado real antes de concluir, preserve seguranca, rastreabilidade, documentacao, versionamento e validacao, e trabalhe de forma incremental, sem atalhos e sem assumir contexto nao verificado. Peca explicitamente o arquivo docs/18-room-baton-package-current.md para receber diretivas, contexto operacional e status atualizado do projeto. So depois disso VOCE deve validar branch, commits recentes, ../project-log.md e os comandos/arquivos complementares de inicializacao. O arquivo deve ser atualizado sempre que o operador solicitar ou sempre que houver mudanca relevante suficiente para impactar a retomada segura.

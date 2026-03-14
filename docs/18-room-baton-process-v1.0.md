@@ -137,12 +137,24 @@ Casos tipicos de atualizacao:
 
 ## 9. Passagem de bastao padrao
 
-Ao abrir nova sala:
-- informar que a sala esta assumindo a continuidade do projeto Patxanga
-- informar que a continuidade e condicao imutavel da atuacao
-- pedir o arquivo unico de passagem de bastao
-- so depois validar branch, commits recentes, `../project-log.md` e comandos
-  complementares de inicializacao
+Frase oficial:
+
+ATENCAO: VOCE esta assumindo a continuidade do projeto Patxanga, no qual a
+continuidade e condicao imutavel da atuacao. Aja como responsavel tecnico de
+continuidade: analise antes de alterar, confirme estado real antes de concluir,
+preserve seguranca, rastreabilidade, documentacao, versionamento e validacao, e
+trabalhe de forma incremental, sem atalhos e sem assumir contexto nao
+verificado. Peca explicitamente o arquivo `docs/18-room-baton-package-current.md`
+para receber diretivas, contexto operacional e status atualizado do projeto. So
+depois disso VOCE deve validar branch, commits recentes, `../project-log.md` e
+os comandos/arquivos complementares de inicializacao. O arquivo deve ser
+atualizado sempre que o operador solicitar ou sempre que houver mudanca
+relevante suficiente para impactar a retomada segura.
+
+Obrigacao operacional da IA:
+- reapresentar essa frase periodicamente na propria conversa com o operador
+- reapresentar essa frase obrigatoriamente apos marcos importantes
+- considerar essa reapresentacao parte imutavel do protocolo de continuidade
 
 ## 10. Fechamento
 
