@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useState } from "react";
+
 type RackTile = {
   id?: string;
   letter?: string;
@@ -10,27 +12,164 @@ type RackSectionProps = {
   rackTiles: unknown[];
   selectedTileId: string | null;
   showDebug: boolean;
+  isPlayersTurn: boolean;
   onToggleTile: (tileId: string) => void;
   onClearPreview: () => void;
   onReorderTile: (draggedTileId: string, targetTileId: string) => void;
 };
 
+function SevenSegmentDigit({ value, alert }: { value: string; alert: boolean }) {
+  return (
+    <div
+      style={{
+        width: 34,
+        height: 50,
+        borderRadius: 8,
+        background: alert ? "#3f0d12" : "#111827",
+        border: alert ? "1px solid #ef4444" : "1px solid #374151",
+        color: alert ? "#fca5a5" : "#f87171",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: '"Courier New", monospace',
+        fontSize: 28,
+        fontWeight: 700,
+        letterSpacing: 1,
+        boxShadow: alert ? "0 0 14px rgba(239, 68, 68, 0.35)" : "inset 0 0 10px rgba(248, 113, 113, 0.14)",
+      }}
+    >
+      {value}
+    </div>
+  );
+}
+
+function formatCountdown(totalSeconds: number) {
+  const safe = Math.max(0, totalSeconds);
+  const minutes = Math.floor(safe / 60);
+  const seconds = safe % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 export function RackSection({
   rackTiles,
   selectedTileId,
   showDebug,
+  isPlayersTurn,
   onToggleTile,
   onClearPreview,
   onReorderTile,
 }: RackSectionProps) {
+  const [countdownSeconds, setCountdownSeconds] = useState(60);
+  const [blinkVisible, setBlinkVisible] = useState(true);
+
+  useEffect(() => {
+    if (!isPlayersTurn) {
+      setCountdownSeconds(60);
+      setBlinkVisible(true);
+      return;
+    }
+
+    setCountdownSeconds(60);
+    setBlinkVisible(true);
+
+    const timer = window.setInterval(() => {
+      setCountdownSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [isPlayersTurn]);
+
+  useEffect(() => {
+    if (!isPlayersTurn || countdownSeconds > 10) {
+      setBlinkVisible(true);
+      return;
+    }
+
+    const blinker = window.setInterval(() => {
+      setBlinkVisible((current) => !current);
+    }, 350);
+
+    return () => window.clearInterval(blinker);
+  }, [countdownSeconds, isPlayersTurn]);
+
+  const countdown = useMemo(() => formatCountdown(countdownSeconds), [countdownSeconds]);
+  const digits = countdown.split("");
+  const isAlert = isPlayersTurn && countdownSeconds <= 10;
+
+  const rackFrameStyle = isPlayersTurn
+    ? {
+        border: "2px solid #2563eb",
+        background: "#eff6ff",
+        boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.12)",
+      }
+    : {
+        border: "1px solid #e5e7eb",
+        background: "#ffffff",
+        boxShadow: "none",
+      };
+
   return (
     <section style={{ padding: 0, border: "none", borderRadius: 0 }}>
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#6b7280" }}>
-          Seu rack
-        </div>
-        <div style={{ marginTop: 6, fontSize: 14, color: "#4b5563" }}>
-          Arraste para reorganizar e clique para selecionar uma peça.
+      <div
+        style={{
+          marginBottom: 14,
+          padding: 14,
+          borderRadius: 16,
+          ...rackFrameStyle,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#6b7280" }}>
+              Seu rack
+            </div>
+            <div style={{ marginTop: 6, fontSize: 14, color: "#4b5563" }}>
+              {isPlayersTurn
+                ? "É sua vez de montar e enviar a jogada."
+                : "Você pode preparar as peças enquanto aguarda sua vez."}
+            </div>
+          </div>
+
+          <div
+            style={{
+              opacity: isPlayersTurn ? (isAlert && !blinkVisible ? 0.35 : 1) : 0.55,
+              transition: "opacity 0.18s ease",
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#6b7280", marginBottom: 6, textAlign: "right" }}>
+              Tempo visual
+            </div>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              {digits.map((digit, index) =>
+                digit === ":" ? (
+                  <div
+                    key={`sep-${index}`}
+                    style={{
+                      width: 12,
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      color: isAlert ? "#dc2626" : "#ef4444",
+                      fontWeight: 700,
+                      fontSize: 24,
+                    }}
+                  >
+                    :
+                  </div>
+                ) : (
+                  <SevenSegmentDigit key={`digit-${index}`} value={digit} alert={isAlert} />
+                )
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

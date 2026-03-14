@@ -119,6 +119,7 @@ export function GamePlayScreen({
 
   const totalPlayers = playersSummary.length;
   const placedTileCount = placedTilesPreview.length;
+  const isPlayersTurn = isActive;
 
   const statusTone = isActive
     ? { label: "Sua mesa está pronta", color: "#166534", background: "#dcfce7", border: "#86efac" }
@@ -319,6 +320,7 @@ export function GamePlayScreen({
                 rackTiles={playerRackState}
                 selectedTileId={selectedTileId}
                 showDebug={showDebug}
+                isPlayersTurn={isPlayersTurn}
                 onToggleTile={onToggleTile}
                 onClearPreview={onClearPreview}
                 onReorderTile={onReorderTile}

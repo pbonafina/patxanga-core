@@ -653,6 +653,7 @@ export default function HomePage() {
         rackTiles={orderedPlayerRackState}
         selectedTileId={selectedTileId}
         showDebug={showDebug}
+        isPlayersTurn={isActive}
         onToggleTile={handleToggleTile}
         onClearPreview={() => {
           setLocalPlacements({});
