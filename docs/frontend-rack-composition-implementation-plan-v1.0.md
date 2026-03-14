@@ -95,13 +95,16 @@ Objetivo:
 Saida esperada:
 - rack local aceita itens reais e lacunas
 
-### Etapa 2 — inserir lacuna entre posicoes
+### Etapa 2 — inserir lacuna entre duas pecas selecionadas
 Objetivo:
-- permitir criacao de lacuna em posicao especifica da composicao local
+- permitir criacao de lacuna entre duas pecas reais escolhidas na composicao local
+- eliminar ambiguidade de criar lacuna a esquerda/direita de uma peca unica
 - deixar de depender apenas de “adicionar lacuna no fim”
 
 Saida esperada:
-- jogador consegue abrir lacuna entre posicoes da composicao
+- jogador consegue selecionar exatamente duas pecas reais
+- jogador consegue abrir lacuna entre essas duas pecas na ordem local atual
+- a lacuna nasce sem vinculo inicial com o tabuleiro
 
 ### Etapa 3 — mover lacunas e grupos de forma coerente
 Objetivo:
@@ -160,8 +163,9 @@ Nao entra nesta implementacao:
 - selecao simples continua funcionando
 - selecao multipla continua funcionando
 - reordenacao em grupo continua funcionando
-- lacuna pode ser criada em posicao coerente
+- lacuna pode ser criada entre duas pecas reais selecionadas
 - lacuna pode receber letra de rascunho
+- lacuna nasce sem vinculo inicial com o tabuleiro
 - submit continua ignorando lacunas
 - submit continua ignorando drafts
 

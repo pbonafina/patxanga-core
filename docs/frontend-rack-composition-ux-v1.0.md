@@ -117,14 +117,20 @@ O frontend pode permitir:
 
 ## 7. Regra de insercao de lacuna
 
-A UX desejada deve priorizar a criacao de lacuna entre pecas
-da composicao local do jogador.
+A UX desejada deve criar lacuna entre duas pecas reais escolhidas
+na composicao local do jogador.
 
 Leitura correta:
 - o jogador organiza pecas reais no rack
-- o jogador pode abrir uma lacuna entre duas posicoes da composicao
-- essa lacuna pode receber uma letra de rascunho
+- o jogador seleciona exatamente duas pecas reais como referencias
+- o frontend cria a lacuna entre essas duas pecas na ordem local atual
+- a lacuna pode receber uma letra de rascunho
 - a composicao inteira continua movel dentro do rack local
+
+Leitura incorreta:
+- criar lacuna a partir de uma peca unica com lado implicito
+- criar lacuna com regra ambigua de esquerda/direita
+- criar lacuna ja vinculada ao tabuleiro
 
 Enquanto essa UX completa nao estiver pronta, implementacoes intermediarias
 podem existir, desde que nao violem os limites deste contrato.
