@@ -1,7 +1,7 @@
 -- ============================================================
--- PATXANGA - RPC: hydrate_patxanga_placed_tiles()
--- Version: 1.2
--- Purpose: Expand placed tile payload using full rack tile objects
+-- PATXANGA - DECLARED LETTER FOR ALL SPECIAL TILES
+-- Version: 1.0
+-- Purpose: Require declared_letter for every special tile that substitutes a letter
 -- ============================================================
 
 create or replace function public.hydrate_patxanga_placed_tiles(

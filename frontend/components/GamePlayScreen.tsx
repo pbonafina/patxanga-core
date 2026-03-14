@@ -1,6 +1,7 @@
 import { BoardSection } from "./BoardSection";
 import { RackSection } from "./RackSection";
 import { VotingSection } from "./VotingSection";
+import type { MovePreviewResult } from "../types/movePreview";
 
 type PendingVoteMove = {
   move_id?: string;
@@ -37,11 +38,14 @@ type GamePlayScreenProps = {
   pendingVoteTilesByCell: Record<string, { letter?: string }>;
   selectedTileId: string | null;
   selectedTileIds: string[];
+  previewTileIds: string[];
   playerRackState: unknown[];
 
   placedTilesPreview: unknown[];
   canSubmitMove: boolean;
   isSubmittingMove: boolean;
+  movePreview: MovePreviewResult | null;
+  isLoadingMovePreview: boolean;
 
   pendingVoteError: string | null;
   pendingVoteMove: PendingVoteMove | null;
@@ -61,9 +65,7 @@ type GamePlayScreenProps = {
   onPlaceTile: (cellKey: string, typedCell: BoardCell) => void;
   onToggleTile: (tileId: string) => void;
   onClearPreview: () => void;
-  onReorderTile: (draggedTileId: string, targetTileId: string) => void;
-  onAddRackGap: () => void;
-  onRemoveRackGap: (gapId: string) => void;
+  onReorderTile: (draggedItemId: string, dropTargetId: string) => void;
   onChangeRackGapDraft: (gapId: string, nextValue: string) => void;
   onSubmitMove: () => void;
   onApprove: () => void;
@@ -93,11 +95,14 @@ export function GamePlayScreen({
   pendingVoteTilesByCell,
   selectedTileId,
   selectedTileIds,
+  previewTileIds,
   playerRackState,
 
   placedTilesPreview,
   canSubmitMove,
   isSubmittingMove,
+  movePreview,
+  isLoadingMovePreview,
 
   pendingVoteError,
   pendingVoteMove,
@@ -114,8 +119,6 @@ export function GamePlayScreen({
   onToggleTile,
   onClearPreview,
   onReorderTile,
-  onAddRackGap,
-  onRemoveRackGap,
   onChangeRackGapDraft,
   onSubmitMove,
   onApprove,
@@ -340,23 +343,83 @@ export function GamePlayScreen({
           {isActive ? (
             <div
               style={{
-                marginTop: 18,
+                marginTop: 10,
                 padding: 18,
                 borderRadius: 16,
                 border: "1px solid #e5e7eb",
                 background: "#ffffff",
               }}
             >
+              {placedTileCount > 0 ? (
+                <div
+                  style={{
+                    marginBottom: 14,
+                    padding: 12,
+                    borderRadius: 12,
+                    border:
+                      movePreview?.status === "invalid"
+                        ? "1px solid #fca5a5"
+                        : movePreview?.requires_vote
+                          ? "1px solid #fcd34d"
+                          : "1px solid #bfdbfe",
+                    background:
+                      movePreview?.status === "invalid"
+                        ? "#fff1f2"
+                        : movePreview?.requires_vote
+                          ? "#fffbeb"
+                          : "#eff6ff",
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#6b7280" }}>
+                    Preview do backend
+                  </div>
+                  <div style={{ marginTop: 6, fontSize: 14, color: "#1f2937" }}>
+                    {isLoadingMovePreview
+                      ? "Calculando pontuacao estimada..."
+                      : movePreview?.status === "ok"
+                        ? `Palavra principal: ${movePreview.main_word ?? "(indisponivel)"}`
+                        : movePreview?.error ?? "Pontuacao estimada indisponivel no momento."}
+                  </div>
+                  {movePreview?.status === "ok" ? (
+                    <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <span
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 999,
+                          background: "#ffffff",
+                          fontSize: 13,
+                          color: "#111827",
+                          border: "1px solid #dbeafe",
+                        }}
+                      >
+                        score estimado: <strong>{movePreview.score?.total_score ?? 0}</strong>
+                      </span>
+                      <span
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 999,
+                          background: "#ffffff",
+                          fontSize: 13,
+                          color: movePreview.requires_vote ? "#92400e" : "#166534",
+                          border: `1px solid ${movePreview.requires_vote ? "#fcd34d" : "#86efac"}`,
+                        }}
+                      >
+                        {movePreview.requires_vote ? "vai para votacao" : "dicionario reconhece"}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               <RackSection
                 rackTiles={playerRackState}
                 selectedTileIds={selectedTileIds}
+                previewTileIds={previewTileIds}
                 showDebug={showDebug}
                 isPlayersTurn={isPlayersTurn}
                 onToggleTile={onToggleTile}
                 onClearPreview={onClearPreview}
                 onReorderTile={onReorderTile}
-                onAddGap={onAddRackGap}
-                onRemoveGap={onRemoveRackGap}
                 onChangeGapDraft={onChangeRackGapDraft}
               />
 

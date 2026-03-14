@@ -1,10 +1,11 @@
 -- ============================================================
 -- PATXANGA - RPC: validate_patxanga_move_alignment()
--- Version: 1.0
+-- Version: 1.1
 -- Purpose: Validate geometric integrity of placed tiles
 -- ============================================================
 
 create or replace function public.validate_patxanga_move_alignment(
+    p_board_state jsonb,
     p_placed_tiles jsonb
 )
 returns void
@@ -23,6 +24,7 @@ declare
     v_distinct_rows integer;
     v_distinct_cols integer;
     v_expected_count integer;
+    v_covered_count integer;
 begin
 
     -- --------------------------------------------------------
@@ -106,13 +108,31 @@ begin
 
     if v_distinct_rows = 1 then
         -- Horizontal word
+        select min(r), max(r)
+        into v_min_row, v_max_row
+        from unnest(v_rows) r;
+
         select min(c), max(c)
         into v_min_col, v_max_col
         from unnest(v_cols) c;
 
         v_expected_count := v_max_col - v_min_col + 1;
 
-        if v_expected_count <> v_count then
+        select count(*)
+        into v_covered_count
+        from generate_series(v_min_col, v_max_col) as c
+        where exists (
+            select 1
+            from jsonb_array_elements(p_placed_tiles) tile
+            where (tile->>'row')::integer = v_min_row
+              and (tile->>'col')::integer = c
+        )
+        or coalesce(
+            jsonb_typeof(p_board_state -> (v_min_row - 1) -> (c - 1) -> 'tile') = 'object',
+            false
+        );
+
+        if v_covered_count <> v_expected_count then
             raise exception 'Horizontal move contains gaps';
         end if;
 
@@ -124,13 +144,46 @@ begin
 
         v_expected_count := v_max_row - v_min_row + 1;
 
-        if v_expected_count <> v_count then
+        select count(*)
+        into v_covered_count
+        from generate_series(v_min_row, v_max_row) as r
+        where exists (
+            select 1
+            from jsonb_array_elements(p_placed_tiles) tile
+            where (tile->>'row')::integer = r
+              and (tile->>'col')::integer = v_min_col
+        )
+        or coalesce(
+            jsonb_typeof(p_board_state -> (r - 1) -> (v_min_col - 1) -> 'tile') = 'object',
+            false
+        );
+
+        if v_covered_count <> v_expected_count then
             raise exception 'Vertical move contains gaps';
         end if;
     end if;
 
 end;
 $$;
+
+create or replace function public.validate_patxanga_move_alignment(
+    p_placed_tiles jsonb
+)
+returns void
+language plpgsql
+immutable
+as
+$$
+begin
+    perform public.validate_patxanga_move_alignment(
+        null,
+        p_placed_tiles
+    );
+end;
+$$;
+
+grant execute on function public.validate_patxanga_move_alignment(jsonb, jsonb)
+to authenticated, anon;
 
 grant execute on function public.validate_patxanga_move_alignment(jsonb)
 to authenticated, anon;

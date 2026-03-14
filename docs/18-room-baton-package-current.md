@@ -177,6 +177,11 @@ a48c292 Adicionado drag and drop local no rack
 ## 2026-03-14 15:06
 - Refinada frase oficial de passagem de bastao
 
+## 2026-03-14 21:30
+- Adicionada RPC read-only `preview_patxanga_move` para estimar score e status da jogada sem persistencia.
+- Frontend passou a consultar o backend durante o preview local para mostrar palavra principal, score estimado e indicacao de votacao.
+- Board perdeu a margem superior fixa e o rack ficou mais proximo do tabuleiro para reduzir rolagem na validacao manual.
+
 ```
 
 ## AMBIENTE OPERACIONAL ATUAL

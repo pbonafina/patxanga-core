@@ -10,10 +10,13 @@ import { PlayersSection } from "../components/PlayersSection";
 import { MatchStatusPanel } from "../components/MatchStatusPanel";
 import { MoveSubmitSection } from "../components/MoveSubmitSection";
 import { GamePlayScreen } from "../components/GamePlayScreen";
+import type { MovePreviewResult } from "../types/movePreview";
 
 type BoardCell = {
   tile?: {
     letter?: string;
+    declared_letter?: string | null;
+    special_type?: string | null;
   } | null;
   multiplier_type?: string | null;
 } | null;
@@ -22,8 +25,181 @@ type RackCompositionItem =
   | { kind: "tile"; tileId: string }
   | { kind: "gap"; gapId: string };
 
+const DEFAULT_RACK_SLOT_IDS = ["__slot__:1", "__slot__:2", "__slot__:3"] as const;
+const INSERTION_TARGET_PREFIX = "__insert__:";
+const DECLARED_LETTER_SPECIAL_TYPES = new Set([
+  "wildcard",
+  "skip_turn",
+  "patxanga_real",
+]);
+
+function normalizeSpecialType(specialType?: string | null): string {
+  return (specialType ?? "").toLowerCase();
+}
+
+function requiresDeclaredLetter(specialType?: string | null): boolean {
+  return DECLARED_LETTER_SPECIAL_TYPES.has(normalizeSpecialType(specialType));
+}
+
+function getDeclaredLetterPromptLabel(specialType?: string | null): string {
+  switch (normalizeSpecialType(specialType)) {
+    case "skip_turn":
+      return "A peça PV deve representar qual letra?";
+    case "patxanga_real":
+      return "A peça PR deve representar qual letra?";
+    default:
+      return "Qual letra esta peca especial deve representar?";
+  }
+}
+
+function buildInitialRackComposition(tileIds: string[]): RackCompositionItem[] {
+  return [
+    ...tileIds.map((tileId) => ({ kind: "tile" as const, tileId })),
+    ...DEFAULT_RACK_SLOT_IDS.map((gapId) => ({ kind: "gap" as const, gapId })),
+  ];
+}
+
+function buildInitialRackGapDrafts(): Record<string, string> {
+  return DEFAULT_RACK_SLOT_IDS.reduce<Record<string, string>>((drafts, gapId) => {
+    drafts[gapId] = "";
+    return drafts;
+  }, {});
+}
+
+function getRackCompositionItemId(item: RackCompositionItem): string {
+  return item.kind === "tile" ? item.tileId : item.gapId;
+}
+
+function parseInsertionIndex(dropTargetId: string): number | null {
+  if (!dropTargetId.startsWith(INSERTION_TARGET_PREFIX)) {
+    return null;
+  }
+
+  const insertIndex = Number(dropTargetId.slice(INSERTION_TARGET_PREFIX.length));
+  if (!Number.isInteger(insertIndex)) {
+    return null;
+  }
+
+  return insertIndex;
+}
+
+function countRemovedItemsBeforeIndex(
+  current: RackCompositionItem[],
+  insertIndex: number,
+  removedItemIds: Set<string>
+): number {
+  return current
+    .slice(0, insertIndex)
+    .filter((item) => removedItemIds.has(getRackCompositionItemId(item))).length;
+}
+
+function reorderRackComposition(
+  current: RackCompositionItem[],
+  draggedItemId: string,
+  dropTargetId: string,
+  selectedTileIds: string[]
+): RackCompositionItem[] {
+  const insertIndex = parseInsertionIndex(dropTargetId);
+
+  if (insertIndex !== null) {
+    const selectedSet = new Set(selectedTileIds);
+    const shouldMoveGroup =
+      selectedTileIds.length > 1 &&
+      selectedSet.has(draggedItemId);
+
+    if (shouldMoveGroup) {
+      const groupItemIds = new Set(selectedTileIds);
+      const group = current.filter(
+        (item) => item.kind === "tile" && groupItemIds.has(item.tileId)
+      );
+      const rest = current.filter(
+        (item) => !(item.kind === "tile" && groupItemIds.has(item.tileId))
+      );
+      const removedBeforeInsert = countRemovedItemsBeforeIndex(
+        current,
+        insertIndex,
+        groupItemIds
+      );
+      const adjustedIndex = insertIndex - removedBeforeInsert;
+      const boundedIndex = Math.max(0, Math.min(adjustedIndex, rest.length));
+
+      return [
+        ...rest.slice(0, boundedIndex),
+        ...group,
+        ...rest.slice(boundedIndex),
+      ];
+    }
+
+    const draggedIndex = current.findIndex(
+      (item) => getRackCompositionItemId(item) === draggedItemId
+    );
+
+    if (draggedIndex === -1) {
+      return current;
+    }
+
+    const next = [...current];
+    const [dragged] = next.splice(draggedIndex, 1);
+    const adjustedIndex = draggedIndex < insertIndex ? insertIndex - 1 : insertIndex;
+    const boundedIndex = Math.max(0, Math.min(adjustedIndex, next.length));
+    next.splice(boundedIndex, 0, dragged);
+    return next;
+  }
+
+  if (selectedTileIds.length > 1 && selectedTileIds.includes(draggedItemId)) {
+    const selectedSet = new Set(selectedTileIds);
+    const group = current.filter(
+      (item) => item.kind === "tile" && selectedSet.has(item.tileId)
+    );
+    const rest = current.filter(
+      (item) => !(item.kind === "tile" && selectedSet.has(item.tileId))
+    );
+    const targetIndex = rest.findIndex(
+      (item) => getRackCompositionItemId(item) === dropTargetId
+    );
+
+    if (group.length === 0 || targetIndex === -1) {
+      return current;
+    }
+
+    return [
+      ...rest.slice(0, targetIndex),
+      ...group,
+      ...rest.slice(targetIndex),
+    ];
+  }
+
+  const draggedIndex = current.findIndex(
+    (item) => getRackCompositionItemId(item) === draggedItemId
+  );
+  const targetIndex = current.findIndex(
+    (item) => getRackCompositionItemId(item) === dropTargetId
+  );
+
+  if (
+    draggedIndex === -1 ||
+    targetIndex === -1 ||
+    draggedIndex === targetIndex
+  ) {
+    return current;
+  }
+
+  const draggedItem = current[draggedIndex];
+  const targetItem = current[targetIndex];
+
+  if (draggedItem.kind === targetItem.kind) {
+    return current;
+  }
+
+  const next = [...current];
+  next[draggedIndex] = targetItem;
+  next[targetIndex] = draggedItem;
+  return next;
+}
+
 function renderCellLabel(cell: BoardCell): string {
   if (!cell) return "";
+  if (cell.tile?.declared_letter) return cell.tile.declared_letter;
   if (cell.tile?.letter) return cell.tile.letter;
   const multiplier = cell.multiplier_type ?? "";
   return multiplier === "NM" ? "" : multiplier;
@@ -73,8 +249,16 @@ export default function HomePage() {
   const [localDeclaredLetters, setLocalDeclaredLetters] = useState<Record<string, string>>({});
   const [localRackComposition, setLocalRackComposition] = useState<RackCompositionItem[]>([]);
   const [localRackGapDrafts, setLocalRackGapDrafts] = useState<Record<string, string>>({});
-  const [nextRackGapSerial, setNextRackGapSerial] = useState(1);
   const [showDebug, setShowDebug] = useState(false);
+  const [quickMatchSession, setQuickMatchSession] = useState<{
+    matchId: string;
+    hostUserId: string;
+    guestUserId: string;
+  } | null>(null);
+  const [isCreatingQuickMatch, setIsCreatingQuickMatch] = useState(false);
+  const [quickMatchError, setQuickMatchError] = useState<string | null>(null);
+  const [movePreview, setMovePreview] = useState<MovePreviewResult | null>(null);
+  const [isLoadingMovePreview, setIsLoadingMovePreview] = useState(false);
 
   const resolvedBootstrap = useMatchBootstrap(bootstrapData ?? undefined);
   const { isConfigured } = getSupabaseEnv();
@@ -132,8 +316,9 @@ export default function HomePage() {
           return null;
         }
 
-        const isWildcard = (tile.special_type ?? "").toLowerCase() == "wildcard";
-        const declaredLetter = isWildcard ? (localDeclaredLetters[cellKey] ?? null) : null;
+        const declaredLetter = requiresDeclaredLetter(tile.special_type)
+          ? (localDeclaredLetters[cellKey] ?? null)
+          : null;
 
         return {
           tile_id: tile.id,
@@ -148,6 +333,11 @@ export default function HomePage() {
         return a.col - b.col;
       });
   }, [localDeclaredLetters, localPlacements, resolvedBootstrap.playerContext]);
+
+  const previewTileIds = useMemo(
+    () => [...new Set(Object.values(localPlacements))],
+    [localPlacements]
+  );
 
 
   const pendingVoteMove = useMemo(() => {
@@ -207,6 +397,85 @@ export default function HomePage() {
     return result;
   }, [pendingVoteMove]);
 
+  const isPlayersTurn =
+    Boolean(resolvedBootstrap.playerId) &&
+    Boolean(resolvedBootstrap.currentTurnPlayerId) &&
+    resolvedBootstrap.playerId === resolvedBootstrap.currentTurnPlayerId &&
+    isActive;
+
+  useEffect(() => {
+    if (
+      !resolvedBootstrap.matchId ||
+      !resolvedBootstrap.playerId ||
+      !isPlayersTurn ||
+      placedTilesPreview.length === 0
+    ) {
+      setMovePreview(null);
+      setIsLoadingMovePreview(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setIsLoadingMovePreview(true);
+
+      try {
+        const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
+        const client = getSupabaseBrowserClient();
+
+        if (!client) {
+          throw new Error("Supabase client indisponivel no frontend.");
+        }
+
+        const { data, error } = await client.rpc("preview_patxanga_move", {
+          p_match_id: resolvedBootstrap.matchId,
+          p_player_id: resolvedBootstrap.playerId,
+          p_placed_tiles: placedTilesPreview,
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        if (error) {
+          setMovePreview({
+            status: "invalid",
+            error: error.message,
+          });
+          return;
+        }
+
+        setMovePreview((data as MovePreviewResult | null) ?? null);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setMovePreview({
+          status: "invalid",
+          error:
+            error instanceof Error
+              ? error.message
+              : "Falha ao consultar preview da jogada.",
+        });
+      } finally {
+        if (!cancelled) {
+          setIsLoadingMovePreview(false);
+        }
+      }
+    }, 120);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    isPlayersTurn,
+    placedTilesPreview,
+    resolvedBootstrap.matchId,
+    resolvedBootstrap.playerId,
+  ]);
+
   useEffect(() => {
     const nextIds = (resolvedBootstrap.playerContext?.rack_state ?? [])
       .map((item) => {
@@ -215,9 +484,8 @@ export default function HomePage() {
       })
       .filter((id): id is string => Boolean(id));
 
-    setLocalRackComposition(nextIds.map((tileId) => ({ kind: "tile" as const, tileId })));
-    setLocalRackGapDrafts({});
-    setNextRackGapSerial(1);
+    setLocalRackComposition(buildInitialRackComposition(nextIds));
+    setLocalRackGapDrafts(buildInitialRackGapDrafts());
   }, [resolvedBootstrap.playerContext]);
 
   const orderedPlayerRackState = useMemo(() => {
@@ -262,8 +530,7 @@ export default function HomePage() {
     return [...ordered, ...missing];
   }, [localRackComposition, localRackGapDrafts, resolvedBootstrap.playerContext]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function openMatchSession(matchId: string, userId: string) {
     setIsLoading(true);
     setErrorMessage(null);
     setSubmitResult(null);
@@ -274,17 +541,17 @@ export default function HomePage() {
     setLocalPlacements({});
     setLocalDeclaredLetters({});
     setLocalRackGapDrafts({});
-    setNextRackGapSerial(1);
+    setMovePreview(null);
 
     try {
       const nextData = await loadMatchBootstrap({
-        matchId: matchIdInput,
-        playerId: playerIdInput,
+        matchId,
+        playerId: userId,
       });
 
       setBootstrapData(nextData);
 
-      await refreshPendingVoteContext(nextData.matchId, playerIdInput, nextData.status);
+      await refreshPendingVoteContext(nextData.matchId, userId, nextData.status);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Falha ao carregar bootstrap da match."
@@ -292,6 +559,88 @@ export default function HomePage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await openMatchSession(matchIdInput, playerIdInput);
+  }
+
+  async function handleCreateQuickMatch() {
+    setQuickMatchError(null);
+    setErrorMessage(null);
+    setIsCreatingQuickMatch(true);
+
+    try {
+      const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
+      const client = getSupabaseBrowserClient();
+
+      if (!client) {
+        throw new Error("Supabase client not configured in frontend environment.");
+      }
+
+      const hostUserId = crypto.randomUUID();
+      const guestUserId = crypto.randomUUID();
+
+      const { data: matchId, error: createError } = await client.rpc("create_patxanga_match", {
+        p_host_user_id: hostUserId,
+        p_host_guest_name: "Host Local",
+        p_language: "pt-BR",
+        p_match_mode: "synchronous",
+        p_max_players: 2,
+      });
+
+      if (createError) {
+        throw new Error(createError.message);
+      }
+
+      const { error: joinError } = await client.rpc("join_patxanga_match", {
+        p_match_id: matchId,
+        p_user_id: guestUserId,
+        p_guest_name: "Guest Local",
+        p_is_bot: false,
+        p_bot_level: null,
+        p_bot_profile: null,
+      });
+
+      if (joinError) {
+        throw new Error(joinError.message);
+      }
+
+      const { error: startError } = await client.rpc("start_patxanga_match", {
+        p_match_id: matchId,
+      });
+
+      if (startError) {
+        throw new Error(startError.message);
+      }
+
+      setQuickMatchSession({
+        matchId,
+        hostUserId,
+        guestUserId,
+      });
+
+      setMatchIdInput(matchId);
+      setPlayerIdInput(hostUserId);
+      await openMatchSession(matchId, hostUserId);
+    } catch (error) {
+      setQuickMatchError(
+        error instanceof Error ? error.message : "Falha ao gerar partida local de teste."
+      );
+    } finally {
+      setIsCreatingQuickMatch(false);
+    }
+  }
+
+  async function handleOpenQuickMatch(userId: string) {
+    if (!quickMatchSession) {
+      return;
+    }
+
+    setMatchIdInput(quickMatchSession.matchId);
+    setPlayerIdInput(userId);
+    await openMatchSession(quickMatchSession.matchId, userId);
   }
 
 
@@ -349,7 +698,7 @@ export default function HomePage() {
       setLocalPlacements({});
       setLocalDeclaredLetters({});
       setLocalRackGapDrafts({});
-      setNextRackGapSerial(1);
+      setMovePreview(null);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Falha ao enviar jogada."
@@ -452,6 +801,8 @@ export default function HomePage() {
     }
 
     if (localPlacements[cellKey]) {
+      const restoredTileId = localPlacements[cellKey];
+
       setLocalPlacements((current) => {
         const next = { ...current };
         delete next[cellKey];
@@ -463,6 +814,9 @@ export default function HomePage() {
         delete next[cellKey];
         return next;
       });
+
+      setSelectedTileIds((current) => current.filter((id) => id !== restoredTileId));
+      setSelectedTileId((current) => (current === restoredTileId ? null : current));
 
       return;
     }
@@ -493,11 +847,11 @@ export default function HomePage() {
       return;
     }
 
-    const isWildcard = (rackTile.special_type ?? "").toLowerCase() === "wildcard";
+    const needsDeclaredLetter = requiresDeclaredLetter(rackTile.special_type);
     let declaredLetter: string | null = null;
 
-    if (isWildcard) {
-      const input = window.prompt("Qual letra esta peca especial deve representar?", "");
+    if (needsDeclaredLetter) {
+      const input = window.prompt(getDeclaredLetterPromptLabel(rackTile.special_type), "");
       const normalized = input?.trim().toUpperCase() ?? "";
 
       if (normalized.length !== 1) {
@@ -524,6 +878,7 @@ export default function HomePage() {
       return next;
     });
 
+    setSelectedTileIds((current) => current.filter((id) => id !== selectedTileId));
     setSelectedTileId(null);
   }
 
@@ -541,27 +896,6 @@ export default function HomePage() {
     });
   }
 
-  function handleAddRackGap() {
-    const gapId = `__gap__:${nextRackGapSerial}`;
-    setNextRackGapSerial((current) => current + 1);
-    setLocalRackComposition((current) => [...current, { kind: "gap", gapId }]);
-    setLocalRackGapDrafts((current) => ({
-      ...current,
-      [gapId]: "",
-    }));
-  }
-
-  function handleRemoveRackGap(gapId: string) {
-    setLocalRackComposition((current) =>
-      current.filter((item) => !(item.kind === "gap" && item.gapId === gapId))
-    );
-    setLocalRackGapDrafts((current) => {
-      const next = { ...current };
-      delete next[gapId];
-      return next;
-    });
-  }
-
   function handleChangeRackGapDraft(gapId: string, nextValue: string) {
     const normalized = nextValue.trim().slice(0, 1).toUpperCase();
     setLocalRackGapDrafts((current) => ({
@@ -570,8 +904,11 @@ export default function HomePage() {
     }));
   }
 
-
-
+  function handleReorderRackItem(draggedItemId: string, dropTargetId: string) {
+    setLocalRackComposition((current) =>
+      reorderRackComposition(current, draggedItemId, dropTargetId, selectedTileIds)
+    );
+  }
 
   return (
     <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 1100, margin: "0 auto" }}>
@@ -585,6 +922,57 @@ export default function HomePage() {
           Nesta etapa, o segundo campo ainda usa temporariamente o <strong>user_id</strong> da sessão
           para localizar o jogador correto da partida.
         </p>
+      </section>
+
+      <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
+        <h2>Partida local rápida</h2>
+        <p>Gera uma partida de teste local e permite alternar entre host e guest sem copiar IDs manualmente.</p>
+
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
+          <button
+            type="button"
+            onClick={handleCreateQuickMatch}
+            disabled={!isConfigured || isCreatingQuickMatch}
+            style={{ padding: "10px 14px", cursor: !isConfigured || isCreatingQuickMatch ? "not-allowed" : "pointer" }}
+          >
+            {isCreatingQuickMatch ? "Gerando partida..." : "Gerar partida local"}
+          </button>
+
+          {quickMatchSession ? (
+            <>
+              <button
+                type="button"
+                onClick={() => handleOpenQuickMatch(quickMatchSession.hostUserId)}
+                disabled={isLoading}
+                style={{ padding: "10px 14px", cursor: isLoading ? "not-allowed" : "pointer" }}
+              >
+                Entrar como host
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenQuickMatch(quickMatchSession.guestUserId)}
+                disabled={isLoading}
+                style={{ padding: "10px 14px", cursor: isLoading ? "not-allowed" : "pointer" }}
+              >
+                Entrar como guest
+              </button>
+            </>
+          ) : null}
+        </div>
+
+        {quickMatchSession ? (
+          <div style={{ marginTop: 12, display: "grid", gap: 6, fontFamily: "monospace", fontSize: 13 }}>
+            <div>match_id: {quickMatchSession.matchId}</div>
+            <div>host_user_id: {quickMatchSession.hostUserId}</div>
+            <div>guest_user_id: {quickMatchSession.guestUserId}</div>
+          </div>
+        ) : null}
+
+        {quickMatchError ? (
+          <p style={{ marginTop: 12, color: "#b00020" }}>
+            <strong>Erro:</strong> {quickMatchError}
+          </p>
+        ) : null}
       </section>
 
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
@@ -644,10 +1032,13 @@ export default function HomePage() {
         pendingVoteTilesByCell={pendingVoteTilesByCell}
         selectedTileId={selectedTileId}
         selectedTileIds={selectedTileIds}
+        previewTileIds={previewTileIds}
         playerRackState={orderedPlayerRackState}
         placedTilesPreview={placedTilesPreview}
         canSubmitMove={placedTilesPreview.length > 0 && Boolean(resolvedBootstrap.playerId)}
         isSubmittingMove={isSubmittingMove}
+        movePreview={movePreview}
+        isLoadingMovePreview={isLoadingMovePreview}
         pendingVoteError={pendingVoteError}
         pendingVoteMove={pendingVoteMove}
         canCurrentViewerVote={canCurrentViewerVote}
@@ -664,54 +1055,10 @@ export default function HomePage() {
           setLocalDeclaredLetters({});
           setSelectedTileId(null);
           setSelectedTileIds([]);
+          setMovePreview(null);
         }}
-        onAddRackGap={handleAddRackGap}
-        onRemoveRackGap={handleRemoveRackGap}
         onChangeRackGapDraft={handleChangeRackGapDraft}
-        onReorderTile={(draggedTileId, targetTileId) => {
-          setLocalRackComposition((current) => {
-            const getId = (item: RackCompositionItem) =>
-              item.kind === "tile" ? item.tileId : item.gapId;
-
-            const selectedSet = new Set(selectedTileIds);
-            const shouldMoveGroup =
-              selectedTileIds.length > 1 &&
-              selectedSet.has(draggedTileId) &&
-              !selectedSet.has(targetTileId);
-
-            if (shouldMoveGroup) {
-              const group = current.filter(
-                (item) => item.kind === "tile" && selectedSet.has(item.tileId)
-              );
-              const rest = current.filter(
-                (item) => !(item.kind === "tile" && selectedSet.has(item.tileId))
-              );
-              const targetIndex = rest.findIndex((item) => getId(item) === targetTileId);
-
-              if (targetIndex === -1) {
-                return current;
-              }
-
-              return [
-                ...rest.slice(0, targetIndex),
-                ...group,
-                ...rest.slice(targetIndex),
-              ];
-            }
-
-            const draggedIndex = current.findIndex((item) => getId(item) === draggedTileId);
-            const targetIndex = current.findIndex((item) => getId(item) === targetTileId);
-
-            if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) {
-              return current;
-            }
-
-            const next = [...current];
-            const [dragged] = next.splice(draggedIndex, 1);
-            next.splice(targetIndex, 0, dragged);
-            return next;
-          });
-        }}
+        onReorderTile={handleReorderRackItem}
         onSubmitMove={handleSubmitMove}
         onApprove={() => handleSubmitVote(false)}
         onReject={() => handleSubmitVote(true)}
@@ -757,6 +1104,7 @@ export default function HomePage() {
       <RackSection
         rackTiles={orderedPlayerRackState}
         selectedTileIds={selectedTileIds}
+        previewTileIds={previewTileIds}
         showDebug={showDebug}
         isPlayersTurn={isActive}
         onToggleTile={handleToggleTile}
@@ -765,28 +1113,10 @@ export default function HomePage() {
           setLocalDeclaredLetters({});
           setSelectedTileId(null);
           setSelectedTileIds([]);
+          setMovePreview(null);
         }}
-        onAddGap={handleAddRackGap}
-        onRemoveGap={handleRemoveRackGap}
         onChangeGapDraft={handleChangeRackGapDraft}
-        onReorderTile={(draggedTileId, targetTileId) => {
-          setLocalRackComposition((current) => {
-            const getId = (item: RackCompositionItem) =>
-              item.kind === "tile" ? item.tileId : item.gapId;
-
-            const draggedIndex = current.findIndex((item) => getId(item) === draggedTileId);
-            const targetIndex = current.findIndex((item) => getId(item) === targetTileId);
-
-            if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) {
-              return current;
-            }
-
-            const next = [...current];
-            const [dragged] = next.splice(draggedIndex, 1);
-            next.splice(targetIndex, 0, dragged);
-            return next;
-          });
-        }}
+        onReorderTile={handleReorderRackItem}
       />
       ) : null}
 
