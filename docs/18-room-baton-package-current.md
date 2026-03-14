@@ -1,0 +1,2859 @@
+# PATXANGA — Room Baton Package (Current)
+Generated at: 2026-03-14 14:51:22
+
+## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
+
+Voce esta retomando o projeto Patxanga em uma sala de continuidade operacional.
+Seu papel e atuar como agente de continuidade tecnica e operacional, preservando de forma rigorosa:
+- seguranca do processo
+- rastreabilidade
+- versionamento correto
+- documentacao viva
+- validacao antes de alteracao
+- coerencia entre frontend, backend e operacao
+
+Regras imutaveis desta atuacao:
+1. nao assumir estado nao verificado
+2. confirmar branch, commits recentes e ../project-log.md antes de propor mudancas
+3. tratar branch + commits pushados + ../project-log.md como fonte de verdade mais forte que a documentacao
+4. localizar o trecho real do codigo antes de alterar
+5. implementar incrementalmente, sem atalhos
+6. validar build/teste antes de versionar
+7. manter documentacao, log operacional e versionamento sincronizados
+8. nao misturar frentes sensiveis sem auditoria consciente
+9. quando necessario, pedir primeiro os comandos e arquivos complementares para inicializacao correta
+
+Seu objetivo inicial nao e programar imediatamente.
+Seu objetivo inicial e se inicializar corretamente, compreender o estado real do projeto e so entao atuar.
+
+## FRASE DE ENTRADA DA NOVA SALA
+
+Voce esta assumindo a continuidade do projeto Patxanga, um jogo por turnos com backend authoritative, frontend em evolucao orientada a produto e processo operacional rigoroso de continuidade, rastreabilidade, documentacao, versionamento e validacao.
+Seu papel nesta sala e preservar e estender esse trabalho sem perder contexto, sem assumir estado nao verificado e sem romper o processo estabelecido.
+A continuidade do projeto e condicao imutavel desta atuacao.
+Antes de qualquer proposta ou alteracao, voce deve pedir o arquivo unico de passagem de bastao com instrucoes detalhadas e, a partir dele, se inicializar corretamente.
+So depois disso voce podera pedir os comandos e arquivos complementares necessarios para validar branch, commits, logs, documentacao, estado operacional e frente atual.
+
+## ESTADO OPERACIONAL GERADO
+
+### git status --short --branch
+```
+## develop...origin/develop
+ M .gitignore
+ M frontend/components/BoardSection.tsx
+ M sql/migrations/001_initial_schema.sql
+ M sql/rpc/create_match.sql
+ M sql/rpc/join_match.sql
+?? .DS_Store
+?? docs/.DS_Store
+?? docs/15-pacote-final-colagem-v1.2-ultra-blindado.md
+?? docs/18-room-baton-package-current.md
+?? docs/18-room-baton-process-v1.0.md
+?? docs/frontend-backend-operational-contract-v1.0.md
+?? frontend/.env.local
+?? generate-continuity-package.sh
+?? generate-room-baton-package.sh
+?? sql/tests/test_direct_invite_decline.sql
+?? sql/tests/test_direct_invite_flow.sql
+?? sql/tests/test_exchange_tiles.sql
+?? sql/tests/test_forfeit_all_players.sql
+?? sql/tests/test_forfeit_single_player.sql
+?? sql/tests/test_list_pending_invites.sql
+?? sql/tests/test_list_resumable_matches.sql
+?? sql/tests/test_match_end_all_passed.sql
+?? sql/tests/test_match_end_empty_rack.sql
+?? sql/tests/test_match_end_final_penalty.sql
+?? sql/tests/test_pass_turn.sql
+?? sql/tests/test_resume_match.sql
+?? sql/tests/test_start_match_from_lobby.sql
+?? sql/tests/test_submit_move_pending_vote.sql
+?? sql/tests/test_submit_move_pending_vote_accept.sql
+?? sql/tests/test_submit_move_pending_vote_reject.sql
+?? supabase/.gitignore
+?? supabase/config.toml
+?? supabase/migrations/20260312152457_01_initial_schema.sql
+?? supabase/migrations/20260312152509_02_dictionary.sql
+?? supabase/migrations/20260312152520_03_distribution_seed.sql
+?? supabase/migrations/20260312152534_04_core_rpcs.sql
+?? supabase/migrations/20260312152552_05_submit_engine.sql
+?? supabase/migrations/20260313091238_07_pending_vote_resolution.sql
+?? supabase/migrations/20260313091843_08_pass_turn.sql
+?? supabase/migrations/20260313092219_09_exchange_tiles.sql
+?? supabase/migrations/20260313093158_10_evaluate_match_end.sql
+?? supabase/migrations/20260313102126_11_lobby_direct.sql
+?? supabase/migrations/20260313103446_12_presence_resume_forfeit.sql
+?? supabase/migrations/20260313104105_13_frontend_entrypoints.sql
+?? tmp/
+```
+
+### git remote -v
+```
+origin	https://github.com/pbonafina/patxanga-core.git (fetch)
+origin	https://github.com/pbonafina/patxanga-core.git (push)
+```
+
+### git log --oneline --decorate -n 15
+```
+9092d55 (HEAD -> develop, origin/develop) Refina regra de lacuna entre duas pecas selecionadas
+71716b1 Normaliza superficie local de composicao do rack
+5aa2663 Adiciona plano de implementacao da composicao local do rack
+f0f8022 Adiciona contrato de UX para composicao local do rack
+0fa250a Corrige destaque de turno e cronometro do rack
+3fa60d5 Adiciona procedimento de validacao manual no browser
+245dac5 Adiciona selecao multipla e reordenacao em grupo no rack
+aa64609 Destaca turno ativo no rack com cronometro visual
+48bdea5 Refina composicao visual da tela jogavel
+53cc1ec Refinado room restart prompt com arquivos concretos do frontend
+2fa2cd6 Ajustado room restart prompt para aguardar todos os arquivos
+8dea51e Atualizado kit de continuidade com tela jogavel e drag and drop
+a48c292 Adicionado drag and drop local no rack
+7313577 Simplificada tela jogavel com foco em acoes
+c33d9b0 Ajustado rack para tiles quadrados e registrado requisito de reordenacao
+```
+
+### tail -n 60 ../project-log.md
+```
+## 2026-03-13 17:52
+- Atualizada continuidade com requisito prioritario de declaracao de letra para peca especial sem letra fixa.
+
+## 2026-03-13 18:41
+- Fechado suporte funcional de wildcard com declared_letter no backend e frontend, validado ate pending_vote.
+
+## 2026-03-13 18:47
+- Atualizado room restart prompt com recomendacao de iniciar pela primeira tela de jogo orientada a produto.
+
+## 2026-03-13 21:37
+- Ajustado rack para tiles quadrados e registrado requisito de reordenacao local do rack na primeira tela jogavel.
+
+## 2026-03-13 21:40
+- Simplificada a tela jogavel: removidos titulos e caixas intermediarias, mantendo apenas botoes de acao.
+
+## 2026-03-13 22:27
+- Adicionado drag and drop local no rack da tela jogavel, mantendo a reordenacao apenas no frontend.
+
+## 2026-03-13 22:29
+- Adicionado drag and drop local no rack da tela jogavel, mantendo a reordenacao apenas no frontend.
+
+## 2026-03-13 22:37
+- Atualizado kit de continuidade com marcos da primeira tela jogavel e drag and drop local no rack.
+
+## 2026-03-13 22:42
+- Ajustado room restart prompt para instruir a nova sala a aguardar todos os arquivos enviados antes de seguir.
+
+## 2026-03-13 23:07
+- Refinado room restart prompt listando explicitamente snapshot vigente e contratos curtos concretos do frontend.
+
+## 2026-03-14 11:27
+- Refinada composicao visual da tela jogavel
+
+## 2026-03-14 12:01
+- Destacado turno ativo no rack com cronometro visual
+
+## 2026-03-14 12:05
+- Destacado turno ativo no rack com cronometro visual
+
+## 2026-03-14 12:22
+- Adicionada selecao multipla e reordenacao em grupo no rack
+
+## 2026-03-14 13:37
+- Adicionado procedimento de validacao manual no browser
+
+## 2026-03-14 13:37
+- Corrigido destaque de turno e cronometro do rack
+
+## 2026-03-14 13:41
+- Adicionado contrato de UX para composicao local do rack
+
+## 2026-03-14 13:45
+- Adicionado plano de implementacao da composicao local do rack
+
+## 2026-03-14 14:01
+- Normalizada superficie local de composicao do rack
+
+## 2026-03-14 14:06
+- Refinada regra de lacuna entre duas pecas selecionadas
+
+```
+
+## AMBIENTE OPERACIONAL ATUAL
+
+- sistema operacional do operador: macOS
+- shell padrao: zsh
+- operador trabalha via terminal do Mac
+- browser local e usado para validacao manual
+- frontend local servido em http://localhost:3001
+- repo local em ~/patxanga-bootstrap/patxanga-core
+- project-log.md e logstep.sh em ~/patxanga-bootstrap
+- container principal local: supabase_db_patxanga-core
+
+## MODO DE TRABALHO COM O OPERADOR
+
+- o operador executa comandos no terminal do Mac
+- a IA deve preparar comandos e scripts prontos para colar
+- evitar edicao manual de arquivos
+- preferir inspecao antes de patch
+- quando houver varios passos, entregar sequencia operacional curta
+- validar build e/ou teste antes de versionar
+- ao fim de cada marco importante, avaliar atualizacao do kit de continuidade
+
+## PROCEDIMENTO DE TESTE BROWSER
+
+### Confirmacao do frontend local
+```bash
+cd ~/patxanga-bootstrap/patxanga-core
+lsof -nP -iTCP:3001 -sTCP:LISTEN
+curl -I http://localhost:3001
+```
+
+### Abrir no browser
+```bash
+cd ~/patxanga-bootstrap/patxanga-core
+open http://localhost:3001
+```
+Depois fazer hard refresh com Cmd + Shift + R.
+
+### Registro de rodada
+```bash
+cd ~/patxanga-bootstrap/patxanga-core
+printf "\n### rodada browser %s\nmatch_id=COLE_AQUI\nuser_id=COLE_AQUI\nobjetivo=COLE_AQUI\n" "$(date "+%Y-%m-%d %H:%M:%S")" >> tmp/browser-validation-notes.txt
+tail -n 20 tmp/browser-validation-notes.txt
+```
+
+## PROCEDIMENTO DE CRIACAO DE PARTIDA DE TESTE
+
+### Criar host, guest e match de teste
+```bash
+cd ~/patxanga-bootstrap/patxanga-core && docker exec -i supabase_db_patxanga-core psql -U postgres -d postgres <<'SQL'
+\pset tuples_only on
+\pset format unaligned
+
+with host_seed as (
+  select gen_random_uuid() as host_user_id
+), created as (
+  select
+    host_seed.host_user_id,
+    public.create_patxanga_match(
+      p_host_user_id := host_seed.host_user_id,
+      p_host_guest_name := 'Host Local',
+      p_language := 'pt-BR',
+      p_match_mode := 'synchronous',
+      p_max_players := 2
+    ) as match_id
+  from host_seed
+), guest_seed as (
+  select gen_random_uuid() as guest_user_id
+), joined as (
+  select
+    created.host_user_id,
+    guest_seed.guest_user_id,
+    created.match_id,
+    public.join_patxanga_match(
+      p_match_id := created.match_id,
+      p_user_id := guest_seed.guest_user_id,
+      p_guest_name := 'Guest Local',
+      p_is_bot := false,
+      p_bot_level := null,
+      p_bot_profile := null
+    ) as guest_player_id
+  from created
+  cross join guest_seed
+), started as (
+  select
+    joined.host_user_id,
+    joined.guest_user_id,
+    joined.match_id,
+    public.start_patxanga_match(joined.match_id) as started_payload
+  from joined
+)
+select 'host_user_id=' || host_user_id::text from started
+union all
+select 'guest_user_id=' || guest_user_id::text from started
+union all
+select 'match_id=' || match_id::text from started;
+SQL
+```
+
+### Uso na UI
+- abrir http://localhost:3001
+- preencher match_id
+- usar host_user_id para validar host
+- usar guest_user_id para validar guest
+
+## FILE: docs/17-continuity-activation-brief-v1.0.md
+
+# Continuity Activation Brief v1.0
+
+## Ler primeiro
+- `docs/continuity-package-v1.6.md`
+- snapshot master vigente
+- `project-log.md`
+- `docs/16-room-restart-prompt-v1.0.md`
+
+## Fonte de verdade
+- branch atual
+- commits ja pushados
+- `project-log.md`
+
+## O que esta fechado
+- backend principal funcional
+- bootstrap real validado
+- submit real validado
+- pending vote validado
+- wildcard com `declared_letter` validado ponta a ponta
+- primeira composicao de tela jogavel aberta
+- rack com drag and drop local no frontend
+
+## O que nao fazer
+- nao tratar a sandbox como layout final
+- nao reabrir contratos funcionais ja validados
+- nao misturar lixo local antigo com o marco atual sem auditoria
+
+## Proxima prioridade
+- evoluir a primeira tela de jogo orientada a produto
+- refinar tabuleiro, rack, acoes e indicadores
+- manter debug em plano secundario
+
+
+## FILE: docs/16-room-restart-prompt-v1.0.md
+
+# Room Restart Prompt v1.0
+
+Antes de qualquer análise ou proposta:
+- vou encaminhar os arquivos de leitura nesta conversa
+- leia os arquivos na ordem enviada
+- considere a enumeração abaixo como checklist de ingestão
+- aguarde receber todos os arquivos antes de concluir a leitura e antes de propor o próximo passo
+- só avance depois de confirmar que recebeu e integrou todo o conjunto
+
+Arquivos que serão encaminhados para leitura:
+1. `docs/continuity-package-v1.6.md`
+2. snapshot master vigente (`docs/99-context-snapshot-master-v1.6.md`)
+3. `docs/15-local-ops-and-collaboration-protocol.md`
+4. `docs/12-submit-move-contract.md`
+5. contratos curtos de frontend relevantes:
+   - `docs/frontend-contract-match-bootstrap-v1.0.md`
+   - `docs/frontend-contract-match-states-v1.0.md`
+   - `docs/frontend-contract-pending-vote-ux-v1.0.md`
+   - `docs/frontend-contract-rpcs-v1.0.md`
+   - `docs/frontend-contract-screen-actions-v1.0.md`
+   - `docs/frontend-backend-operational-contract-v1.0.md`
+   - `docs/frontend-integration-checklist-v1.0.md`
+6. `docs/16-room-restart-prompt-v1.0.md`
+7. `docs/17-continuity-activation-brief-v1.0.md`
+
+Você está entrando na continuidade do projeto Patxanga.
+
+Leia e use, nesta ordem:
+1. `docs/continuity-package-v1.6.md`
+2. snapshot master vigente (`docs/99-context-snapshot-master-v1.6.md`)
+3. `docs/15-local-ops-and-collaboration-protocol.md`
+4. `docs/12-submit-move-contract.md`
+5. contratos curtos de frontend relevantes:
+   - `docs/frontend-contract-match-bootstrap-v1.0.md`
+   - `docs/frontend-contract-match-states-v1.0.md`
+   - `docs/frontend-contract-pending-vote-ux-v1.0.md`
+   - `docs/frontend-contract-rpcs-v1.0.md`
+   - `docs/frontend-contract-screen-actions-v1.0.md`
+   - `docs/frontend-backend-operational-contract-v1.0.md`
+   - `docs/frontend-integration-checklist-v1.0.md`
+6. `docs/16-room-restart-prompt-v1.0.md`
+7. `docs/17-continuity-activation-brief-v1.0.md`
+
+Antes de propor ou executar qualquer novo passo:
+- confirme o estado atual do branch
+- leia os commits mais recentes
+- use `project-log.md` como trilha operacional
+- trate branch + commits ja pushados como fonte de verdade mais forte em caso de divergencia
+
+Estado consolidado do projeto:
+- backend central do jogo ja funcional
+- bootstrap real frontend-backend ja validado
+- submit real de jogada ja validado
+- ramo `accepted` ja validado pela UI
+- ramo `pending_vote` ja validado pela UI
+- votacao `accepted` e `rejected` ja validadas
+- overlay visual de `pending_vote` ja implementado
+- home atual continua existindo como sandbox operacional
+- `VotingSection`, `BoardSection`, `RackSection`, `PlayersSection`, `MatchStatusPanel` e `MoveSubmitSection` ja foram extraidos
+- wildcard com `declared_letter` foi fechado ponta a ponta
+- a primeira composicao de tela jogavel orientada a produto ja foi aberta
+- o rack jogavel ja suporta reordenacao local via drag and drop no frontend
+
+Leitura correta do momento atual:
+- a home atual nao deve ser tratada como layout final de produto
+- ela deve ser entendida como tela operacional/sandbox de validacao
+- a tela jogavel inicial ja existe e deve ser a frente principal de evolucao
+- a proxima prioridade principal nao e mais infra nem integracao
+- a proxima prioridade principal e evoluir a primeira tela de jogo orientada a produto
+
+Diretriz para a proxima fase:
+- priorizar visualmente tabuleiro, rack/deck, acao principal do turno e votacao apenas quando necessaria
+- reduzir detalhes tecnicos visiveis por padrao
+- manter debug como camada secundaria
+- nao reabrir contratos funcionais ja validados sem necessidade
+- continuar trabalhando com commits pequenos, frequentes e tematicos
+- apos cada marco relevante: validar, commitar, pushar, registrar com `logstep.sh` e refletir no continuity package quando houver mudanca operacional real
+
+Modo de operacao:
+- pesquisar primeiro
+- localizar o trecho real do codigo antes de alterar
+- decidir com base no estado atual do repositorio
+- implementar de forma incremental
+- evitar adivinhacao em patches
+- confirmar build/teste sempre que mexer em frontend ou SQL critico
+
+Recomendacao de partida para a proxima sala:
+- nao voltar a polir a sandbox antes disso
+- continuar diretamente a evolucao da primeira tela de jogo orientada a produto
+- usar a sandbox apenas como apoio operacional e de validacao
+
+
+## FILE: docs/continuity-package-v1.6.md
+
+Leia atentamente, nesta ordem:
+
+1) CONTEXT SNAPSHOT MASTER v1.6
+2) docs/12-submit-move-contract.md — Version 1.2 (Frozen)
+3) Operational Log Policy
+4) Handoff Protocol
+
+Estado atual confirmado:
+
+• Projeto usa Supabase CLI
+• Banco reconstruído exclusivamente via migrations
+• supabase db reset compila engine sem erro
+• submit_move hardened e integrado
+• pending_vote persistente real já validado
+• votação accept/reject já validada
+• pass turn já validado
+• exchange tiles já validado
+• fim de partida já validado em dois critérios
+• pontuação final por peças restantes já validada
+• UUID por peça preservado
+• Server-authoritative absoluto
+
+Processo oficial:
+
+• Nunca gerar SQL fora de migration
+• Nunca confiar em validação client-side
+• Nunca alterar regras estratégicas congeladas
+• Toda nova função deve entrar em migration versionada
+• Sempre versionar mudanças relevantes e registrar logstep
+
+Estado técnico validado:
+
+• create_match funcional
+• join_match funcional
+• start_match funcional
+• rack distribuído corretamente
+• current_turn_player_id funcional
+• submit_move funcional nos ramos success e pending_vote
+• submit_vote funcional nos ramos accepted e rejected
+• pass_turn funcional
+• exchange_tiles funcional
+• score funcional
+• board_state persistido corretamente
+• rack_state atualizado corretamente
+• bag_state atualizado corretamente
+• next_player definido
+• match_finished funcional
+• score final ajustado por peças restantes
+
+Objetivo do próximo passo:
+[DESCREVER AQUI]
+
+Não simplifique arquitetura.
+Não altere regras congeladas.
+Não reestruture banco.
+Não remova UUID.
+Não quebre replay.
+Não ignore fluxo de pending_vote.
+Não troque player_id por user_id no estado interno da partida.
+
+
+## Observação operacional importante desta etapa
+
+Durante a tentativa de consolidar o documento `frontend-backend-operational-contract-v1.0.md`,
+foi observado um limite prático de geração/renderização de conteúdo longo nesta sala.
+
+Sintoma:
+- a resposta é truncada repetidamente no mesmo ponto
+- o conteúdo deixa de chegar como documento único
+- passam a surgir blocos separados e incompletos
+
+Conclusão:
+- o problema é operacional da sala/interface, não do backend do projeto
+
+Regra de trabalho a partir daqui:
+- evitar gerar documentos longos em bloco único nesta sala
+- preferir documentos menores e segmentados
+- quando necessário, quebrar artefatos grandes em múltiplos arquivos
+- registrar sempre o ponto exato onde a geração foi interrompida
+
+## Estado do projeto nesta etapa
+
+O backend do Patxanga encontra-se amplamente validado, incluindo:
+
+- gameplay core
+- pending_vote
+- votação accept/reject
+- pass turn
+- exchange tiles
+- fim de partida
+- penalidade final
+- lobby direct
+- convites
+- resume
+- forfeit
+- listagens mínimas para frontend
+
+Pendência atual:
+- consolidação documental do contrato operacional frontend-backend
+
+Natureza da pendência:
+- limitação operacional de geração de arquivo longo nesta sala
+- não representa bloqueio técnico do produto
+
+Se qualquer dúvida estrutural surgir, pare e peça confirmação antes de gerar código e aguarde eu anexar o segundo arquivo antes de qualquer coisa.
+
+## Atualização documental posterior a este pacote
+
+Desde este baseline, o repositório passou a incluir o documento curto:
+
+- `docs/frontend-contract-rpcs-v1.0.md`
+- `docs/frontend-contract-match-states-v1.0.md` passa a integrar a ordem de referência para sessões de frontend
+- `docs/frontend-contract-screen-actions-v1.0.md` passa a integrar a ordem de referência para sessões de frontend
+- `docs/frontend-contract-match-bootstrap-v1.0.md` passa a integrar a ordem de referência para sessões de frontend
+
+Uso recomendado em sessões de frontend:
+- tratar `docs/frontend-contract-rpcs-v1.0.md` como contrato curto operacional das RPCs expostas ao frontend
+- manter leitura conjunta com:
+  - snapshot master vigente
+  - `docs/12-submit-move-contract.md` — Version 1.2 (Frozen)
+  - protocolo local/operacional vigente
+
+## Marco de implementacao posterior a este pacote
+
+Desde este baseline, o repositório passou a incluir uma base real de frontend em:
+
+- `frontend/`
+
+Stack adotada:
+- Next.js com Pages Router
+
+Uso recomendado em sessoes futuras:
+- tratar `frontend/` como baseline inicial de implementacao do frontend
+- manter leitura conjunta com:
+  - `docs/frontend-contract-rpcs-v1.0.md`
+  - `docs/frontend-contract-match-states-v1.0.md`
+  - `docs/frontend-contract-screen-actions-v1.0.md`
+  - `docs/frontend-contract-match-bootstrap-v1.0.md`
+  - `docs/frontend-integration-checklist-v1.0.md`
+
+## Marco posterior: bootstrap real inicial da match
+
+Desde este baseline, o projeto passou a incluir:
+
+- RPC server-authoritative `get_patxanga_match_bootstrap(uuid, uuid)`
+- migration `20260313113000_14_match_bootstrap_entrypoint.sql`
+- teste `sql/tests/test_get_match_bootstrap.sql` validado localmente
+- frontend com provider real de bootstrap da match e fallback mock controlado
+- remoção do adapter legado `frontend/lib/matchBootstrapAdapter.ts`
+
+Estado prático atual:
+- frontend buildando com bootstrap da match preparado para backend real
+- camada ativa no frontend:
+  - `frontend/lib/backend/`
+  - `frontend/lib/supabase/`
+- continuidade recomendada de leitura para sessões de frontend:
+  - `docs/frontend-contract-rpcs-v1.0.md`
+  - `docs/frontend-contract-match-states-v1.0.md`
+  - `docs/frontend-contract-screen-actions-v1.0.md`
+  - `docs/frontend-contract-match-bootstrap-v1.0.md`
+  - `docs/frontend-integration-checklist-v1.0.md`
+
+## Validacao funcional posterior: bootstrap real frontend-backend
+
+Validado localmente em fluxo real pela UI:
+
+- frontend em Next.js Pages Router carregando `.env.local`
+- provider real do frontend consultando Supabase local
+- RPC `get_patxanga_match_bootstrap(uuid, uuid)` respondendo corretamente
+- resolucao server-authoritative de `player_id` a partir de `match_id + user_id`
+- UI exibindo corretamente:
+  - `status`
+  - `match_id`
+  - `player_id` resolvido
+  - `current_turn_player_id`
+  - `turn_number`
+  - `players_summary`
+
+Estado confirmado deste marco:
+- primeiro bootstrap real da match validado ponta a ponta entre frontend e backend local
+
+## Marco posterior: interacao local inicial de gameplay no frontend
+
+Desde este baseline, a home do frontend passou a incluir:
+
+- renderizacao de `players_summary`
+- destaque visual de `current_turn_player_id`
+- renderizacao read-only de `board_state`
+- renderizacao do `rack_state` do jogador resolvido
+- selecao local de pecas do rack
+- preview local de posicionamento de pecas no board
+- limpeza do preview local sem mutar estado oficial da match
+
+Estado prático atual:
+- frontend ja exibe leitura minima util da partida
+- frontend ja possui interacao local inicial sem submit ao backend
+- fluxo ainda preserva backend server-authoritative como fonte de verdade
+
+## Marco posterior: preview local do payload de jogada no frontend
+
+Desde este baseline, a home do frontend passou a incluir:
+
+- selecao local de pecas do rack
+- preview local de posicionamento no board
+- geracao local de payload compativel com `submit_patxanga_move(...)`
+- preview visivel de `p_placed_tiles` antes de qualquer submit real
+
+Estado prático atual:
+- frontend ja alcanca a fronteira do contrato real de jogada
+- submit real ainda nao foi ligado
+- backend continua como fonte oficial de validacao e aplicacao
+
+## Marco posterior: submit real inicial de jogada no frontend
+
+Desde este baseline, a home do frontend passou a incluir:
+
+- geracao local de `p_placed_tiles`
+- uso de `player_id` resolvido pelo bootstrap oficial
+- chamada real de `submit_patxanga_move(...)`
+- exibicao do retorno bruto da RPC
+- recarga do bootstrap oficial apos a resposta
+
+Estado prático atual:
+- frontend ja executa submit real inicial de jogada contra o backend local
+- fluxo ainda e controlado e simples, mas ja cruza a fronteira real da engine
+- backend permanece server-authoritative para validacao, aplicacao e transicao de estado
+
+## Validacao funcional posterior: jogada aceita pela UI no frontend
+
+Validado localmente pela home do frontend:
+
+- selecao local de pecas do rack
+- posicionamento local no board
+- geracao de `p_placed_tiles`
+- chamada real de `submit_patxanga_move(...)`
+- jogada valida aceita pela engine
+- board oficial atualizado apos refresh do bootstrap
+- rack recomposto com novas pecas apos a jogada
+
+Estado confirmado deste marco:
+- ramo `accepted` de submit real de jogada ja foi validado ponta a ponta pela UI
+
+## Marco posterior: overlay visual de pending_vote na home do frontend
+
+Desde este baseline, o projeto passou a incluir:
+
+- read model `get_patxanga_pending_vote_context(...)`
+- migration `20260313143000_15_pending_vote_context_entrypoint.sql`
+- teste SQL do contexto de `pending_vote` validado localmente
+- home do frontend com overlay visual para jogada pendente durante `voting`
+
+Estado prático atual:
+- `board_state` oficial permanece intacto durante `pending_vote`
+- UI pode exibir a jogada pendente em overlay visual
+- frontend fica alinhado ao contrato de UX de `pending_vote`
+
+## Validacao funcional posterior: rejeicao de pending_vote pela UI
+
+Validado localmente pela home do frontend:
+
+- carregamento da match em `voting` como jogador elegivel para votar
+- exibicao do contexto pendente de votacao
+- uso de `submit_patxanga_vote(...)` pela UI
+- rejeicao da jogada pendente por outro jogador
+- retorno da match para `active`
+- `current_turn_player_id` preservado no autor da jogada
+- move resolvido como `rejected`
+- `board_state` oficial permanecendo intacto apos a rejeicao
+
+Estado confirmado deste marco:
+- ramo `rejected` de `submit_patxanga_vote(...)` ja foi validado ponta a ponta pela UI
+
+## Validacao funcional posterior: aprovacao de pending_vote pela UI
+
+Validado localmente pela home do frontend:
+
+- carregamento da match em `voting` como jogador elegivel para votar
+- exibicao do contexto pendente de votacao
+- uso de `submit_patxanga_vote(...)` pela UI
+- aprovacao da jogada pendente por outro jogador
+- retorno da match para `active`
+- avanço de `turn_number`
+- avanço de `current_turn_player_id`
+- move resolvido como `accepted`
+- `board_state` oficial aplicando a jogada apos a aprovacao
+
+Estado confirmado deste marco:
+- ramo `accepted` de `submit_patxanga_vote(...)` ja foi validado ponta a ponta pela UI
+
+## Marco posterior: acabamento visual inicial do board na home
+
+Desde este baseline, a home do frontend passou a refletir o direcionamento visual do board definitivo:
+
+- casas `NM` renderizadas em branco
+- coordenadas removidas do tabuleiro
+- casas especiais preservadas apenas por diferenciação visual
+- overlays relevantes de gameplay mantidos
+
+Estado prático atual:
+- board da home ficou menos técnico e mais próximo de produto
+- renderização continua compatível com submit real, `pending_vote` e votação
+
+## Plano recomendado das proximas fases
+
+### Fase 1 — estabilizacao estrutural do frontend
+Objetivo:
+- reduzir risco de regressao
+- sair da dependencia de uma home muito grande
+- preparar o frontend para evolucao mais rapida
+
+Etapas:
+- [feito] extrair `VotingSection`
+- [feito] extrair `BoardSection`
+- [feito] extrair `RackSection`
+- [feito] extrair `PlayersSection`
+- [feito] extrair `MatchStatusPanel`
+- [feito] extrair `MoveSubmitSection`
+- [opcional] extrair `MatchLoadSection` se ainda houver ganho claro
+- manter `pages/index.tsx` como orquestradora de estado e fluxo
+- preservar comportamento atual sem mudar contratos
+
+Criterio de saida:
+- `index.tsx` deixa de concentrar o grosso do JSX
+- build continua passando
+- fluxos `active` e `voting` continuam funcionando sem mudanca funcional
+
+Estado atual da fase:
+- Fase 1 avancou de forma consistente
+- os blocos mais sensiveis e volumosos da home ja foram separados
+- a `index.tsx` passou a operar principalmente como orquestradora
+- a extracao adicional de `MatchLoadSection` ficou opcional, nao obrigatoria
+
+### Fase 2 — acabamento de UX da partida
+Objetivo:
+- transformar a tela de prova funcional em tela mais proxima de produto
+
+Etapas:
+- reduzir ainda mais ruido tecnico visivel por padrao
+- manter debug apenas em modo opcional
+- consolidar estilo visual do board
+- consolidar estilo visual do rack
+- melhorar textos de estado e acoes
+- diferenciar com clareza:
+  - turno atual
+  - jogada pendente
+  - acao disponivel ao jogador
+- revisar visual de overlays e destaques
+
+Criterio de saida:
+- tela fica compreensivel sem leitura tecnica
+- jogador entende o que pode fazer em cada estado
+
+### Fase 3 — fechamento do fluxo de votacao como feature de produto
+Objetivo:
+- sair de UI minima de votacao para fluxo de votacao utilizavel
+
+Etapas:
+- revisar UX de autor x votante
+- deixar explicito quando o autor nao pode votar
+- tornar mais claro o resultado apos aprovacao/rejeicao
+- decidir comportamento visual pos-voto
+- revisar se o contexto pendente precisa mostrar:
+  - palavra principal
+  - palavras secundarias
+  - autor
+  - pecas em overlay
+- validar multiplos ciclos de votacao seguidos
+
+Criterio de saida:
+- votacao fica legivel, previsivel e consistente
+- fluxo nao parece mais interno ou experimental
+
+### Fase 4 — amadurecimento dos estados fora do miolo principal
+Objetivo:
+- cobrir estados do produto que ainda estao menos trabalhados no frontend
+
+Etapas:
+- melhorar UX de `waiting`
+- melhorar entrada e saida de lobby
+- revisar `finished`
+- revisar comportamento de resume
+- revisar presenca/ausencia
+- revisar forfeit
+- revisar mensagens de transicao de estado
+
+Criterio de saida:
+- frontend deixa de estar forte so em `active` e `voting`
+- estados laterais ficam coerentes com o restante do produto
+
+### Fase 5 — consolidacao de contratos de frontend
+Objetivo:
+- reduzir ambiguidades futuras
+- fixar decisoes que hoje ainda estao espalhadas entre codigo e conversa
+
+Etapas:
+- consolidar contrato visual do board definitivo
+- consolidar contrato de UX de votacao
+- consolidar contrato de acoes por estado
+- alinhar documentos curtos com implementacao real
+- atualizar continuidade ao fim de marcos relevantes, nao de microajustes
+
+Criterio de saida:
+- proxima sala encontra regras explicitas
+- menos dependencia de memoria operacional
+
+### Fase 6 — preparacao para uma primeira versao apresentavel
+Objetivo:
+- deixar a aplicacao pronta para demonstracao interna consistente
+
+Etapas:
+- revisar organizacao visual geral
+- revisar textos e nomenclatura
+- reduzir areas claramente de teste
+- garantir fluxo feliz completo:
+  - carregar match
+  - jogar
+  - cair em votacao
+  - votar
+  - seguir jogando
+  - encerrar partida
+- revisar navegacao minima necessaria
+
+Criterio de saida:
+- primeira versao demonstravel sem parecer painel tecnico
+
+### Ordem recomendada de execucao
+1. Refinar UX de votacao
+2. Refinar UX de `waiting` e `finished`
+3. Consolidar contratos e documentacao
+4. Polimento de produto
+
+## Uso do versionamento para retomada segura
+
+Este projeto esta sendo conduzido com commits pequenos, frequentes e tematicos.
+
+Regra operacional adotada:
+- todo marco relevante deve, idealmente:
+  - passar em build e/ou validacao pertinente
+  - ser commitado
+  - ser pushado
+  - ser registrado via `logstep.sh`
+  - ser refletido no continuity package quando altera o estado operacional do projeto
+
+Como isso ajuda uma proxima sala:
+- localizar rapidamente o ultimo marco estavel
+- diferenciar experimento local de mudanca consolidada
+- entender a sequencia real de evolucao
+- retomar a partir do ultimo ponto seguro, e nao de memoria de conversa
+
+Ordem recomendada de confianca para retomada:
+1. estado atual do branch
+2. commits recentes
+3. `project-log.md`
+4. `docs/continuity-package-v1.6.md`
+
+Leitura correta:
+- o continuity package resume o estado operacional e as decisoes
+- o historico de commits e o `project-log.md` mostram a trilha real de execucao
+- em caso de divergencia, tratar o branch e os commits ja pushados como fonte de verdade mais forte
+
+## Releitura do estado atual da home e mudanca de prioridade
+
+Leitura consolidada apos revisao visual da tela em browser:
+
+- a home atual evoluiu bem como tela operacional de validacao
+- a integracao real frontend-backend ja esta funcional
+- os fluxos principais de gameplay e votacao ja foram validados
+- a home atual ja nao e monolitica e foi bastante modularizada
+- apesar disso, a experiencia visual ainda se aproxima mais de sandbox operacional do que de tela final de jogo
+
+Diagnostico de produto:
+- a tela atual ainda expõe estrutura de paineis e blocos tecnicos demais
+- o fluxo principal de gameplay ainda nao aparece como composicao visual dominante
+- tabuleiro, rack e acao principal ainda nao estao organizados como uma mesa de jogo de producao
+- a tela atual deve ser entendida como base funcional de validacao e nao como layout final do jogo
+
+Decisao de prioridade:
+- nao tratar a home atual como candidata direta a tela final de producao
+- manter a home atual como tela operacional/sandbox util para validacao, depuracao e testes de integracao
+- abrir como proxima frente uma primeira tela de jogo orientada a produto
+
+Objetivo da proxima fase:
+- construir uma tela centrada em gameplay
+- priorizar visualmente:
+  - tabuleiro
+  - rack/deck do jogador
+  - acao principal do turno
+  - bloco de votacao apenas quando necessario
+- reduzir fortemente detalhes tecnicos visiveis por padrao
+- manter debug como camada secundaria, opcional e nao central
+
+Implicacao pratica:
+- o proximo passo principal nao deve ser apenas continuar polindo paineis da home atual
+- o proximo passo principal deve ser desenhar e implementar a primeira composicao de tela jogavel com foco de produto
+- a home atual permanece util como apoio operacional durante essa transicao
+
+## Requisito prioritario da proxima fase: declaracao de letra para peca especial sem letra fixa
+
+Este requisito deve ser tratado como prioritario antes da consolidacao da primeira tela de jogo orientada a produto.
+
+Regra funcional:
+- quando o jogador usar uma peca especial sem letra fixa na face, ele deve declarar qual letra essa peca representara naquela jogada
+- sem essa declaracao, a palavra formada fica ambigua e nao pode ser tratada como jogada completa de producao
+
+Motivos:
+- validar corretamente a palavra submetida
+- persistir corretamente a jogada aceita
+- permitir leitura correta do board em cruzamentos futuros
+- permitir votacao e revisao da jogada com informacao completa
+
+Implicacoes tecnicas:
+- o frontend deve exigir a escolha da letra para a peca especial antes da confirmacao da jogada
+- o payload da jogada deve carregar `declared_letter` para essa peca
+- o backend deve tratar `declared_letter` como obrigatorio nesse caso
+- a letra declarada deve ser a referencia efetiva para validacao, persistencia e leitura futura da celula no board
+
+Diretriz de prioridade:
+- este requisito deve entrar antes do refinamento avancado da primeira tela jogavel de produto
+- a proxima fase nao deve considerar o fluxo principal suficientemente fechado sem essa cobertura
+
+## Marco posterior: wildcard com declared_letter validado ponta a ponta
+
+Foi fechado o requisito funcional prioritario da peca especial sem letra fixa.
+
+Estado validado:
+- backend exige `declared_letter` para tile `wildcard`
+- `declared_letter` e normalizado no backend
+- frontend passou a exigir a letra ao posicionar wildcard
+- preview local do board mostra a letra declarada
+- clique em casa com preview local remove a peca do board e limpa o estado local correspondente
+- submit real com wildcard voltou a funcionar sem quebrar os fluxos existentes
+- em palavra nao reconhecida, o fluxo continua corretamente para `pending_vote`
+
+Leitura correta:
+- o requisito funcional de wildcard ficou coberto
+- a UX atual ainda e minima
+- refinamentos futuros podem substituir o `prompt()` por interacao melhor, mas sem reabrir o contrato funcional\n\n## Requisito de UX para a primeira tela jogavel: reordenacao local do rack
+
+A primeira tela de jogo orientada a produto deve permitir que o jogador reorganize visualmente as pecas do proprio rack antes de leva-las ao tabuleiro.
+
+Objetivo:
+- permitir leitura melhor das combinacoes possiveis
+- permitir montagem mental da palavra ainda no rack
+- aproximar a experiencia de jogo do comportamento esperado em jogos de palavra com pecas
+
+Escopo esperado:
+- reordenacao apenas local/visual do rack
+- sem alterar estado persistido do backend
+- sem impacto no contrato funcional de submit
+- a ordem visual reorganizada deve servir apenas como apoio de gameplay e usabilidade
+
+Leitura correta:
+- este requisito e de UX/gameplay
+- nao substitui o fluxo de posicionamento no tabuleiro
+- deve entrar no desenho da primeira tela de jogo orientada a produto\n
+
+## Marco posterior: primeira composicao de tela jogavel orientada a produto
+
+Foi aberta a primeira composicao visual de tela jogavel sem substituir a home sandbox existente.
+
+Estado consolidado:
+- a home continua existindo como sandbox operacional e de validacao
+- foi criada uma composicao mais orientada a gameplay na camada de frontend
+- o foco visual passou a privilegiar tabuleiro, rack e acao principal da jogada
+- a sandbox tecnica permanece acessivel via debug e nao como experiencia principal
+
+Leitura correta:
+- este marco nao fecha a UX final do jogo
+- este marco abre a primeira camada real de tela jogavel
+- a direcao correta passa a ser evoluir essa composicao de gameplay, e nao voltar a expandir a sandbox
+
+## Marco posterior: rack jogavel simplificado e reordenacao local
+
+A tela jogavel passou a ter um rack mais proximo de pecas de jogo e menos de cartoes tecnicos.
+
+Estado consolidado:
+- tiles do rack foram simplificados visualmente
+- selecao passou a depender mais de estado visual e menos de texto
+- o rack passou a suportar reordenacao local no frontend
+- a primeira versao de reordenacao foi validada
+- em seguida a interacao foi evoluida para drag and drop local no rack
+
+Garantias:
+- a reordenacao e apenas visual/local
+- nao altera contrato do backend
+- nao altera estado persistido do rack no servidor
+- nao reabre os contratos funcionais ja validados
+
+Leitura correta:
+- drag and drop local do rack e um ganho de UX/gameplay
+- a ordem visual ajuda o jogador a montar mentalmente a palavra antes de posicionar no tabuleiro
+- este comportamento ainda pode ser refinado visualmente, mas a capacidade funcional ja foi adicionada
+
+## Estado mais recente da frente de produto
+
+No ponto atual do projeto:
+- backend funcional principal segue validado
+- wildcard com `declared_letter` segue validado ponta a ponta
+- a tela jogavel inicial ja existe
+- o rack ja suporta drag and drop local
+- a sandbox continua util, mas nao deve voltar a ser o centro do trabalho de UX
+
+Prioridade recomendada para a proxima sala:
+- continuar a evolucao da primeira tela de jogo orientada a produto
+- revisar a composicao visual final de tabuleiro, rack, acoes e indicadores de estado
+- manter a sandbox apenas como camada secundaria de apoio operacional
+
+## FILE: docs/99-context-snapshot-master-v1.6.md
+
+# ============================================================
+# PATXANGA — CONTEXT SNAPSHOT MASTER
+# Version: 1.6 (Gameplay Core + Voting + End Conditions + Final Penalties Validated)
+# Status: FROZEN BASELINE
+# ============================================================
+
+Este documento representa o estado arquitetural oficial da engine Patxanga
+após validação do núcleo completo do gameplay backend, incluindo votação,
+encerramento de partida e ajuste final de score por peças restantes.
+
+Nenhuma decisão estrutural pode ser alterada sem incremento de versão.
+
+------------------------------------------------------------
+1. ARQUITETURA GERAL
+------------------------------------------------------------
+
+• Backend 100% server-authoritative
+• PostgreSQL (Supabase)
+• Todas as alterações via migrations
+• Nenhum SQL aplicado manualmente fora de migration
+• UUID individual por peça
+• Persistência completa de board_state, rack_state e bag_state
+• Estado interno da partida usa player_id, não user_id
+
+------------------------------------------------------------
+2. PROCESSO OFICIAL DE BUILD
+------------------------------------------------------------
+
+Ambiente local:
+
+1. supabase start
+2. supabase db reset
+
+Reset recria todo o banco a partir das migrations oficiais.
+
+Ordem obrigatória das migrations:
+
+01_initial_schema
+02_dictionary
+03_distribution_seed
+04_core_rpcs
+05_submit_engine
+06_dictionary_test_seed
+07_pending_vote_resolution
+08_pass_turn
+09_exchange_tiles
+10_evaluate_match_end
+
+------------------------------------------------------------
+3. ESTRUTURA DO PROJETO
+------------------------------------------------------------
+
+/sql
+    /migrations        → arquivos históricos originais
+    /rpc               → funções individuais fonte
+    /seeds             → seeds isolados
+    /tests             → testes SQL
+
+/supabase
+    /migrations        → migrations oficiais aplicáveis
+
+Migrations oficiais são geradas concatenando/copiando os arquivos fonte quando necessário.
+
+------------------------------------------------------------
+4. ENGINE ATUAL
+------------------------------------------------------------
+
+Fluxos implementados:
+
+create_match()
+join_match()
+initialize_bag()
+initialize_board()
+start_match()
+submit_patxanga_move()
+submit_patxanga_vote()
+submit_patxanga_pass_turn()
+submit_patxanga_exchange_tiles()
+evaluate_patxanga_match_end()
+
+------------------------------------------------------------
+5. SUBMIT_MOVE
+------------------------------------------------------------
+
+submit_move inclui:
+
+• Lock pessimista da match
+• Lock do player
+• Validação de posse UUID
+• Validação geométrica
+• Hidratação de placed tiles com peças completas do rack
+• Construção de virtual board
+• Extração de palavras
+• Regra: palavra principal deve ter pelo menos 2 letras
+• Validação lexical via tabela local
+• Branch success
+• Branch pending_vote persistente
+• Replay
+• Atualização de board_state
+• Atualização de rack_state
+• Atualização de bag_state
+• Avanço de turno
+• Integração com avaliação de fim de partida
+• Reset de estagnação após jogada válida
+
+------------------------------------------------------------
+6. PENDING_VOTE
+------------------------------------------------------------
+
+Quando a palavra não existe no dicionário:
+
+• patxanga_moves recebe status = pending_vote
+• match passa para status = voting
+• move_id é retornado ao cliente
+• board_state não é alterado
+• rack_state não é alterado
+• bag_state não é alterado
+• turno não avança
+• replay registra o evento
+
+submit_patxanga_vote() resolve:
+
+• voto do autor é proibido
+• rejeição única já resolve como rejected
+• todas as aprovações necessárias resolvem como accepted
+
+Se accepted:
+
+• move vira accepted
+• board é aplicado
+• rack é atualizado
+• bag é reduzido
+• score é aplicado
+• turno avança
+• match volta para active
+
+Se rejected:
+
+• move vira rejected
+• board permanece intacto
+• turno permanece no autor
+• match volta para active
+
+------------------------------------------------------------
+7. PASS TURN
+------------------------------------------------------------
+
+submit_patxanga_pass_turn():
+
+• valida match / turno / player
+• persiste move_type = pass
+• status = accepted
+• score_total = 0
+• marca has_passed_last_cycle = true
+• avança turno
+• replay registra turn_passed e turn_changed
+• integra avaliação de fim de partida
+
+------------------------------------------------------------
+8. EXCHANGE TILES
+------------------------------------------------------------
+
+submit_patxanga_exchange_tiles():
+
+• valida match / turno / player
+• valida posse das peças
+• remove peças do rack
+• devolve peças ao bag
+• compra mesma quantidade de peças novas
+• atualiza rack_state
+• atualiza bag_state
+• persiste move_type = exchange_tiles
+• avança turno
+• replay registra tiles_exchanged e turn_changed
+
+------------------------------------------------------------
+9. FIM DE PARTIDA
+------------------------------------------------------------
+
+evaluate_patxanga_match_end():
+
+Critério 1:
+• bag vazio
+• algum jogador com rack vazio
+→ match finished
+
+Critério 2:
+• bag vazio
+• todos os jogadores com has_passed_last_cycle = true
+→ match finished
+
+Ao terminar:
+
+• status = finished
+• winner_player_id = maior score ajustado
+• finished_at preenchido
+• replay registra match_finished
+
+------------------------------------------------------------
+10. PONTUAÇÃO FINAL
+------------------------------------------------------------
+
+Quando a match termina:
+
+• cada jogador recebe penalidade igual à soma dos pontos das peças restantes no rack
+• essa penalidade é subtraída do score final
+• se houve encerramento por rack vazio, o jogador que zerou o rack recebe bônus
+  igual à soma total das penalidades dos demais jogadores
+• winner_player_id é recalculado após esse ajuste final
+
+Regra atual de winner:
+• maior score
+• desempate simples por turn_order asc
+
+Ainda não implementado nesta versão:
+• tie-break formal sofisticado
+
+------------------------------------------------------------
+11. DICIONÁRIO
+------------------------------------------------------------
+
+Tabela:
+
+patxanga_dictionary (
+    word_original text PK,
+    word_normalized text unique
+)
+
+Funções:
+
+normalize_patxanga_word()
+validate_word()
+
+Seed mínimo local para testes:
+
+• SE
+• DE
+• EM
+• ME
+• TE
+• DA
+• DO
+• EU
+• TU
+• NO
+• NA
+• RE
+
+------------------------------------------------------------
+12. REGRAS ESTRATÉGICAS CONGELADAS
+------------------------------------------------------------
+
+• Tabuleiro 15x15
+• Centro (8,8) obrigatório na primeira jogada
+• 4 PT nos cantos
+• Multiplicadores NM | LD | LT | PD | PT
+• Patxanga Real dobra apenas a palavra principal
+• Patxanga Real aplica após multiplicadores
+• Bônus 7 peças = +20
+
+------------------------------------------------------------
+13. PROIBIÇÕES
+------------------------------------------------------------
+
+• Não alterar layout
+• Não alterar distribuição
+• Não remover UUID
+• Não confiar no frontend
+• Não aplicar SQL fora de migrations
+• Não trocar player_id por user_id no estado interno da partida
+• Não modificar engine sem update do snapshot
+
+------------------------------------------------------------
+14. VALIDAÇÃO JÁ COMPROVADA
+------------------------------------------------------------
+
+Já foi comprovado com testes locais determinísticos:
+
+• success com palavra válida ("DA")
+• score = 6 com multiplicador central
+• board_state persistido
+• rack recomposto
+• bag reduzido
+• turno avançado
+
+• pending_vote com palavra inválida ("TS")
+• move persistido
+• match em voting
+• board intacto
+
+• pending_vote accepted
+• move aplicado ao board
+• score aplicado
+• match volta para active
+
+• pending_vote rejected
+• move rejeitado
+• board intacto
+• match volta para active
+
+• pass turn funcional
+
+• exchange tiles funcional
+
+• match end por bag vazio + rack vazio
+
+• match end por bag vazio + todos passaram
+
+• penalidade final por peças restantes aplicada corretamente
+
+• bônus final ao jogador que zerou o rack aplicado corretamente
+
+------------------------------------------------------------
+15. ESTADO ATUAL
+------------------------------------------------------------
+
+Engine compilável via:
+
+supabase db reset
+
+Gameplay backend central está validado.
+
+Próximos blocos prioritários:
+
+• tie-break / empate formal
+• cruzamentos e palavras secundárias mais complexas
+• integração com frontend
+• testes de regressão mais amplos
+• polimento de replay / observabilidade
+## FILE: docs/15-local-ops-and-collaboration-protocol.md
+
+# PATXANGA — LOCAL OPS AND COLLABORATION PROTOCOL
+Version: 1.0
+Status: ACTIVE OPERATIONAL BASELINE
+
+## 1. Objetivo
+
+Este documento registra o protocolo operacional local e o método de colaboração
+adotado para o projeto Patxanga nesta fase.
+
+Ele existe para reduzir retrabalho, evitar comandos ambíguos, manter continuidade
+e padronizar a criação de arquivos, validações e versionamento local.
+
+## 2. Ambiente local oficial
+
+- Sistema operacional: macOS
+- Shell padrão: zsh
+- Diretório de trabalho do projeto: `~/patxanga-bootstrap/patxanga-core`
+- Repositório Git local: `~/patxanga-bootstrap/patxanga-core`
+
+## 3. Fluxo local oficial de banco
+
+Comando padrão de reconstrução local:
+
+```bash
+cd ~/patxanga-bootstrap/patxanga-core && supabase db reset
+```
+
+Regras obrigatórias:
+
+- o banco deve ser reconstruído exclusivamente via migrations
+- migrations são a fonte oficial de reconstrução do banco
+- nunca usar SQL manual fora de migration como solução final
+
+## 4. Container local padrão
+
+Container principal de Postgres/Supabase:
+
+- `supabase_db_patxanga-core`
+
+## 5. Forma padrão de rodar testes SQL
+
+Comando padrão:
+
+```bash
+cd ~/patxanga-bootstrap/patxanga-core && docker exec -i supabase_db_patxanga-core psql -U postgres < caminho/do/teste.sql
+```
+
+## 6. Forma padrão de abrir arquivos para edição local
+
+Comando padrão:
+
+```bash
+cd ~/patxanga-bootstrap/patxanga-core && open -a TextEdit caminho/do/arquivo
+```
+
+## 7. Script local de logstep
+
+O script local de logstep fica um nível acima do projeto.
+
+Fluxo padrão:
+
+```bash
+cd ~/patxanga-bootstrap && ./logstep.sh "mensagem" && cd patxanga-core
+```
+
+## 8. Fluxo padrão de versionamento
+
+Comandos padrão:
+
+```bash
+cd ~/patxanga-bootstrap/patxanga-core && git add ... && git commit -m "..." && git push
+```
+
+Regra prática:
+
+- não assumir caminhos diferentes sem explicitar antes
+
+## 9. Ferramentas preferenciais de validação no terminal
+
+Quando precisar validar arquivos ou trechos de arquivo, preferir:
+
+- `ls`
+- `grep -n`
+- `sed -n`
+- `tail -n`
+- `cat`
+- `nl -ba` quando for importante inspecionar linhas com precisão
+
+## 10. Convenções arquiteturais que devem ser preservadas
+
+- migrations como fonte oficial do banco
+- nada de SQL manual como solução final
+- separação rígida entre `user_id` e `player_id`
+- backend server-authoritative
+- UUID individual por peça
+- replay preservado
+- regras estratégicas congeladas não devem ser alteradas sem motivo técnico forte e versionamento formal
+
+## 11. Protocolo de interação operacional nesta sala
+
+- trabalhar com o mínimo de interações possível
+- preferir comandos prontos para colar no terminal do mac
+- quando houver vários passos, entregar sequência operacional curta e numerada
+- dizer sempre com clareza:
+  - o objetivo
+  - o comando exato para rodar
+  - o resultado esperado
+  - o próximo comando
+- quando precisar de validação, pedir explicitamente para rodar um comando e colar a saída
+- quando houver risco de truncamento, mudar de estratégia antes de continuar
+- nunca entregar respostas fragmentadas em muitos blocos difíceis de copiar
+
+## 12. Protocolo para criação e substituição de arquivos
+
+Princípios gerais:
+
+- preferir comandos completos e robustos
+- para arquivos críticos, preferir pacote pronto e completo
+- para documentação longa, preferir arquivos curtos ou geração por script local
+
+### 12.1 Para geração de arquivos
+
+- usar heredoc apenas para arquivos curtos e simples
+- usar `python3` para arquivos markdown ricos, especialmente se contiverem fences, JSON, listas longas ou se houver histórico de truncamento na sala
+- validar sempre o arquivo gerado com inspeção no terminal antes de concluir que houve apenas erro de renderização
+
+### 12.2 Estratégia preferencial por tipo de arquivo
+
+- arquivo curto e simples: heredoc pode ser aceitável
+- arquivo markdown mais rico: preferir `python3` escrevendo o arquivo inteiro
+- usar anexação de blocos curtos apenas quando necessário
+- quando houver chance de quebra por tamanho, dividir em arquivos menores, não em blocos confusos de chat
+
+## 13. Regras de segurança operacional para documentação e comandos
+
+- não assumir que erro visual na interface significa apenas erro de renderização
+- primeiro inspecionar o conteúdo real do arquivo no terminal
+- antes de corrigir arquivo supostamente quebrado, validar o conteúdo bruto
+- preferir correções precisas baseadas em inspeção real de linhas
+
+## 14. Padrão de resposta esperado na colaboração
+
+Formato ideal das respostas:
+
+- diagnóstico objetivo
+- recomendação objetiva
+- comandos prontos para terminal
+- resultado esperado
+- próximo passo
+
+## 15. Observação final
+
+Este documento é operacional e complementar.
+
+Ele não substitui:
+
+- snapshot arquitetural
+- contratos congelados de gameplay
+- migrations oficiais
+- políticas formais de log e handoff
+
+Fim do documento.
+
+## 16. Regras obrigatórias de versionamento
+
+Toda mudança relevante de arquitetura, fluxo, contrato, operação local
+ou baseline documental deve resultar em arquivo versionado no repositório.
+
+Toda mudança relevante deve terminar com a sequência operacional completa:
+- `git add ...`
+- `git commit -m "mensagem descritiva em português"`
+- `git push`
+- `cd ..`
+- `./logstep.sh "mensagem"`
+- `cd patxanga-core`
+
+Regra prática:
+- não considerar trabalho concluído sem indicar claramente se houve ou não versionamento
+- preferir apresentar o versionamento em comandos explícitos, um por linha, no formato operacional usado no projeto
+- preferir mensagens de commit descritivas em português, alinhadas ao conteúdo efetivamente alterado
+- preferir mensagem de logstep curta, objetiva e compatível com a etapa concluída
+- quando uma alteração exigir atualização de documento já existente, isso deve ser sinalizado explicitamente
+- quando surgir novo baseline, deve ser criado ou atualizado o documento correspondente no projeto
+
+## 17. Regras obrigatórias de continuidade entre salas
+
+Continuidade deve ser tratada como parte do trabalho,
+não como detalhe opcional.
+
+Ao final de cada bloco importante, deve haver avaliação explícita sobre a necessidade de atualizar:
+- continuity package vigente
+- snapshot master vigente
+- protocolo local e operacional
+- contratos específicos relacionados ao tema trabalhado
+
+Se a resposta for sim:
+- preparar comandos
+- preparar conteúdo
+- preparar versionamento
+
+Se a resposta for não:
+- dizer explicitamente por que a atualização do kit não é necessária naquele momento
+
+## 18. Critério prático para atualizar o kit de continuidade
+
+A documentação de continuidade deve ser atualizada sempre que houver qualquer uma destas situações:
+- nova arquitetura ou subarquitetura aprovada
+- novo subsistema implementado
+- mudança relevante de fluxo de produto
+- novo contrato entre frontend e backend
+- nova regra operacional importante
+- nova limitação operacional descoberta
+- novo baseline congelado
+- mudança relevante no processo local de build, teste, versionamento ou colaboração
+
+## 19. Responsabilidade ao encerrar uma etapa
+
+Ao encerrar uma etapa importante, a resposta deve informar objetivamente:
+1. estado atual do projeto
+2. impacto no projeto
+3. se precisa atualizar kit de continuidade: sim ou não
+4. se sim, quais arquivos atualizar
+5. comandos prontos para versionar
+6. frase recomendada de retomada para futura sala, quando aplicável
+
+## 20. Ordem oficial dos documentos de continuidade
+
+A ordem oficial de referência entre salas é:
+- continuity package vigente
+- snapshot master vigente
+- protocolo local e operacional
+- contratos específicos relevantes para a sessão
+
+## 21. Regras adicionais de continuidade
+
+- não deixar a atualização do kit implícita
+- não assumir que a atualização será lembrada manualmente depois
+- não encerrar milestones sem avaliar formalmente a continuidade
+- tratar continuidade como requisito de engenharia do projeto
+
+## FILE: docs/frontend-browser-validation-procedure-v1.0.md
+
+# PATXANGA — Frontend Browser Validation Procedure
+Version: 1.0
+Status: ACTIVE OPERATIONAL BASELINE
+
+Base normativa:
+- snapshot master vigente
+- continuity package vigente
+- docs/15-local-ops-and-collaboration-protocol.md
+- contratos curtos de frontend vigentes
+
+## 1. Objetivo
+
+Padronizar a validacao manual no browser para marcos de frontend do Patxanga,
+especialmente quando houver mudanca de UX local, composicao visual da tela,
+fluxo de preparo de jogada, rack ou votacao.
+
+## 2. Regra central
+
+Build verde nao substitui validacao no browser.
+
+A ordem correta para marcos de frontend com impacto visual/interacional e:
+
+1. aplicar patch
+2. validar build
+3. validar no browser
+4. so depois decidir commit
+5. push
+6. logstep
+7. avaliar se o kit de continuidade precisa ser atualizado
+
+## 3. Ambiente padrao
+
+- frontend local servido em `http://localhost:3001`
+- repo local em `~/patxanga-bootstrap/patxanga-core`
+- `project-log.md` e `logstep.sh` no diretorio pai `~/patxanga-bootstrap`
+
+## 4. Confirmacao do frontend local
+
+Antes de abrir o browser:
+
+```bash
+cd ~/patxanga-bootstrap/patxanga-core
+lsof -nP -iTCP:3001 -sTCP:LISTEN
+curl -I http://localhost:3001
+```
+
+## 5. Registro da rodada
+
+Toda rodada deve registrar:
+- `match_id`
+- `user_id`
+- objetivo da rodada
+
+Registro recomendado:
+
+```bash
+cd ~/patxanga-bootstrap/patxanga-core
+printf "\n### rodada browser %s\nmatch_id=COLE_AQUI\nuser_id=COLE_AQUI\nobjetivo=COLE_AQUI\n" "$(date "+%Y-%m-%d %H:%M:%S")" >> tmp/browser-validation-notes.txt
+tail -n 20 tmp/browser-validation-notes.txt
+```
+
+## 6. Fluxo padrao de validacao
+
+### 6.1 Abrir a aplicacao
+
+```bash
+open http://localhost:3001
+```
+
+Depois fazer hard refresh:
+- `Cmd + Shift + R`
+
+### 6.2 Carregar a partida
+
+Na UI:
+- preencher `match_id`
+- preencher `user_id`
+- carregar/bootstrap da partida
+
+### 6.3 Validar bootstrap
+
+Confirmar:
+- a tela carregou sem erro
+- board apareceu quando aplicavel
+- rack apareceu quando aplicavel
+- estado da match esta legivel
+- turno atual esta legivel
+
+## 7. Ordem padrao de validacao por rodada
+
+### Rodada A — bootstrap
+Validar:
+- carregamento da match
+- estado renderizado
+- board/rack sem crash
+
+### Rodada B — UX local do rack
+Validar, conforme o marco:
+- selecao simples
+- selecao multipla
+- reordenacao
+- reordenacao em grupo
+- lacunas locais
+- rascunho local nas lacunas
+- cronometro visual
+- destaque de turno
+
+### Rodada C — preview e preparo local de jogada
+Validar:
+- selecao de pecas
+- preview no board
+- limpeza do preview
+- estabilidade visual
+
+### Rodada D — submit real
+Validar:
+- submit continua funcionando
+- backend continua como fonte de verdade
+- UX local nao contaminou payload nem estado oficial
+
+## 8. Checklist padrao
+
+```text
+match_id:
+user_id:
+objetivo:
+
+resultado:
+- status exibido:
+- bootstrap carregou:
+- board apareceu:
+- rack apareceu:
+- comportamento esperado:
+- comportamento observado:
+- submit continua ok:
+- erro visual/console, se houver:
+```
+
+## 9. Regra de fechamento
+
+Um marco de frontend so pode ser considerado pronto quando:
+- o diff esta isolado
+- o build passou
+- a validacao no browser passou
+- o resultado foi explicitamente descrito
+- o versionamento foi executado
+- o `project-log.md` foi atualizado via `logstep.sh`
+- foi feita avaliacao formal sobre atualizar ou nao o kit de continuidade
+
+## 10. Continuidade entre salas
+
+Este procedimento deve ser repassado a novas salas quando:
+- houver continuidade de UX/frontend
+- houver rodada de validacao manual em browser
+- houver necessidade de repetir testes com `match_id` e `user_id`
+
+Fim do documento.
+
+## FILE: docs/frontend-contract-screen-actions-v1.0.md
+
+# PATXANGA — FRONTEND CONTRACT: Screen Actions
+Version: 1.0
+Status: ACTIVE OPERATIONAL BASELINE
+Base normativa:
+- Context Snapshot Master v1.6
+- docs/12-submit-move-contract.md — Version 1.2 (Frozen)
+- docs/frontend-contract-rpcs-v1.0.md
+- docs/frontend-contract-match-states-v1.0.md
+
+## 1. Objetivo
+
+Este documento define, de forma curta e operacional, quais ações de UI
+devem existir por tela e por estado oficial da match.
+
+Ele não redefine engine, não substitui RPCs e não altera a autoridade do backend.
+
+## 2. Regra central
+
+- o frontend renderiza ações compatíveis com o estado oficial da match
+- o frontend não promove transições sozinho
+- o backend continua sendo a única fonte de verdade para turno, aplicação de jogada, votação e encerramento
+
+## 3. Tela de lobby / estado `waiting`
+
+### Ações permitidas
+- entrar na partida, quando permitido
+- visualizar participantes atuais
+- iniciar partida, apenas se a regra de backend permitir essa ação ao usuário correto
+
+### RPCs relacionadas
+- `join_match()`
+- `start_match()`
+
+### Bloqueios obrigatórios
+- não permitir submit de jogada
+- não permitir `submit_patxanga_pass_turn()`
+- não permitir `submit_patxanga_exchange_tiles()`
+- não permitir fluxo de votação normal de gameplay
+
+## 4. Tela de partida / estado `active`
+
+### Ações permitidas ao jogador do turno
+- montar jogada localmente
+- enviar jogada por `submit_patxanga_move()`
+- passar turno por `submit_patxanga_pass_turn()`
+- trocar peças por `submit_patxanga_exchange_tiles()`
+
+### Ações permitidas a jogadores fora do turno
+- visualizar board, rack próprio e placar conforme permissões já existentes
+- aguardar turno
+
+### RPCs relacionadas
+- `submit_patxanga_move()`
+- `submit_patxanga_pass_turn()`
+- `submit_patxanga_exchange_tiles()`
+
+### Bloqueios obrigatórios
+- não permitir ação de turno a jogador fora do turno
+- não avançar turno localmente sem confirmação do backend
+- não aplicar score local como estado oficial
+
+## 5. Tela / fluxo de votação no estado `voting`
+
+### Ações permitidas
+- visualizar que existe jogada pendente
+- votar via `submit_patxanga_vote()`, apenas quando o backend permitir
+
+### RPC relacionada
+- `submit_patxanga_vote()`
+
+### Comportamento obrigatório
+- não aplicar a jogada pendente ao board oficial
+- não remover peças do rack oficial
+- não avançar turno localmente
+- aguardar resolução oficial do backend
+
+### Bloqueios obrigatórios
+- bloquear nova jogada normal
+- bloquear `pass_turn`
+- bloquear `exchange_tiles`
+
+## 6. Tela de resultado / estado `finished`
+
+### Ações permitidas
+- visualizar resultado final
+- visualizar vencedor oficial
+- visualizar score final oficial
+
+### Bloqueios obrigatórios
+- não permitir nova jogada
+- não permitir votação
+- não permitir `pass_turn`
+- não permitir `exchange_tiles`
+
+## 7. Regras transversais de UI
+
+- toda ação visual depende do `status` oficial da match
+- toda ação de turno depende do `current_turn_player_id` oficial
+- `player_id` continua sendo a identidade correta nas RPCs de gameplay
+- `user_id` não substitui `player_id` no fluxo interno da partida
+- `pending_vote` deve ser tratado como fluxo real de produto
+
+## 8. Limites deste documento
+
+- não substitui o contrato de RPCs
+- não substitui o contrato de estados da match
+- não redefine replay
+- não redefine engine
+- não substitui migrations
+
+Fim do documento.
+
+## FILE: docs/frontend-contract-match-states-v1.0.md
+
+# PATXANGA — FRONTEND CONTRACT: Match States
+Version: 1.0
+Status: Draft operacional segmentado
+Base normativa:
+- Context Snapshot Master v1.6
+- Submit Move Contract v1.2 (Frozen)
+- frontend-contract-rpcs-v1.0.md
+
+## 1. Objetivo
+
+Este documento define o contrato operacional dos estados de partida
+que o frontend deve respeitar ao consumir o backend do Patxanga.
+
+Ele não redefine regras de engine, não substitui migrations
+e não altera a autoridade do servidor.
+
+## 2. Princípio central
+
+O estado oficial da match é sempre definido pelo backend.
+
+O frontend:
+- renderiza o estado retornado
+- adapta a UI ao estado oficial
+- não promove transições por conta própria
+- não assume sucesso local como mudança definitiva de estado
+
+## 3. Estados oficiais mínimos
+
+Os estados mínimos relevantes para o frontend nesta fase são:
+
+- `waiting`
+- `active`
+- `voting`
+- `finished`
+
+## 4. Estado `waiting`
+
+### Definição
+Partida ainda não iniciada.
+
+### Características
+- lobby ativo
+- jogadores ainda podem entrar, conforme regras do backend
+- tabuleiro ainda não está em fluxo normal de jogo
+- turno jogável ainda não deve ser tratado como ativo pelo frontend
+
+### UI esperada
+- exibir contexto de lobby
+- exibir participantes atuais
+- permitir ações compatíveis com pré-início
+- não habilitar ações de gameplay normal
+
+## 5. Estado `active`
+
+### Definição
+Partida em andamento, apta para jogadas normais.
+
+### Características
+- existe `current_turn_player_id`
+- jogadas normais podem ser submetidas
+- fluxo de turno está ativo
+- board, rack e score devem ser tratados como oficiais
+
+### UI esperada
+- habilitar ação de jogar apenas ao jogador do turno
+- habilitar `pass_turn` apenas ao jogador do turno
+- habilitar `exchange_tiles` apenas ao jogador do turno
+- manter demais jogadores em estado de espera
+- refletir turno atual de forma explícita
+
+## 6. Estado `voting`
+
+### Definição
+Partida temporariamente em fluxo de votação por jogada pendente.
+
+### Características
+- existe jogada em `pending_vote`
+- board oficial ainda não foi alterado por essa jogada
+- rack oficial ainda não foi alterado por essa jogada
+- bag oficial ainda não foi alterado por essa jogada
+- turno ainda não avançou
+- a resolução depende de `submit_patxanga_vote()`
+
+### UI esperada
+- bloquear continuidade do fluxo normal de jogada
+- destacar que a partida está aguardando votação
+- permitir votação apenas a quem puder votar segundo o backend
+- impedir que a UI trate a jogada pendente como aplicada ao board oficial
+- impedir avanço local de turno
+
+## 7. Estado `finished`
+
+### Definição
+Partida encerrada pelo backend.
+
+### Características
+- novas ações de gameplay não devem prosseguir
+- `winner_player_id` deve ser tratado como resultado oficial
+- `finished_at` deve ser tratado como timestamp oficial de encerramento
+- score final já deve refletir ajustes finais aplicáveis
+
+### UI esperada
+- bloquear ações de gameplay
+- exibir resultado final
+- exibir vencedor oficial
+- exibir score final oficial
+- permitir apenas ações compatíveis com partida encerrada
+
+## 8. Transições oficiais esperadas
+
+### `waiting` → `active`
+Ocorre quando a partida é iniciada com sucesso.
+
+Trigger típico:
+- `start_match()`
+
+### `active` → `voting`
+Ocorre quando `submit_patxanga_move()` encontra palavra não validada no dicionário
+e entra no fluxo de `pending_vote`.
+
+### `voting` → `active`
+Ocorre quando `submit_patxanga_vote()` resolve a jogada pendente, seja como:
+- `accepted`
+- `rejected`
+
+### `active` → `finished`
+Ocorre quando o backend conclui fim de partida por critério válido.
+
+### `voting` → `finished`
+Não deve ser presumido pelo frontend como fluxo normal direto.
+O frontend deve sempre respeitar o estado oficial devolvido pelo backend.
+
+## 9. Regras de bloqueio de UI por estado
+
+### Em `waiting`
+- não permitir submit de jogada normal
+- não permitir `pass_turn`
+- não permitir `exchange_tiles`
+
+### Em `active`
+- permitir ações normais apenas ao jogador do turno
+- não permitir que jogador fora do turno envie jogada como se estivesse autorizado
+
+### Em `voting`
+- bloquear nova jogada normal
+- bloquear avanço local de turno
+- bloquear aplicação visual definitiva da jogada pendente ao board oficial
+
+### Em `finished`
+- bloquear toda ação de gameplay
+- não permitir nova jogada
+- não permitir voto
+- não permitir `pass_turn`
+- não permitir `exchange_tiles`
+
+## 10. Relação com estado local temporário
+
+Estados locais de UX, como:
+- seleção de peças
+- drag-and-drop
+- preview visual
+- animações de turno
+- score estimado
+
+nunca substituem o estado oficial da match.
+
+Se houver divergência entre frontend e backend:
+- o frontend deve descartar o estado local temporário
+- o backend prevalece
+
+## 11. Limites deste documento
+
+Este documento:
+- não substitui o contrato de RPCs
+- não redefine regras estratégicas
+- não redefine payloads internos de replay
+- não substitui migrations
+- não altera o fluxo server-authoritative
+
+## 12. Decisões congeladas refletidas aqui
+
+- backend server-authoritative
+- `player_id` como identidade de engine
+- `pending_vote` como estado real do produto
+- turno só muda por decisão oficial do backend
+- fim de partida só existe quando o backend o define
+
+Fim do documento.
+
+## FILE: docs/frontend-contract-rpcs-v1.0.md
+
+# PATXANGA — FRONTEND CONTRACT: RPCs
+Version: 1.0
+Status: ACTIVE OPERATIONAL BASELINE
+Base normativa:
+- Context Snapshot Master v1.6
+- Submit Move Contract v1.2 (Frozen)
+- docs/15-local-ops-and-collaboration-protocol.md
+
+## 1. Objetivo
+
+Este documento consolida, de forma curta e operacional, as RPCs expostas ao frontend
+na fase atual do Patxanga.
+
+Ele não redefine engine, não substitui migrations e não altera a autoridade do backend.
+
+## 2. Regras centrais
+
+- Backend é server-authoritative.
+- Estado interno da partida usa `player_id`, nunca `user_id`.
+- Frontend pode usar `user_id` para autenticação, perfil, lobby e associação visual.
+- RPCs de gameplay devem usar `player_id` quando esse for o contrato oficial.
+- `pending_vote` é fluxo real do produto e deve ser tratado como estado válido de operação.
+- Frontend nunca deve tratar validação local como fonte de verdade.
+
+## 3. RPCs expostas ao frontend
+
+- `create_match()`
+- `join_match()`
+- `start_match()`
+- `submit_patxanga_move()`
+- `submit_patxanga_vote()`
+- `submit_patxanga_pass_turn()`
+- `submit_patxanga_exchange_tiles()`
+
+## 4. Contrato operacional por RPC
+
+### 4.1 `create_match()`
+
+#### Finalidade
+Criar uma nova partida ou lobby.
+
+#### Parâmetros de entrada
+Parâmetros definidos pela RPC oficial do backend.
+
+#### Saída esperada
+- `match_id`
+- estado inicial da match
+- dados mínimos necessários para o frontend entrar no fluxo de lobby
+
+#### Estados relevantes para UI
+- `waiting`
+
+#### Regra de autoridade do backend
+- o frontend não decide composição inicial da match
+- o frontend apenas renderiza o estado retornado
+
+### 4.2 `join_match()`
+
+#### Finalidade
+Ingressar em uma partida existente.
+
+#### Parâmetros de entrada
+Parâmetros definidos pela RPC oficial do backend.
+
+#### Saída esperada
+- `match_id`
+- `player_id`, quando a RPC devolver a identidade interna do participante
+- estado atualizado do lobby ou da partida
+
+#### Estados relevantes para UI
+- `waiting`
+- `active`, se a partida já estiver iniciada e a entrada for permitida pelo backend
+
+#### Regra de autoridade do backend
+- frontend deve persistir `player_id` por match
+- frontend nunca deve substituir `player_id` por `user_id` em RPC de gameplay
+
+### 4.3 `start_match()`
+
+#### Finalidade
+Iniciar a partida e habilitar o fluxo normal de jogo.
+
+#### Parâmetros de entrada
+Parâmetros definidos pela RPC oficial do backend.
+
+#### Saída esperada
+- `board_state` inicial oficial
+- `rack_state` oficial
+- `current_turn_player_id`
+- `status` da match
+
+#### Estados relevantes para UI
+- transição de `waiting` para `active`
+
+#### Regra de autoridade do backend
+- frontend não distribui rack
+- frontend não escolhe jogador inicial
+
+### 4.4 `submit_patxanga_move()`
+
+#### Finalidade
+Submeter uma jogada de colocação de peças.
+
+#### Parâmetros de entrada
+- `p_match_id uuid`
+- `p_player_id uuid`
+- `p_placed_tiles jsonb`
+
+#### Observação crítica de contrato
+- `p_placed_tiles` contém apenas as peças colocadas na jogada atual
+- frontend não envia board completo
+- frontend não envia score calculado
+- frontend não envia validação lexical como fonte de verdade
+
+#### Saída esperada
+Um dos ramos operacionais abaixo:
+- jogada aceita
+- jogada em `pending_vote`
+- erro de validação
+
+#### Estados relevantes para UI
+- `active`
+- `voting`, quando houver `pending_vote`
+
+#### Regra de autoridade do backend
+- backend valida posse, geometria, conexão, palavras e score
+- backend decide se a jogada é aceita, pendente de voto ou rejeitada por erro
+- frontend não avança turno por conta própria
+
+#### Comportamento esperado na UI
+- se accepted: atualizar estado oficial retornado ou recarregado
+- se `pending_vote`: não aplicar a jogada ao board oficial e abrir fluxo de votação
+- se erro: manter estado oficial anterior
+
+### 4.5 `submit_patxanga_vote()`
+
+#### Finalidade
+Resolver uma jogada em fluxo de `pending_vote`.
+
+#### Parâmetros de entrada
+Parâmetros definidos pela RPC oficial do backend para votação da jogada pendente.
+
+#### Saída esperada
+- resolução `accepted`
+- resolução `rejected`
+- estado oficial atualizado da match
+
+#### Estados relevantes para UI
+- `voting`
+- retorno para `active` após resolução
+
+#### Regra de autoridade do backend
+- autor da jogada não vota
+- uma rejeição pode encerrar como `rejected`
+- aceitações suficientes resolvem como `accepted`
+- frontend apenas reflete a resolução oficial
+
+### 4.6 `submit_patxanga_pass_turn()`
+
+#### Finalidade
+Passar o turno sem jogar peças.
+
+#### Parâmetros de entrada
+Parâmetros definidos pela RPC oficial do backend para passar turno.
+
+#### Saída esperada
+- jogada de pass persistida
+- turno avançado
+- estado oficial atualizado
+- eventual avaliação de fim de partida
+
+#### Estados relevantes para UI
+- `active`
+- eventual `finished`, se o backend encerrar a match
+
+#### Regra de autoridade do backend
+- frontend só oferece a ação ao jogador do turno
+- frontend não muda turno localmente sem confirmação oficial
+
+### 4.7 `submit_patxanga_exchange_tiles()`
+
+#### Finalidade
+Trocar peças do rack com o bag.
+
+#### Parâmetros de entrada
+- `match_id`
+- `player_id`
+- conjunto de `tile_id` selecionados para troca, conforme contrato oficial da RPC
+
+#### Saída esperada
+- `rack_state` atualizado
+- `bag_state` atualizado, quando aplicável ao retorno consumido pelo frontend
+- turno avançado
+- estado oficial atualizado
+
+#### Estados relevantes para UI
+- `active`
+- eventual `finished`, se o backend encerrar a match depois da avaliação oficial
+
+#### Regra de autoridade do backend
+- backend valida posse das peças e executa a troca
+- frontend não remove peças definitivamente antes da confirmação oficial
+
+## 5. Regras transversais para UI
+
+- renderizar board a partir de `board_state` oficial
+- renderizar rack a partir de `rack_state` oficial
+- tratar scores persistidos como oficiais
+- tratar `current_turn_player_id` como fonte oficial de turno
+- bloquear ações incompatíveis com `status` da match
+
+## 6. Limites deste documento
+
+- não redefine arquitetura
+- não substitui snapshot master
+- não substitui submit move contract
+- não substitui migrations
+- não detalha replay interno
+
+Fim do documento.
+
+## FILE: docs/frontend-rack-composition-ux-v1.0.md
+
+# PATXANGA — FRONTEND CONTRACT: Rack Composition UX
+Version: 1.0
+Status: ACTIVE OPERATIONAL BASELINE
+
+Base normativa:
+- Context Snapshot Master vigente
+- docs/frontend-contract-match-states-v1.0.md
+- docs/frontend-contract-screen-actions-v1.0.md
+- docs/frontend-contract-rpcs-v1.0.md
+- docs/frontend-browser-validation-procedure-v1.0.md
+
+## 1. Objetivo
+
+Definir o contrato de UX da composicao local do rack/deck do jogador.
+
+Este documento fixa o que pode existir como camada local de usabilidade
+para montagem mental da jogada sem alterar o modelo server-authoritative
+do Patxanga.
+
+## 2. Regra central
+
+A composicao do rack e uma camada local de frontend.
+
+Ela:
+- ajuda o jogador a organizar pecas
+- ajuda o jogador a testar arranjos mentais
+- nao substitui o estado oficial do backend
+- nao altera o rack persistido no servidor
+- nao altera o board oficial
+- nao altera o payload oficial de submit
+
+## 3. Fonte de verdade
+
+Continuam como fonte oficial:
+- `board_state`
+- `rack_state`
+- `current_turn_player_id`
+- `status` da match
+- validacao de jogada pelo backend
+
+A composicao local do rack:
+- nao e fonte de verdade
+- nao pode ser tratada como reserva oficial de jogada
+- nao pode ser tratada como estado persistido da partida
+
+## 4. Escopo deste contrato
+
+Este contrato cobre apenas:
+- reorganizacao local do rack
+- selecao local de pecas
+- grupos locais de pecas
+- lacunas locais
+- letras de rascunho em lacunas
+- espacos extras locais para composicao
+
+Este contrato nao redefine:
+- engine
+- submit real
+- validacao lexical
+- regras do board
+- replay
+- ordem oficial de turno
+
+
+## 5. Conceitos operacionais
+
+### 5.1 Rack oficial
+Conjunto de pecas reais retornadas pelo backend em `rack_state`.
+
+### 5.2 Superficie local de composicao
+Camada de UX onde o frontend pode organizar visualmente:
+- pecas reais do rack oficial
+- lacunas locais
+- espacos extras locais
+
+### 5.3 Lacuna local
+Espaco visual criado no frontend para representar uma posicao
+que o jogador deseja deixar em aberto durante sua montagem mental.
+
+A lacuna local:
+- nao e uma peca real
+- nao existe no backend
+- nao entra no submit
+- nao altera score
+- nao altera board
+- nao altera `rack_state` oficial
+
+### 5.4 Letra de rascunho
+Letra digitada pelo jogador dentro de uma lacuna local apenas como lembrete.
+
+A letra de rascunho:
+- nao e `declared_letter` de backend
+- nao e reserva de letra no tabuleiro
+- nao altera o jogo real
+- nao pode ser enviada como parte da jogada oficial
+
+### 5.5 Espacos extras locais
+Posicoes adicionais de composicao visual no rack para permitir manobra,
+reordenacao e planejamento mental da palavra.
+
+Esses espacos:
+- sao locais
+- nao representam aumento real do rack
+- nao alteram o backend
+
+## 6. Comportamentos permitidos
+
+O frontend pode permitir:
+- reordenar pecas reais localmente
+- selecionar uma ou mais pecas localmente
+- mover grupos locais dentro da superficie do rack
+- criar lacunas locais
+- mover lacunas locais
+- remover lacunas locais
+- digitar uma letra de rascunho na lacuna
+- usar espacos extras locais como apoio de composicao
+
+## 7. Regra de insercao de lacuna
+
+A UX desejada deve criar lacuna entre duas pecas reais escolhidas
+na composicao local do jogador.
+
+Leitura correta:
+- o jogador organiza pecas reais no rack
+- o jogador seleciona exatamente duas pecas reais como referencias
+- o frontend cria a lacuna entre essas duas pecas na ordem local atual
+- a lacuna pode receber uma letra de rascunho
+- a composicao inteira continua movel dentro do rack local
+
+Leitura incorreta:
+- criar lacuna a partir de uma peca unica com lado implicito
+- criar lacuna com regra ambigua de esquerda/direita
+- criar lacuna ja vinculada ao tabuleiro
+
+Enquanto essa UX completa nao estiver pronta, implementacoes intermediarias
+podem existir, desde que nao violem os limites deste contrato.
+
+
+## 8. Relacao com o tabuleiro
+
+A composicao local do rack pode refletir a intencao do jogador
+de usar uma letra ja existente no tabuleiro.
+
+Mas essa intencao:
+- e apenas local
+- nao reserva a letra no board
+- nao bloqueia outros jogadores
+- nao cria prioridade sobre a casa ou sobre a letra
+- pode ficar invalida antes do turno do jogador
+
+Portanto:
+- a letra escolhida na lacuna e apenas lembrete estrategico
+- o jogador pode precisar revisar sua composicao depois
+
+## 9. Relacao com submit de jogada
+
+O submit oficial continua obedecendo o contrato vigente de `submit_patxanga_move(...)`.
+
+Logo:
+- apenas pecas reais colocadas entram em `p_placed_tiles`
+- lacunas locais nao entram em `p_placed_tiles`
+- letras de rascunho nao entram em `p_placed_tiles`
+- espacos extras locais nao entram em `p_placed_tiles`
+
+## 10. Relacao com o estado local temporario
+
+A composicao local do rack e estado temporario de UX.
+
+Ela pode ser descartada quando houver:
+- reload oficial da partida
+- alteracao oficial de `rack_state`
+- submit aceito
+- troca de pecas
+- nova distribuicao de pecas
+- qualquer divergencia com o backend que exija reidratacao
+
+## 11. Relacao com drag and drop para o board
+
+Este contrato nao define drag and drop do rack para o tabuleiro como fluxo oficial.
+
+Ate nova definicao:
+- drag no rack serve para reorganizacao local
+- posicionamento no board continua podendo usar fluxo de selecao + clique
+- qualquer futuro suporte a drag rack -> board deve ser definido em contrato proprio ou revisao formal deste documento
+
+## 12. Proibicoes
+
+A composicao local do rack nao pode:
+- alterar `rack_state` oficial
+- alterar `board_state` oficial
+- reservar letra do tabuleiro
+- reservar casa do tabuleiro
+- alterar validacao da engine
+- gerar payload oficial com lacunas locais
+- substituir `declared_letter` oficial de wildcard
+- alterar score
+- alterar turno
+
+
+## 13. Leitura correta desta fase
+
+Nesta fase do projeto:
+- o rack pode evoluir como mesa local de composicao
+- essa evolucao deve permanecer no frontend
+- o backend continua server-authoritative
+- o submit oficial continua separado da montagem mental local
+
+## 14. Criterio de saida desta linha de UX
+
+Esta frente pode ser considerada coerente quando:
+- o jogador conseguir reorganizar pecas livremente no rack local
+- o jogador conseguir abrir lacunas locais entre posicoes da composicao
+- o jogador conseguir usar letras de rascunho como lembrete
+- o jogador entender que isso nao altera o jogo real
+- o fluxo continuar compativel com o backend atual
+
+## 15. Limites deste documento
+
+Este documento:
+- nao redefine engine
+- nao redefine RPCs
+- nao redefine payload de submit
+- nao redefine replay
+- nao altera o modelo server-authoritative
+
+Fim do documento.
+
+## FILE: docs/frontend-rack-composition-implementation-plan-v1.0.md
+
+# PATXANGA — FRONTEND: Rack Composition Implementation Plan
+Version: 1.0
+Status: ACTIVE WORKING PLAN
+
+Base normativa:
+- docs/frontend-rack-composition-ux-v1.0.md
+- docs/frontend-contract-screen-actions-v1.0.md
+- docs/frontend-contract-rpcs-v1.0.md
+- docs/frontend-browser-validation-procedure-v1.0.md
+
+## 1. Objetivo
+
+Definir o plano tecnico incremental para implementar a composicao local do rack
+no frontend sem alterar backend, engine ou contrato oficial de submit.
+
+## 2. Regra central
+
+Toda a implementacao desta frente deve permanecer frontend-only.
+
+Nao entra neste plano:
+- alteracao de engine
+- alteracao de RPC
+- alteracao de payload oficial
+- drag and drop rack -> board como fluxo oficial
+
+## 3. Resultado esperado
+
+Ao fim desta frente, o jogador deve conseguir:
+- reorganizar pecas reais no rack local
+- inserir lacunas locais entre posicoes da composicao
+- mover lacunas junto da composicao local
+- escrever letras de rascunho nas lacunas
+- continuar enviando jogadas reais sem contaminar o submit
+
+
+## 4. Arquivos principais afetados
+
+### 4.1 `frontend/pages/index.tsx`
+Responsabilidades nesta frente:
+- manter estado local da superficie de composicao do rack
+- coordenar selecao de pecas reais
+- coordenar lacunas locais
+- coordenar drafts locais de letras nas lacunas
+- preservar geracao correta de `placedTilesPreview`
+- garantir que lacunas nao entrem em submit
+
+### 4.2 `frontend/components/RackSection.tsx`
+Responsabilidades nesta frente:
+- renderizar pecas reais e lacunas locais na mesma superficie visual
+- permitir reordenacao local coerente
+- permitir edicao da letra de rascunho
+- permitir remocao local de lacunas
+- manter clareza visual entre item real e item local
+
+### 4.3 `frontend/components/GamePlayScreen.tsx`
+Responsabilidades nesta frente:
+- continuar orquestrando o rack como parte da tela jogavel
+- repassar props novas de composicao local sem assumir regra de backend
+
+## 5. Estrutura de estado recomendada
+
+A superficie local do rack deve deixar de depender apenas de uma lista de ids reais.
+
+Modelo recomendado:
+- itens locais heterogeneos
+- cada item pode ser:
+  - peca real
+  - lacuna local
+
+Exemplo conceitual:
+- `{ kind: "tile", tileId: "..." }`
+- `{ kind: "gap", gapId: "..." }`
+
+Estado adicional:
+- drafts por lacuna
+- selecao atual de pecas reais
+- ordem local da superficie de composicao
+
+## 6. Invariantes obrigatorios
+
+- peca real continua identificada por `tileId`
+- lacuna local continua sem existencia no backend
+- submit oficial continua ignorando lacunas
+- submit oficial continua ignorando drafts
+- `placedTilesPreview` continua derivado apenas de pecas reais colocadas no board
+- reidratacao oficial pode descartar estado local temporario
+
+
+## 7. Etapas de implementacao
+
+### Etapa 1 — normalizar a superficie local do rack
+Objetivo:
+- substituir a ordem local baseada apenas em ids por uma ordem local baseada em itens de composicao
+
+Saida esperada:
+- rack local aceita itens reais e lacunas
+
+### Etapa 2 — inserir lacuna entre duas pecas selecionadas
+Objetivo:
+- permitir criacao de lacuna entre duas pecas reais escolhidas na composicao local
+- eliminar ambiguidade de criar lacuna a esquerda/direita de uma peca unica
+- deixar de depender apenas de “adicionar lacuna no fim”
+
+Saida esperada:
+- jogador consegue selecionar exatamente duas pecas reais
+- jogador consegue abrir lacuna entre essas duas pecas na ordem local atual
+- a lacuna nasce sem vinculo inicial com o tabuleiro
+
+### Etapa 3 — mover lacunas e grupos de forma coerente
+Objetivo:
+- manter reordenacao local funcionando com itens mistos
+- preservar reordenacao em grupo para pecas reais selecionadas
+
+Saida esperada:
+- grupo de pecas continua movel
+- lacuna continua movel
+- nenhuma dessas operacoes afeta backend
+
+### Etapa 4 — preservar submit oficial
+Objetivo:
+- garantir que lacunas e drafts nunca contaminem o submit real
+
+Saida esperada:
+- `placedTilesPreview` permanece correto
+- submit continua aceitando apenas pecas reais
+
+### Etapa 5 — refino visual minimo
+Objetivo:
+- diferenciar melhor:
+  - peca real
+  - lacuna local
+  - letra de rascunho
+- manter legibilidade da mesa de composicao
+
+## 8. Fora de escopo neste plano
+
+Nao entra nesta implementacao:
+- drag rack -> board
+- reserva de letra do tabuleiro
+- reserva de casa do tabuleiro
+- alteracao do contrato de wildcard
+- alteracao do submit oficial
+- alteracao do backend
+
+
+## 9. Riscos que devem ser evitados
+
+- misturar item local de lacuna com peca real
+- quebrar selecao multipla ja validada
+- quebrar reordenacao em grupo ja validada
+- deixar lacuna entrar em `placedTilesPreview`
+- deixar draft local interferir em wildcard real
+- acoplar composicao local ao board oficial
+
+## 10. Checklist de validacao
+
+### Build
+- frontend build verde
+
+### Browser
+- host ve rack normalmente fora do turno
+- guest ve rack normalmente no turno
+- selecao simples continua funcionando
+- selecao multipla continua funcionando
+- reordenacao em grupo continua funcionando
+- lacuna pode ser criada entre duas pecas reais selecionadas
+- lacuna pode receber letra de rascunho
+- lacuna nasce sem vinculo inicial com o tabuleiro
+- submit continua ignorando lacunas
+- submit continua ignorando drafts
+
+## 11. Fechamento correto desta frente
+
+A frente so deve ser encerrada quando:
+- build passar
+- browser validation passar
+- commit/push/logstep forem executados
+- for avaliado se continuity package precisa refletir a nova capacidade
+
+## 12. Limites deste plano
+
+Este plano:
+- nao substitui o contrato de UX
+- nao redefine engine
+- nao redefine backend
+- nao redefine RPC
+- nao redefine fluxo oficial do board
+
+Fim do documento.
+
+## FILE: docs/18-room-baton-process-v1.0.md
+
+# PATXANGA — Room Baton Process
+Version: 1.0
+Status: ACTIVE OPERATIONAL BASELINE
+
+## 1. Objetivo
+
+Padronizar a passagem de bastao para novas salas de forma robusta,
+previsivel, rastreavel e segura.
+
+## 2. Regra central
+
+A nova sala nao deve receber contexto fragmentado como forma principal
+de inicializacao.
+
+A passagem de bastao deve usar:
+- uma frase de entrada padrao
+- um arquivo unico de passagem de bastao
+- validacao posterior de branch, commits e `../project-log.md`
+
+## 3. Frase de entrada da nova sala
+
+Texto base:
+
+Voce esta assumindo a continuidade do projeto Patxanga, um jogo por turnos
+com backend authoritative, frontend em evolucao orientada a produto e processo
+operacional rigoroso de continuidade, rastreabilidade, documentacao,
+versionamento e validacao.
+
+Seu papel nesta sala e preservar e estender esse trabalho sem perder contexto,
+sem assumir estado nao verificado e sem romper o processo estabelecido.
+A continuidade do projeto e condicao imutavel desta atuacao.
+
+Antes de qualquer proposta ou alteracao, voce deve pedir o arquivo unico de
+passagem de bastao com instrucoes detalhadas e, a partir dele, se inicializar
+corretamente. So depois disso voce podera pedir os comandos e arquivos
+complementares necessarios para validar branch, commits, logs, documentacao,
+estado operacional e frente atual.
+
+
+## 4. Prompt interno no topo do arquivo unico
+
+O arquivo unico de passagem de bastao deve comecar com um prompt interno
+de ativacao de continuidade.
+
+Esse prompt deve orientar a nova sala a:
+- agir como agente de continuidade tecnica e operacional
+- nao assumir estado nao verificado
+- confirmar branch, commits recentes e `../project-log.md`
+- tratar branch + commits pushados + `../project-log.md` como fonte de verdade
+  mais forte que a documentacao, em caso de divergencia
+- localizar o trecho real do codigo antes de alterar
+- implementar incrementalmente
+- validar build/teste antes de versionar
+- manter documentacao, log operacional e versionamento sincronizados
+
+## 5. Precedencia entre fontes
+
+A ordem correta de leitura e:
+1. branch atual + commits pushados + `../project-log.md`
+2. arquivo unico de passagem de bastao
+3. contratos e documentos operacionais versionados
+4. snapshot/context package mais recente
+5. codigo local nao commitado apenas como contexto, nunca como verdade automatica
+
+## 6. Artefatos obrigatorios do processo
+
+O processo deve gerar e manter:
+- `docs/18-room-baton-process-v1.0.md`
+- `docs/18-room-baton-package-current.md`
+- `generate-room-baton-package.sh`
+
+## 7. Conteudo minimo do arquivo unico
+
+O arquivo unico deve consolidar:
+- prompt interno de ativacao
+- estado operacional atual
+- branch, remote, commits recentes
+- working tree atual
+- trechos recentes do `project-log.md`
+- ambiente operacional atual do projeto
+- modo de trabalho com o operador
+- procedimentos de teste
+- procedimento de criacao de partida de teste
+- contratos ativos essenciais
+- frente atual e proximos passos
+- frase padrao de passagem de bastao
+
+### 7.1 Ambiente operacional atual do projeto
+
+Deve constar explicitamente:
+- sistema operacional atual do operador
+- uso via terminal do Mac
+- browser local para validacao manual
+- frontend local em `http://localhost:3001`
+- repo em `~/patxanga-bootstrap/patxanga-core`
+- `project-log.md` e `logstep.sh` em `~/patxanga-bootstrap`
+
+### 7.2 Modo de trabalho com o operador
+
+Deve constar explicitamente:
+- o operador executa comandos no terminal
+- a IA prepara comandos e scripts
+- evitar edicao manual de arquivos
+- preferir inspecao antes de patch
+- validar build/teste antes de versionar
+
+### 7.3 Procedimento de criacao de partida de teste
+
+Deve constar explicitamente:
+- como criar uma match local de teste
+- como obter `match_id`
+- como obter `host_user_id`
+- como obter `guest_user_id`
+- como usar esses ids na validacao browser
+
+
+## 8. Regra de atualizacao do arquivo unico
+
+O arquivo unico de passagem de bastao e um artefato vivo de continuidade
+operacional.
+
+Ele deve ser atualizado obrigatoriamente:
+- quando solicitado pelo operador
+- sempre que a IA julgar que houve mudanca relevante suficiente para impactar
+  a retomada segura do projeto em nova sala
+
+Na duvida, deve-se preferir atualizar o arquivo.
+
+Casos tipicos de atualizacao:
+- novo marco relevante commitado e pushado
+- mudanca de frente principal
+- novo contrato ou plano versionado
+- mudanca de procedimento operacional
+- novo diagnostico que altera a leitura correta do projeto
+- alteracao relevante de UX ou de fluxo validado
+- mudanca relevante no processo de testes
+
+## 9. Passagem de bastao padrao
+
+Ao abrir nova sala:
+- informar que a sala esta assumindo a continuidade do projeto Patxanga
+- informar que a continuidade e condicao imutavel da atuacao
+- pedir o arquivo unico de passagem de bastao
+- so depois validar branch, commits recentes, `../project-log.md` e comandos
+  complementares de inicializacao
+
+## 10. Fechamento
+
+Este processo deve ser usado como base oficial para transicao entre salas
+enquanto o projeto depender de continuidade assistida.
+
+Fim do documento.
+
+## FRASE PADRAO DE PASSAGEM DE BASTAO
+
+Ao abrir nova sala, informe que ela esta assumindo a continuidade do projeto Patxanga, que a continuidade e condicao imutavel da atuacao, peca o arquivo unico de passagem de bastao e mantenha esse arquivo atualizado sempre que o operador solicitar ou sempre que houver mudanca relevante suficiente para impactar a retomada segura.
