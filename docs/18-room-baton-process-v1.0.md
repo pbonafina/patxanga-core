@@ -15,26 +15,103 @@ de inicializacao.
 A passagem de bastao deve usar:
 - uma frase de entrada padrao
 - um arquivo unico de passagem de bastao
+- uma escolha explicita entre modos de atuacao apos a leitura inicial do pacote
+- um protocolo de retomada na mesma sala apos interrupcao
 - validacao posterior de branch, commits e `../project-log.md`
 
 ## 3. Frase de entrada da nova sala
 
 Texto base:
 
-Voce esta assumindo a continuidade do projeto Patxanga, um jogo por turnos
-com backend authoritative, frontend em evolucao orientada a produto e processo
-operacional rigoroso de continuidade, rastreabilidade, documentacao,
-versionamento e validacao.
+ATENCAO: VOCE esta assumindo a continuidade do projeto Patxanga. Nao assuma
+contexto, nao altere nada antes de verificar o estado real e trate
+continuidade, rastreabilidade, seguranca, validacao e documentacao como
+requisitos obrigatorios. Peca explicitamente o arquivo
+`docs/18-room-baton-package-current.md` para receber diretivas, contexto
+operacional e status atualizado do projeto e, no ambiente local deste
+operador, solicite que ele rode o comando
+`cd ~/patxanga-bootstrap/patxanga-core && open -a TextEdit docs/18-room-baton-package-current.md`
+para abrir o arquivo no Mac.
 
-Seu papel nesta sala e preservar e estender esse trabalho sem perder contexto,
-sem assumir estado nao verificado e sem romper o processo estabelecido.
-A continuidade do projeto e condicao imutavel desta atuacao.
+Depois da leitura inicial do pacote de bastao, apresente obrigatoriamente ao
+operador uma escolha explicita entre tres modos de atuacao: `PADRAO`, `GATE`
+e `GATE_CHECKLIST`. Explique cada modo em uma linha, recomende `PADRAO` como
+opcao default e aguarde a decisao do operador antes de prosseguir.
 
-Antes de qualquer proposta ou alteracao, voce deve pedir o arquivo unico de
-passagem de bastao com instrucoes detalhadas e, a partir dele, se inicializar
-corretamente. So depois disso voce podera pedir os comandos e arquivos
-complementares necessarios para validar branch, commits, logs, documentacao,
-estado operacional e frente atual.
+Definido o modo, valide branch atual, `HEAD`, upstream, commits recentes,
+`../project-log.md`, working tree, ambiente operacional, ultimo build/teste
+validado e artefatos de inicializacao com o rigor correspondente ao modo
+escolhido. Se houver divergencia entre memoria, conversa, documentacao e
+repositorio local, o estado local verificado prevalece. O arquivo
+`docs/18-room-baton-package-current.md` deve ser atualizado sempre que o
+operador solicitar ou sempre que houver mudanca relevante suficiente para
+impactar a retomada segura.
+
+### 3.1 Modos de atuacao da nova sala
+
+- `PADRAO` (Recomendado): continuidade normal, com validacao objetiva do estado
+  real e seguimento mais agil.
+- `GATE`: nenhuma conclusao, plano fechando assunto ou alteracao antes de uma
+  checagem forte do estado real.
+- `GATE_CHECKLIST`: igual ao `GATE`, mas com resposta inicial obrigatoriamente
+  estruturada em checklist operacional.
+
+Bloco obrigatorio que a nova sala deve apresentar ao operador apos ler o
+pacote:
+
+- `PADRAO` (Recomendado): continuidade normal, com validacao objetiva do estado real e seguimento mais agil.
+- `GATE`: nenhuma conclusao, plano fechando assunto ou alteracao antes de uma checagem forte do estado real.
+- `GATE_CHECKLIST`: igual ao `GATE`, mas com resposta inicial obrigatoriamente estruturada em checklist operacional.
+
+Pergunta obrigatoria:
+`Escolha o modo de atuacao para esta sala: PADRAO, GATE ou GATE_CHECKLIST.`
+
+### 3.2 Resposta obrigatoria quando o modo for GATE_CHECKLIST
+
+- arquivo de bastao lido
+- branch atual
+- `HEAD` atual
+- upstream
+- ultimos commits relevantes
+- estado do working tree
+- ultimo build validado
+- ultimos testes validados
+- frente atual
+- riscos ou bloqueios
+- divergencias encontradas
+- status do pacote de bastao: atualizado ou precisa refresh
+
+### 3.3 Retomada na mesma sala apos interrupcao
+
+Quando houver interrupcao na mesma sala, nao se deve confiar em memoria
+implícita da conversa como fonte unica de continuidade.
+
+A retomada deve usar:
+- checkpoint curto registrado pelo assistente durante a atuacao
+- historico da conversa
+- estado real verificado do working tree e dos arquivos em foco
+- build/teste ja concluido e confirmado
+
+Frase padrao de retomada na mesma sala:
+`RETOMADA MESMA SALA: recupere o ultimo checkpoint confirmado, diferencie o que ficou concluido do que ficou pendente, revalide qualquer acao que possa ter sido interrompida e continue apenas a partir do estado real verificado.`
+
+Conteudo minimo do checkpoint curto:
+- modo ativo
+- objetivo atual
+- ultimo passo confirmado como concluido
+- ponto pendente ou interrompido
+- arquivos em foco
+- ultima validacao confirmada
+- proximo passo
+
+Resposta obrigatoria da IA apos a frase de retomada:
+- modo ativo
+- objetivo atual
+- ultimo ponto confirmado
+- ponto incerto ou interrompido
+- arquivos em foco
+- ultima validacao confirmada
+- proximo passo
 
 
 ## 4. Prompt interno no topo do arquivo unico
@@ -81,6 +158,8 @@ O arquivo unico deve consolidar:
 - modo de trabalho com o operador
 - procedimentos de teste
 - procedimento de criacao de partida de teste
+- modos de atuacao e bloco de escolha obrigatorio
+- protocolo de retomada na mesma sala apos interrupcao
 - contratos ativos essenciais
 - frente atual e proximos passos
 - frase padrao de passagem de bastao
@@ -139,22 +218,61 @@ Casos tipicos de atualizacao:
 
 Frase oficial:
 
-ATENCAO: VOCE esta assumindo a continuidade do projeto Patxanga, no qual a
-continuidade e condicao imutavel da atuacao. Aja como responsavel tecnico de
-continuidade: analise antes de alterar, confirme estado real antes de concluir,
-preserve seguranca, rastreabilidade, documentacao, versionamento e validacao, e
-trabalhe de forma incremental, sem atalhos e sem assumir contexto nao
-verificado. Peca explicitamente o arquivo `docs/18-room-baton-package-current.md`
-para receber diretivas, contexto operacional e status atualizado do projeto e,
-no ambiente local deste operador, solicite que ele rode o comando `cd ~/patxanga-bootstrap/patxanga-core && open -a TextEdit docs/18-room-baton-package-current.md`
-para abrir o arquivo no Mac. So depois disso VOCE deve validar branch, commits
-recentes, `../project-log.md` e os comandos/arquivos complementares de
-inicializacao. O arquivo deve ser atualizado sempre que o operador solicitar ou
-sempre que houver mudanca relevante suficiente para impactar a retomada segura.
+ATENCAO: VOCE esta assumindo a continuidade do projeto Patxanga. Nao assuma
+contexto, nao altere nada antes de verificar o estado real e trate
+continuidade, rastreabilidade, seguranca, validacao e documentacao como
+requisitos obrigatorios. Peca explicitamente o arquivo
+`docs/18-room-baton-package-current.md` para receber diretivas, contexto
+operacional e status atualizado do projeto e, no ambiente local deste
+operador, solicite que ele rode o comando
+`cd ~/patxanga-bootstrap/patxanga-core && open -a TextEdit docs/18-room-baton-package-current.md`
+para abrir o arquivo no Mac.
+
+Depois da leitura inicial do pacote de bastao, apresente obrigatoriamente ao
+operador uma escolha explicita entre tres modos de atuacao: `PADRAO`, `GATE`
+e `GATE_CHECKLIST`. Explique cada modo em uma linha, recomende `PADRAO` como
+opcao default e aguarde a decisao do operador antes de prosseguir.
+
+Definido o modo, valide branch atual, `HEAD`, upstream, commits recentes,
+`../project-log.md`, working tree, ambiente operacional, ultimo build/teste
+validado e artefatos de inicializacao com o rigor correspondente ao modo
+escolhido. Se houver divergencia entre memoria, conversa, documentacao e
+repositorio local, o estado local verificado prevalece. O arquivo
+`docs/18-room-baton-package-current.md` deve ser atualizado sempre que o
+operador solicitar ou sempre que houver mudanca relevante suficiente para
+impactar a retomada segura.
+
+Bloco de escolha obrigatorio:
+
+- `PADRAO` (Recomendado): continuidade normal, com validacao objetiva do estado real e seguimento mais agil.
+- `GATE`: nenhuma conclusao, plano fechando assunto ou alteracao antes de uma checagem forte do estado real.
+- `GATE_CHECKLIST`: igual ao `GATE`, mas com resposta inicial obrigatoriamente estruturada em checklist operacional.
+
+Pergunta obrigatoria:
+`Escolha o modo de atuacao para esta sala: PADRAO, GATE ou GATE_CHECKLIST.`
+
+Resposta obrigatoria quando o modo for `GATE_CHECKLIST`:
+
+- arquivo de bastao lido
+- branch atual
+- `HEAD` atual
+- upstream
+- ultimos commits relevantes
+- estado do working tree
+- ultimo build validado
+- ultimos testes validados
+- frente atual
+- riscos ou bloqueios
+- divergencias encontradas
+- status do pacote de bastao: atualizado ou precisa refresh
 
 Obrigacao operacional da IA:
 - reapresentar essa frase periodicamente na propria conversa com o operador
 - reapresentar essa frase obrigatoriamente apos marcos importantes
+- apresentar a escolha entre `PADRAO`, `GATE` e `GATE_CHECKLIST` logo apos a
+  leitura inicial do pacote
+- manter checkpoints curtos durante marcos relevantes para permitir retomada
+  segura na mesma sala
 - considerar essa reapresentacao parte imutavel do protocolo de continuidade
 
 ## 10. Fechamento
