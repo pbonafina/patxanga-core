@@ -38,8 +38,11 @@ type GamePlayScreenProps = {
   pendingVoteTilesByCell: Record<string, { letter?: string }>;
   selectedTileId: string | null;
   selectedTileIds: string[];
+  selectedRackSlotId: string | null;
   previewTileIds: string[];
   playerRackState: unknown[];
+  rackSlotAssociations: Record<string, string>;
+  rackSlotAssociationLabels: Record<string, string>;
 
   placedTilesPreview: unknown[];
   canSubmitMove: boolean;
@@ -64,13 +67,19 @@ type GamePlayScreenProps = {
 
   onPlaceTile: (cellKey: string, typedCell: BoardCell) => void;
   onToggleTile: (tileId: string) => void;
+  onToggleRackSlot: (slotId: string) => void;
   onClearPreview: () => void;
   onReorderTile: (draggedItemId: string, dropTargetId: string) => void;
-  onChangeRackGapDraft: (gapId: string, nextValue: string) => void;
+  onChangeRackSlotDraft: (slotId: string, nextValue: string) => void;
   onSubmitMove: () => void;
   onApprove: () => void;
   onReject: () => void;
 };
+
+function getSlotShortLabel(slotId: string): string {
+  const suffix = slotId.split(":").pop() ?? slotId;
+  return `S${suffix}`;
+}
 
 function formatFinishedAt(value: string | null): string {
   if (!value) return "(não disponível)";
@@ -95,8 +104,11 @@ export function GamePlayScreen({
   pendingVoteTilesByCell,
   selectedTileId,
   selectedTileIds,
+  selectedRackSlotId,
   previewTileIds,
   playerRackState,
+  rackSlotAssociations,
+  rackSlotAssociationLabels,
 
   placedTilesPreview,
   canSubmitMove,
@@ -117,9 +129,10 @@ export function GamePlayScreen({
 
   onPlaceTile,
   onToggleTile,
+  onToggleRackSlot,
   onClearPreview,
   onReorderTile,
-  onChangeRackGapDraft,
+  onChangeRackSlotDraft,
   onSubmitMove,
   onApprove,
   onReject,
@@ -244,6 +257,20 @@ export function GamePlayScreen({
               </span>
             ) : null}
 
+            {selectedRackSlotId ? (
+              <span
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 999,
+                  background: "#dbeafe",
+                  fontSize: 13,
+                  color: "#1d4ed8",
+                }}
+              >
+                {getSlotShortLabel(selectedRackSlotId)} em associacao local
+              </span>
+            ) : null}
+
             {isVoting ? (
               <span
                 style={{
@@ -331,7 +358,9 @@ export function GamePlayScreen({
                 localDeclaredLetters={localDeclaredLetters}
                 pendingVoteTilesByCell={pendingVoteTilesByCell}
                 selectedTileId={selectedTileId}
+                selectedRackSlotId={selectedRackSlotId}
                 playerRackState={playerRackState}
+                rackSlotAssociations={rackSlotAssociations}
                 buildCellKey={buildCellKey}
                 renderCellLabel={renderCellLabel}
                 renderCellBackground={renderCellBackground}
@@ -414,13 +443,16 @@ export function GamePlayScreen({
               <RackSection
                 rackTiles={playerRackState}
                 selectedTileIds={selectedTileIds}
+                activeSlotId={selectedRackSlotId}
+                slotAssociationLabels={rackSlotAssociationLabels}
                 previewTileIds={previewTileIds}
                 showDebug={showDebug}
                 isPlayersTurn={isPlayersTurn}
                 onToggleTile={onToggleTile}
+                onToggleSlot={onToggleRackSlot}
                 onClearPreview={onClearPreview}
                 onReorderTile={onReorderTile}
-                onChangeGapDraft={onChangeRackGapDraft}
+                onChangeSlotDraft={onChangeRackSlotDraft}
               />
 
               <div

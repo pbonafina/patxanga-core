@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-03-15 18:07:51
+Generated at: 2026-03-15 18:23:56
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,26 +93,22 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## develop...origin/develop [ahead 2]
+## develop...origin/develop [ahead 3]
  M .gitignore
  M docs/18-room-baton-package-current.md
- M docs/18-room-baton-process-v1.0.md
+ M docs/frontend-browser-validation-procedure-v1.0.md
  M docs/frontend-rack-composition-implementation-plan-v1.0.md
  M docs/frontend-rack-composition-ux-v1.0.md
+ M frontend/components/BoardSection.tsx
+ M frontend/components/GamePlayScreen.tsx
+ M frontend/components/RackSection.tsx
+ M frontend/pages/index.tsx
+ M frontend/tests/browser-validation.spec.ts
 ?? .DS_Store
 ?? docs/.DS_Store
 ?? docs/15-pacote-final-colagem-v1.2-ultra-blindado.md
 ?? frontend/node_modules/
 ?? generate-continuity-package.sh
-?? scripts/run-sql-test-suite.sh
-?? sql/tests/test_exchange_tiles.sql
-?? sql/tests/test_match_end_all_passed.sql
-?? sql/tests/test_match_end_empty_rack.sql
-?? sql/tests/test_match_end_final_penalty.sql
-?? sql/tests/test_pass_turn.sql
-?? sql/tests/test_submit_move_pending_vote.sql
-?? sql/tests/test_submit_move_pending_vote_accept.sql
-?? sql/tests/test_submit_move_pending_vote_reject.sql
 ?? tmp/
 ```
 
@@ -124,7 +120,8 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-372d0e7 (HEAD -> develop) Add operational lobby invite baseline
+0722828 (HEAD -> develop) Add SQL regression test suites
+372d0e7 Add operational lobby invite baseline
 d584091 Add browser validation scenarios and Playwright coverage
 9e0feae (origin/develop) Formalize same-room resume continuity protocol
 54da7e4 Implement rack UX and backend move preview
@@ -138,7 +135,6 @@ f0f8022 Adiciona contrato de UX para composicao local do rack
 0fa250a Corrige destaque de turno e cronometro do rack
 3fa60d5 Adiciona procedimento de validacao manual no browser
 245dac5 Adiciona selecao multipla e reordenacao em grupo no rack
-aa64609 Destaca turno ativo no rack com cronometro visual
 ```
 
 ### tail -n 60 ../project-log.md
@@ -2022,8 +2018,9 @@ Validar, conforme o marco:
 - selecao multipla
 - reordenacao
 - reordenacao em grupo
-- lacunas locais
-- rascunho local nas lacunas
+- slots locais permanentes
+- rascunho local nos slots
+- associacao local de slot com o tabuleiro
 - cronometro visual
 - destaque de turno
 
@@ -2659,9 +2656,9 @@ Este contrato cobre apenas:
 - reorganizacao local do rack
 - selecao local de pecas
 - grupos locais de pecas
-- lacunas locais
-- letras de rascunho em lacunas
-- espacos extras locais para composicao
+- slots locais permanentes
+- letras de rascunho em slots
+- associacoes locais opcionais com o tabuleiro
 
 Este contrato nao redefine:
 - engine
@@ -2801,7 +2798,7 @@ A composicao local do rack nao pode:
 - reservar letra do tabuleiro
 - reservar casa do tabuleiro
 - alterar validacao da engine
-- gerar payload oficial com lacunas locais
+- gerar payload oficial com slots locais
 - substituir `declared_letter` oficial de wildcard
 - alterar score
 - alterar turno
@@ -2937,7 +2934,7 @@ Objetivo:
 - substituir a ordem local baseada apenas em ids por uma ordem local baseada em itens de composicao
 
 Saida esperada:
-- rack local aceita itens reais e lacunas
+- rack local aceita itens reais e slots locais
 
 ### Etapa 2 — slots locais permanentes de composicao
 Objetivo:

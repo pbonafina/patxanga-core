@@ -47,4 +47,31 @@ test.describe("browser validation scenarios", () => {
     await page.getByRole("button", { name: "Recusar convite" }).click();
     await expect(page.getByText("Convite recusado com sucesso.")).toBeVisible();
   });
+
+  test("associates a local rack slot to the board without affecting gameplay state", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await expect(page.getByRole("heading", { name: "Partida local rápida" })).toBeVisible();
+
+    await page.getByTestId("quick-match-create").click();
+
+    const slot = page.getByTestId("rack-slot-1");
+    const boardCell = page.getByTestId("board-cell-0-0");
+
+    await expect(slot).toBeVisible();
+    await expect(boardCell).toBeVisible();
+
+    await slot.click();
+    await boardCell.click();
+
+    await expect(page.getByTestId("rack-slot-1-association")).toHaveText("1,1");
+    await expect(page.getByTestId("board-cell-0-0-slot-badges")).toContainText("S1");
+
+    await boardCell.click();
+
+    await expect(page.getByTestId("rack-slot-1-association")).toHaveCount(0);
+    await expect(page.getByTestId("board-cell-0-0-slot-badges")).toHaveCount(0);
+  });
 });

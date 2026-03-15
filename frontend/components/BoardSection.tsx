@@ -67,7 +67,9 @@ type BoardSectionProps = {
   localDeclaredLetters: Record<string, string>;
   pendingVoteTilesByCell: Record<string, { letter?: string }>;
   selectedTileId: string | null;
+  selectedRackSlotId: string | null;
   playerRackState: unknown[];
+  rackSlotAssociations: Record<string, string>;
   buildCellKey: (rowIndex: number, colIndex: number) => string;
   renderCellLabel: (cell: BoardCell) => string;
   renderCellBackground: (
@@ -84,7 +86,9 @@ export function BoardSection({
   localDeclaredLetters,
   pendingVoteTilesByCell,
   selectedTileId,
+  selectedRackSlotId,
   playerRackState,
+  rackSlotAssociations,
   buildCellKey,
   renderCellLabel,
   renderCellBackground,
@@ -114,6 +118,12 @@ export function BoardSection({
           (row as unknown[]).map((cell, colIndex) => {
             const typedCell = cell as BoardCell;
             const cellKey = buildCellKey(rowIndex, colIndex);
+            const linkedSlotIds = Object.entries(rackSlotAssociations)
+              .filter(([, linkedCellKey]) => linkedCellKey === cellKey)
+              .map(([slotId]) => slotId);
+            const isActiveSlotTarget =
+              Boolean(selectedRackSlotId) &&
+              rackSlotAssociations[selectedRackSlotId ?? ""] === cellKey;
             const label = renderCellLabel(typedCell);
             const isCenter = rowIndex === 7 && colIndex === 7;
             const localTileId = localPlacements[cellKey];
@@ -147,6 +157,7 @@ export function BoardSection({
             return (
               <div
                 key={`${rowIndex}-${colIndex}`}
+                data-testid={`board-cell-${rowIndex}-${colIndex}`}
                 title={`(${rowIndex + 1}, ${colIndex + 1})`}
                 onClick={() => onPlaceTile(cellKey, typedCell)}
                 style={{
@@ -172,10 +183,54 @@ export function BoardSection({
                   textAlign: "center",
                   padding: 2,
                   boxSizing: "border-box",
-                  boxShadow: isCenter ? "inset 0 0 0 2px #c99a00" : "none",
-                  cursor: hasLocalPreview || Boolean(selectedTileId) ? "pointer" : "default",
+                  position: "relative",
+                  boxShadow: [
+                    isCenter ? "inset 0 0 0 2px #c99a00" : null,
+                    linkedSlotIds.length > 0
+                      ? `inset 0 0 0 2px ${isActiveSlotTarget ? "#2563eb" : "#c4b5fd"}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(", "),
+                  cursor:
+                    hasLocalPreview || Boolean(selectedTileId) || Boolean(selectedRackSlotId)
+                      ? "pointer"
+                      : "default",
                 }}
               >
+                {linkedSlotIds.length > 0 ? (
+                  <div
+                    data-testid={`board-cell-${rowIndex}-${colIndex}-slot-badges`}
+                    style={{
+                      position: "absolute",
+                      top: 2,
+                      left: 2,
+                      display: "flex",
+                      gap: 2,
+                      zIndex: 1,
+                    }}
+                  >
+                    {linkedSlotIds.map((slotId) => (
+                      <span
+                        key={slotId}
+                        style={{
+                          minWidth: 16,
+                          padding: "1px 3px",
+                          borderRadius: 999,
+                          background:
+                            selectedRackSlotId === slotId ? "#2563eb" : "rgba(124, 58, 237, 0.88)",
+                          color: "#ffffff",
+                          fontSize: 8,
+                          fontWeight: 800,
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {`S${slotId.split(":").pop() ?? slotId}`}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
                 <div
                   style={{
                     width: "100%",

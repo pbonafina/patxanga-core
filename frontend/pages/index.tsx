@@ -32,7 +32,7 @@ type BoardCell = {
 
 type RackCompositionItem =
   | { kind: "tile"; tileId: string }
-  | { kind: "gap"; gapId: string };
+  | { kind: "slot"; slotId: string };
 
 type SessionRole = "host" | "guest";
 
@@ -102,19 +102,19 @@ function getDeclaredLetterPromptLabel(specialType?: string | null): string {
 function buildInitialRackComposition(tileIds: string[]): RackCompositionItem[] {
   return [
     ...tileIds.map((tileId) => ({ kind: "tile" as const, tileId })),
-    ...DEFAULT_RACK_SLOT_IDS.map((gapId) => ({ kind: "gap" as const, gapId })),
+    ...DEFAULT_RACK_SLOT_IDS.map((slotId) => ({ kind: "slot" as const, slotId })),
   ];
 }
 
-function buildInitialRackGapDrafts(): Record<string, string> {
-  return DEFAULT_RACK_SLOT_IDS.reduce<Record<string, string>>((drafts, gapId) => {
-    drafts[gapId] = "";
+function buildInitialRackSlotDrafts(): Record<string, string> {
+  return DEFAULT_RACK_SLOT_IDS.reduce<Record<string, string>>((drafts, slotId) => {
+    drafts[slotId] = "";
     return drafts;
   }, {});
 }
 
 function getRackCompositionItemId(item: RackCompositionItem): string {
-  return item.kind === "tile" ? item.tileId : item.gapId;
+  return item.kind === "tile" ? item.tileId : item.slotId;
 }
 
 function parseInsertionIndex(dropTargetId: string): number | null {
@@ -256,6 +256,43 @@ function buildCellKey(rowIndex: number, colIndex: number): string {
   return `${rowIndex}-${colIndex}`;
 }
 
+function parseCellKey(cellKey: string): { rowIndex: number; colIndex: number } | null {
+  const [rowIndexText, colIndexText] = cellKey.split("-");
+  const rowIndex = Number(rowIndexText);
+  const colIndex = Number(colIndexText);
+
+  if (!Number.isInteger(rowIndex) || !Number.isInteger(colIndex)) {
+    return null;
+  }
+
+  return { rowIndex, colIndex };
+}
+
+function formatBoardCoordinates(cellKey: string): string {
+  const parsed = parseCellKey(cellKey);
+
+  if (!parsed) {
+    return cellKey;
+  }
+
+  return `${parsed.rowIndex + 1},${parsed.colIndex + 1}`;
+}
+
+function getBoardAssociationLabel(cellKey: string, boardState: unknown[]): string {
+  const parsed = parseCellKey(cellKey);
+
+  if (!parsed) {
+    return cellKey;
+  }
+
+  const row = boardState[parsed.rowIndex] as unknown[] | undefined;
+  const cell = row?.[parsed.colIndex] as BoardCell | undefined;
+  const boardLetter = cell?.tile?.declared_letter ?? cell?.tile?.letter ?? "";
+  const coordinates = formatBoardCoordinates(cellKey);
+
+  return boardLetter ? `${boardLetter} · ${coordinates}` : coordinates;
+}
+
 function renderCellBackground(cell: BoardCell, rowIndex: number, colIndex: number): string {
   if (!cell) return "#ffffff";
   if (cell.tile?.letter) return "#f3f4f6";
@@ -292,10 +329,14 @@ export default function HomePage() {
   const [pendingVoteContext, setPendingVoteContext] = useState<unknown | null>(null);
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
   const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
+  const [selectedRackSlotId, setSelectedRackSlotId] = useState<string | null>(null);
   const [localPlacements, setLocalPlacements] = useState<Record<string, string>>({});
   const [localDeclaredLetters, setLocalDeclaredLetters] = useState<Record<string, string>>({});
   const [localRackComposition, setLocalRackComposition] = useState<RackCompositionItem[]>([]);
-  const [localRackGapDrafts, setLocalRackGapDrafts] = useState<Record<string, string>>({});
+  const [localRackSlotDrafts, setLocalRackSlotDrafts] = useState<Record<string, string>>({});
+  const [localRackSlotAssociations, setLocalRackSlotAssociations] = useState<
+    Record<string, string>
+  >({});
   const [showDebug, setShowDebug] = useState(false);
   const [quickMatchSession, setQuickMatchSession] = useState<{
     matchId: string;
@@ -428,6 +469,17 @@ export default function HomePage() {
   const previewTileIds = useMemo(
     () => [...new Set(Object.values(localPlacements))],
     [localPlacements]
+  );
+
+  const rackSlotAssociationLabels = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(localRackSlotAssociations).map(([slotId, cellKey]) => [
+          slotId,
+          getBoardAssociationLabel(cellKey, resolvedBootstrap.boardState),
+        ])
+      ),
+    [localRackSlotAssociations, resolvedBootstrap.boardState]
   );
 
 
@@ -576,7 +628,9 @@ export default function HomePage() {
       .filter((id): id is string => Boolean(id));
 
     setLocalRackComposition(buildInitialRackComposition(nextIds));
-    setLocalRackGapDrafts(buildInitialRackGapDrafts());
+    setLocalRackSlotDrafts(buildInitialRackSlotDrafts());
+    setLocalRackSlotAssociations({});
+    setSelectedRackSlotId(null);
   }, [resolvedBootstrap.playerContext]);
 
   const orderedPlayerRackState = useMemo(() => {
@@ -596,11 +650,11 @@ export default function HomePage() {
 
     const ordered = localRackComposition
       .map((item) => {
-        if (item.kind === "gap") {
+        if (item.kind === "slot") {
           return {
-            kind: "gap" as const,
-            gapId: item.gapId,
-            draftLetter: localRackGapDrafts[item.gapId] ?? "",
+            kind: "slot" as const,
+            slotId: item.slotId,
+            draftLetter: localRackSlotDrafts[item.slotId] ?? "",
           };
         }
 
@@ -619,7 +673,7 @@ export default function HomePage() {
     );
 
     return [...ordered, ...missing];
-  }, [localRackComposition, localRackGapDrafts, resolvedBootstrap.playerContext]);
+  }, [localRackComposition, localRackSlotDrafts, resolvedBootstrap.playerContext]);
 
   async function openMatchSession(matchId: string, userId: string) {
     setIsLoading(true);
@@ -629,9 +683,11 @@ export default function HomePage() {
     setPendingVoteError(null);
     setSelectedTileId(null);
     setSelectedTileIds([]);
+    setSelectedRackSlotId(null);
     setLocalPlacements({});
     setLocalDeclaredLetters({});
-    setLocalRackGapDrafts({});
+    setLocalRackSlotDrafts({});
+    setLocalRackSlotAssociations({});
     setMovePreview(null);
 
     try {
@@ -1188,9 +1244,11 @@ export default function HomePage() {
 
       setSelectedTileId(null);
       setSelectedTileIds([]);
+      setSelectedRackSlotId(null);
       setLocalPlacements({});
       setLocalDeclaredLetters({});
-      setLocalRackGapDrafts({});
+      setLocalRackSlotDrafts({});
+      setLocalRackSlotAssociations({});
       setMovePreview(null);
     } catch (error) {
       setErrorMessage(
@@ -1289,6 +1347,22 @@ export default function HomePage() {
   }
 
   function handlePlaceTile(cellKey: string, typedCell: BoardCell) {
+    if (selectedRackSlotId) {
+      setLocalRackSlotAssociations((current) => {
+        const next = { ...current };
+
+        if (next[selectedRackSlotId] === cellKey) {
+          delete next[selectedRackSlotId];
+        } else {
+          next[selectedRackSlotId] = cellKey;
+        }
+
+        return next;
+      });
+
+      return;
+    }
+
     if (typedCell?.tile?.letter) {
       return;
     }
@@ -1376,6 +1450,7 @@ export default function HomePage() {
   }
 
   function handleToggleTile(tileId: string) {
+    setSelectedRackSlotId(null);
     setSelectedTileIds((current) => {
       if (current.includes(tileId)) {
         const next = current.filter((id) => id !== tileId);
@@ -1389,11 +1464,17 @@ export default function HomePage() {
     });
   }
 
-  function handleChangeRackGapDraft(gapId: string, nextValue: string) {
+  function handleToggleRackSlot(slotId: string) {
+    setSelectedTileId(null);
+    setSelectedTileIds([]);
+    setSelectedRackSlotId((current) => (current === slotId ? null : slotId));
+  }
+
+  function handleChangeRackSlotDraft(slotId: string, nextValue: string) {
     const normalized = nextValue.trim().slice(0, 1).toUpperCase();
-    setLocalRackGapDrafts((current) => ({
+    setLocalRackSlotDrafts((current) => ({
       ...current,
-      [gapId]: normalized,
+      [slotId]: normalized,
     }));
   }
 
@@ -1424,6 +1505,7 @@ export default function HomePage() {
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
           <button
             type="button"
+            data-testid="quick-match-create"
             onClick={handleCreateQuickMatch}
             disabled={!isConfigured || isCreatingQuickMatch}
             style={{ padding: "10px 14px", cursor: !isConfigured || isCreatingQuickMatch ? "not-allowed" : "pointer" }}
@@ -1435,6 +1517,7 @@ export default function HomePage() {
             <>
               <button
                 type="button"
+                data-testid="quick-match-open-host"
                 onClick={() => handleOpenQuickMatch(quickMatchSession.hostUserId)}
                 disabled={isLoading}
                 style={{ padding: "10px 14px", cursor: isLoading ? "not-allowed" : "pointer" }}
@@ -1443,6 +1526,7 @@ export default function HomePage() {
               </button>
               <button
                 type="button"
+                data-testid="quick-match-open-guest"
                 onClick={() => handleOpenQuickMatch(quickMatchSession.guestUserId)}
                 disabled={isLoading}
                 style={{ padding: "10px 14px", cursor: isLoading ? "not-allowed" : "pointer" }}
@@ -1891,8 +1975,11 @@ export default function HomePage() {
         pendingVoteTilesByCell={pendingVoteTilesByCell}
         selectedTileId={selectedTileId}
         selectedTileIds={selectedTileIds}
+        selectedRackSlotId={selectedRackSlotId}
         previewTileIds={previewTileIds}
         playerRackState={orderedPlayerRackState}
+        rackSlotAssociations={localRackSlotAssociations}
+        rackSlotAssociationLabels={rackSlotAssociationLabels}
         placedTilesPreview={placedTilesPreview}
         canSubmitMove={placedTilesPreview.length > 0 && Boolean(resolvedBootstrap.playerId)}
         isSubmittingMove={isSubmittingMove}
@@ -1909,14 +1996,16 @@ export default function HomePage() {
         renderCellBackground={renderCellBackground}
         onPlaceTile={handlePlaceTile}
         onToggleTile={handleToggleTile}
+        onToggleRackSlot={handleToggleRackSlot}
         onClearPreview={() => {
           setLocalPlacements({});
           setLocalDeclaredLetters({});
           setSelectedTileId(null);
           setSelectedTileIds([]);
+          setSelectedRackSlotId(null);
           setMovePreview(null);
         }}
-        onChangeRackGapDraft={handleChangeRackGapDraft}
+        onChangeRackSlotDraft={handleChangeRackSlotDraft}
         onReorderTile={handleReorderRackItem}
         onSubmitMove={handleSubmitMove}
         onApprove={() => handleSubmitVote(false)}
@@ -1951,7 +2040,9 @@ export default function HomePage() {
         localDeclaredLetters={localDeclaredLetters}
         pendingVoteTilesByCell={pendingVoteTilesByCell}
         selectedTileId={selectedTileId}
+        selectedRackSlotId={selectedRackSlotId}
         playerRackState={orderedPlayerRackState}
+        rackSlotAssociations={localRackSlotAssociations}
         buildCellKey={buildCellKey}
         renderCellLabel={renderCellLabel}
         renderCellBackground={renderCellBackground}
@@ -1963,18 +2054,22 @@ export default function HomePage() {
       <RackSection
         rackTiles={orderedPlayerRackState}
         selectedTileIds={selectedTileIds}
+        activeSlotId={selectedRackSlotId}
+        slotAssociationLabels={rackSlotAssociationLabels}
         previewTileIds={previewTileIds}
         showDebug={showDebug}
         isPlayersTurn={isActive}
         onToggleTile={handleToggleTile}
+        onToggleSlot={handleToggleRackSlot}
         onClearPreview={() => {
           setLocalPlacements({});
           setLocalDeclaredLetters({});
           setSelectedTileId(null);
           setSelectedTileIds([]);
+          setSelectedRackSlotId(null);
           setMovePreview(null);
         }}
-        onChangeGapDraft={handleChangeRackGapDraft}
+        onChangeSlotDraft={handleChangeRackSlotDraft}
         onReorderTile={handleReorderRackItem}
       />
       ) : null}

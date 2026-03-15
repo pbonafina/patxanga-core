@@ -122,8 +122,9 @@ Validar, conforme o marco:
 - selecao multipla
 - reordenacao
 - reordenacao em grupo
-- lacunas locais
-- rascunho local nas lacunas
+- slots locais permanentes
+- rascunho local nos slots
+- associacao local de slot com o tabuleiro
 - cronometro visual
 - destaque de turno
 

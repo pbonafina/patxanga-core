@@ -49,9 +49,9 @@ Este contrato cobre apenas:
 - reorganizacao local do rack
 - selecao local de pecas
 - grupos locais de pecas
-- lacunas locais
-- letras de rascunho em lacunas
-- espacos extras locais para composicao
+- slots locais permanentes
+- letras de rascunho em slots
+- associacoes locais opcionais com o tabuleiro
 
 Este contrato nao redefine:
 - engine
@@ -70,14 +70,13 @@ Conjunto de pecas reais retornadas pelo backend em `rack_state`.
 ### 5.2 Superficie local de composicao
 Camada de UX onde o frontend pode organizar visualmente:
 - pecas reais do rack oficial
-- lacunas locais
-- espacos extras locais
+- slots locais permanentes de composicao
 
-### 5.3 Lacuna local
-Espaco visual criado no frontend para representar uma posicao
-que o jogador deseja deixar em aberto durante sua montagem mental.
+### 5.3 Slot local permanente
+Espaco visual local, sempre disponivel na superficie de composicao,
+usado para dar folga de montagem mental ao jogador.
 
-A lacuna local:
+O slot local permanente:
 - nao e uma peca real
 - nao existe no backend
 - nao entra no submit
@@ -86,7 +85,7 @@ A lacuna local:
 - nao altera `rack_state` oficial
 
 ### 5.4 Letra de rascunho
-Letra digitada pelo jogador dentro de uma lacuna local apenas como lembrete.
+Letra digitada pelo jogador dentro de um slot local apenas como lembrete.
 
 A letra de rascunho:
 - nao e `declared_letter` de backend
@@ -94,14 +93,16 @@ A letra de rascunho:
 - nao altera o jogo real
 - nao pode ser enviada como parte da jogada oficial
 
-### 5.5 Espacos extras locais
-Posicoes adicionais de composicao visual no rack para permitir manobra,
-reordenacao e planejamento mental da palavra.
+### 5.5 Associacao local com o tabuleiro
+Associacao local, explicita e reversivel entre um slot de composicao
+e uma peca/casa do tabuleiro escolhida pelo jogador.
 
-Esses espacos:
-- sao locais
-- nao representam aumento real do rack
-- nao alteram o backend
+Essa associacao:
+- e apenas local
+- nao reserva a peca do tabuleiro
+- nao reserva a casa do tabuleiro
+- nao altera o backend
+- pode se tornar invalida se o tabuleiro mudar antes da jogada
 
 ## 6. Comportamentos permitidos
 
@@ -109,37 +110,35 @@ O frontend pode permitir:
 - reordenar pecas reais localmente
 - selecionar uma ou mais pecas localmente
 - mover grupos locais dentro da superficie do rack
-- criar lacunas locais
-- mover lacunas locais
-- remover lacunas locais
-- digitar uma letra de rascunho na lacuna
-- usar espacos extras locais como apoio de composicao
+- usar slots locais permanentes como apoio de composicao
+- digitar letra de rascunho em slots locais
+- associar localmente um slot a uma peca/casa do tabuleiro
+- remover ou refazer essa associacao local
 
-## 7. Regra de insercao de lacuna
+## 7. Regra de composicao com slots permanentes
 
-A UX desejada deve criar lacuna entre duas pecas reais escolhidas
-na composicao local do jogador.
+A UX desejada deve oferecer slots locais permanentes de composicao,
+sempre disponiveis no rack local do jogador.
 
 Leitura correta:
 - o jogador organiza pecas reais no rack
-- o jogador seleciona exatamente duas pecas reais como referencias
-- o frontend cria a lacuna entre essas duas pecas na ordem local atual
-- a lacuna pode receber uma letra de rascunho
+- o jogador move pecas livremente entre pecas reais e slots locais
+- um slot vazio pode receber letra de rascunho
+- depois, se desejar, o jogador pode associar localmente esse slot
+  a uma peca/casa do tabuleiro
 - a composicao inteira continua movel dentro do rack local
 
 Leitura incorreta:
-- criar lacuna a partir de uma peca unica com lado implicito
-- criar lacuna com regra ambigua de esquerda/direita
-- criar lacuna ja vinculada ao tabuleiro
-
-Enquanto essa UX completa nao estiver pronta, implementacoes intermediarias
-podem existir, desde que nao violem os limites deste contrato.
+- depender de criar lacuna dinamica para cada montagem
+- tratar slot local como peca oficial
+- criar vinculo inicial automatico entre slot e tabuleiro
+- tratar associacao local como reserva oficial do board
 
 
 ## 8. Relacao com o tabuleiro
 
 A composicao local do rack pode refletir a intencao do jogador
-de usar uma letra ja existente no tabuleiro.
+de usar uma letra ou casa ja existente no tabuleiro.
 
 Mas essa intencao:
 - e apenas local
@@ -149,7 +148,8 @@ Mas essa intencao:
 - pode ficar invalida antes do turno do jogador
 
 Portanto:
-- a letra escolhida na lacuna e apenas lembrete estrategico
+- a letra digitada no slot e apenas lembrete estrategico
+- a associacao local com o tabuleiro e apenas referencia de composicao
 - o jogador pode precisar revisar sua composicao depois
 
 ## 9. Relacao com submit de jogada
@@ -158,9 +158,9 @@ O submit oficial continua obedecendo o contrato vigente de `submit_patxanga_move
 
 Logo:
 - apenas pecas reais colocadas entram em `p_placed_tiles`
-- lacunas locais nao entram em `p_placed_tiles`
+- slots locais nao entram em `p_placed_tiles`
 - letras de rascunho nao entram em `p_placed_tiles`
-- espacos extras locais nao entram em `p_placed_tiles`
+- associacoes locais com o tabuleiro nao entram em `p_placed_tiles`
 
 ## 10. Relacao com o estado local temporario
 
@@ -191,7 +191,7 @@ A composicao local do rack nao pode:
 - reservar letra do tabuleiro
 - reservar casa do tabuleiro
 - alterar validacao da engine
-- gerar payload oficial com lacunas locais
+- gerar payload oficial com slots locais
 - substituir `declared_letter` oficial de wildcard
 - alterar score
 - alterar turno
@@ -209,8 +209,9 @@ Nesta fase do projeto:
 
 Esta frente pode ser considerada coerente quando:
 - o jogador conseguir reorganizar pecas livremente no rack local
-- o jogador conseguir abrir lacunas locais entre posicoes da composicao
+- o jogador conseguir usar slots locais permanentes de composicao
 - o jogador conseguir usar letras de rascunho como lembrete
+- o jogador conseguir associar localmente slots ao tabuleiro sem afetar o backend
 - o jogador entender que isso nao altera o jogo real
 - o fluxo continuar compativel com o backend atual
 

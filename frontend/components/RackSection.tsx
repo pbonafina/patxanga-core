@@ -8,22 +8,25 @@ type RackTile = {
   special_type?: string | null;
 };
 
-type RackGapItem = {
-  kind: "gap";
-  gapId: string;
+type RackSlotItem = {
+  kind: "slot";
+  slotId: string;
   draftLetter?: string;
 };
 
 type RackSectionProps = {
   rackTiles: unknown[];
   selectedTileIds: string[];
+  activeSlotId: string | null;
+  slotAssociationLabels: Record<string, string>;
   previewTileIds: string[];
   showDebug: boolean;
   isPlayersTurn: boolean;
   onToggleTile: (tileId: string) => void;
+  onToggleSlot: (slotId: string) => void;
   onClearPreview: () => void;
   onReorderTile: (draggedItemId: string, dropTargetId: string) => void;
-  onChangeGapDraft: (gapId: string, nextValue: string) => void;
+  onChangeSlotDraft: (slotId: string, nextValue: string) => void;
 };
 
 const DIGIT_SEGMENTS: Record<string, string[]> = {
@@ -112,13 +115,22 @@ function formatCountdown(totalSeconds: number | null) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-function isGapItem(item: unknown): item is RackGapItem {
+function isSlotItem(item: unknown): item is RackSlotItem {
   return Boolean(
     item &&
       typeof item === "object" &&
-      (item as RackGapItem).kind === "gap" &&
-      typeof (item as RackGapItem).gapId === "string"
+      (item as RackSlotItem).kind === "slot" &&
+      typeof (item as RackSlotItem).slotId === "string"
   );
+}
+
+function getSlotShortLabel(slotId: string): string {
+  const suffix = slotId.split(":").pop() ?? slotId;
+  return `S${suffix}`;
+}
+
+function getSlotTestId(slotId: string): string {
+  return `rack-slot-${slotId.split(":").pop() ?? slotId}`;
 }
 
 function getRackTileFace(tile: RackTile): {
@@ -183,13 +195,16 @@ function InsertionZone({
 export function RackSection({
   rackTiles,
   selectedTileIds,
+  activeSlotId,
+  slotAssociationLabels,
   previewTileIds,
   showDebug,
   isPlayersTurn,
   onToggleTile,
+  onToggleSlot,
   onClearPreview,
   onReorderTile,
-  onChangeGapDraft,
+  onChangeSlotDraft,
 }: RackSectionProps) {
   const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
   const [blinkVisible, setBlinkVisible] = useState(true);
@@ -231,7 +246,7 @@ export function RackSection({
   const digits = countdown.split("");
   const isAlert = isPlayersTurn && countdownSeconds !== null && countdownSeconds <= 10;
   const selectedCount = selectedTileIds.length;
-  const gapCount = rackTiles.filter((item) => isGapItem(item)).length;
+  const slotCount = rackTiles.filter((item) => isSlotItem(item)).length;
   const previewTileIdSet = useMemo(() => new Set(previewTileIds), [previewTileIds]);
 
   const rackFrameStyle = isPlayersTurn
@@ -278,16 +293,21 @@ export function RackSection({
               Arraste para reorganizar no rack. Para levar ao tabuleiro, selecione a peça e clique na casa desejada.
             </div>
             <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
-              Solte uma peça sobre um slot para trocar o buraco vazio de lugar dentro do rack.
+              Solte uma peça sobre um slot para reorganizar a folga local dentro do rack.
             </div>
             {selectedCount > 0 ? (
               <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
                 {selectedCount} peça{selectedCount === 1 ? "" : "s"} selecionada{selectedCount === 1 ? "" : "s"}
               </div>
             ) : null}
-            {gapCount > 0 ? (
+            {slotCount > 0 ? (
               <div style={{ marginTop: 6, fontSize: 13, color: "#7c3aed", fontWeight: 700 }}>
-                {gapCount} slot{gapCount === 1 ? "" : "s"} local{gapCount === 1 ? "" : "is"} permanente{gapCount === 1 ? "" : "s"} no rack
+                {slotCount} slot{slotCount === 1 ? "" : "s"} local{slotCount === 1 ? "" : "is"} permanente{slotCount === 1 ? "" : "s"} no rack
+              </div>
+            ) : null}
+            {activeSlotId ? (
+              <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
+                {getSlotShortLabel(activeSlotId)} selecionado. Clique numa casa ou letra do tabuleiro para criar um vinculo local.
               </div>
             ) : null}
           </div>
@@ -377,16 +397,25 @@ export function RackSection({
           >
             <InsertionZone insertIndex={0} onReorderTile={onReorderTile} />
             {rackTiles.map((tile, index) => {
-              if (isGapItem(tile)) {
-                const gapId = tile.gapId;
+              if (isSlotItem(tile)) {
+                const slotId = tile.slotId;
                 const draftLetter = (tile.draftLetter ?? "").toUpperCase();
+                const slotTestId = getSlotTestId(slotId);
+                const isActiveSlot = activeSlotId === slotId;
+                const associationLabel = slotAssociationLabels[slotId] ?? null;
 
                 return (
                   <div
-                    key={gapId}
+                    key={slotId}
+                    data-testid={slotTestId}
                     draggable
+                    onMouseDown={(event) => {
+                      if ((event.target as HTMLElement).tagName !== "INPUT") {
+                        onToggleSlot(slotId);
+                      }
+                    }}
                     onDragStart={(event) => {
-                      event.dataTransfer.setData("text/plain", gapId);
+                      event.dataTransfer.setData("text/plain", slotId);
                       event.dataTransfer.effectAllowed = "move";
                     }}
                     onDragOver={(event) => {
@@ -396,24 +425,29 @@ export function RackSection({
                     onDrop={(event) => {
                       event.preventDefault();
                       const draggedItemId = event.dataTransfer.getData("text/plain");
-                      if (!draggedItemId || draggedItemId === gapId) {
+                      if (!draggedItemId || draggedItemId === slotId) {
                         return;
                       }
-                      onReorderTile(draggedItemId, gapId);
+                      onReorderTile(draggedItemId, slotId);
                     }}
                     style={{
                       width: 54,
                       minHeight: 54,
                       padding: 4,
-                      border: "1px dashed #8b5cf6",
+                      border: isActiveSlot
+                        ? "2px solid #2563eb"
+                        : associationLabel
+                          ? "1px solid #7c3aed"
+                          : "1px dashed #8b5cf6",
                       borderRadius: 12,
-                      background: "#faf5ff",
+                      background: isActiveSlot ? "#eff6ff" : "#faf5ff",
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "space-between",
                       position: "relative",
                       boxSizing: "border-box",
+                      cursor: "pointer",
                     }}
                   >
                     <div style={{ marginTop: 4, fontSize: 9, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#7c3aed" }}>
@@ -422,7 +456,13 @@ export function RackSection({
 
                     <input
                       value={draftLetter}
-                      onChange={(event) => onChangeGapDraft(gapId, event.target.value)}
+                      onClick={(event) => event.stopPropagation()}
+                      onFocus={() => {
+                        if (activeSlotId !== slotId) {
+                          onToggleSlot(slotId);
+                        }
+                      }}
+                      onChange={(event) => onChangeSlotDraft(slotId, event.target.value)}
                       maxLength={1}
                       placeholder="?"
                       style={{
@@ -438,6 +478,29 @@ export function RackSection({
                       }}
                       title="Letra de rascunho"
                     />
+
+                    {associationLabel ? (
+                      <div
+                        data-testid={`${slotTestId}-association`}
+                        style={{
+                          marginBottom: 4,
+                          padding: "2px 4px",
+                          maxWidth: "100%",
+                          borderRadius: 999,
+                          background: isActiveSlot ? "#dbeafe" : "#ede9fe",
+                          color: isActiveSlot ? "#1d4ed8" : "#6d28d9",
+                          fontSize: 9,
+                          fontWeight: 700,
+                          lineHeight: 1.2,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                        title={`Associado localmente a ${associationLabel}`}
+                      >
+                        {associationLabel}
+                      </div>
+                    ) : null}
                   </div>
                 );
               }
@@ -572,7 +635,9 @@ export function RackSection({
             <div style={{ fontSize: 13, color: "#6b7280" }}>
               {selectedCount > 1
                 ? "Arraste qualquer peça destacada para mover o grupo dentro do rack."
-                : "Arraste peças e slots livremente. Solte a peça sobre um slot para mover o buraco."}
+                : activeSlotId
+                  ? "Clique no tabuleiro para associar localmente o slot selecionado."
+                  : "Arraste peças e slots livremente. Solte a peça sobre um slot para reorganizar a folga local."}
             </div>
 
             <button

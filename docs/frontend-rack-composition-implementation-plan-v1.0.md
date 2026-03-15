@@ -27,9 +27,10 @@ Nao entra neste plano:
 
 Ao fim desta frente, o jogador deve conseguir:
 - reorganizar pecas reais no rack local
-- inserir lacunas locais entre posicoes da composicao
-- mover lacunas junto da composicao local
-- escrever letras de rascunho nas lacunas
+- usar slots locais permanentes de composicao
+- mover pecas livremente entre pecas reais e slots locais
+- escrever letras de rascunho nos slots
+- associar localmente slots ao tabuleiro sem contaminar o submit
 - continuar enviando jogadas reais sem contaminar o submit
 
 
@@ -39,18 +40,19 @@ Ao fim desta frente, o jogador deve conseguir:
 Responsabilidades nesta frente:
 - manter estado local da superficie de composicao do rack
 - coordenar selecao de pecas reais
-- coordenar lacunas locais
-- coordenar drafts locais de letras nas lacunas
+- coordenar slots locais permanentes
+- coordenar drafts locais de letras nos slots
+- coordenar associacoes locais opcionais entre slot e tabuleiro
 - preservar geracao correta de `placedTilesPreview`
-- garantir que lacunas nao entrem em submit
+- garantir que slots nao entrem em submit
 
 ### 4.2 `frontend/components/RackSection.tsx`
 Responsabilidades nesta frente:
-- renderizar pecas reais e lacunas locais na mesma superficie visual
+- renderizar pecas reais e slots locais na mesma superficie visual
 - permitir reordenacao local coerente
-- permitir edicao da letra de rascunho
-- permitir remocao local de lacunas
+- permitir edicao da letra de rascunho nos slots
 - manter clareza visual entre item real e item local
+- manter manipulacao simples e previsivel no rack
 
 ### 4.3 `frontend/components/GamePlayScreen.tsx`
 Responsabilidades nesta frente:
@@ -65,23 +67,25 @@ Modelo recomendado:
 - itens locais heterogeneos
 - cada item pode ser:
   - peca real
-  - lacuna local
+  - slot local permanente
 
 Exemplo conceitual:
 - `{ kind: "tile", tileId: "..." }`
-- `{ kind: "gap", gapId: "..." }`
+- `{ kind: "slot", slotId: "slot-1" }`
 
 Estado adicional:
-- drafts por lacuna
+- drafts por slot
+- associacao opcional do slot ao tabuleiro
 - selecao atual de pecas reais
 - ordem local da superficie de composicao
 
 ## 6. Invariantes obrigatorios
 
 - peca real continua identificada por `tileId`
-- lacuna local continua sem existencia no backend
-- submit oficial continua ignorando lacunas
+- slot local continua sem existencia no backend
+- submit oficial continua ignorando slots
 - submit oficial continua ignorando drafts
+- submit oficial continua ignorando associacoes locais com o tabuleiro
 - `placedTilesPreview` continua derivado apenas de pecas reais colocadas no board
 - reidratacao oficial pode descartar estado local temporario
 
@@ -93,43 +97,64 @@ Objetivo:
 - substituir a ordem local baseada apenas em ids por uma ordem local baseada em itens de composicao
 
 Saida esperada:
-- rack local aceita itens reais e lacunas
+- rack local aceita itens reais e slots locais
 
-### Etapa 2 — inserir lacuna entre duas pecas selecionadas
+### Etapa 2 — slots locais permanentes de composicao
 Objetivo:
-- permitir criacao de lacuna entre duas pecas reais escolhidas na composicao local
-- eliminar ambiguidade de criar lacuna a esquerda/direita de uma peca unica
-- deixar de depender apenas de “adicionar lacuna no fim”
+- substituir lacunas dinamicas por slots locais permanentes
+- manter sempre folga de composicao no rack local
+- simplificar a montagem mental sem depender de criacao pontual de lacuna
 
 Saida esperada:
-- jogador consegue selecionar exatamente duas pecas reais
-- jogador consegue abrir lacuna entre essas duas pecas na ordem local atual
-- a lacuna nasce sem vinculo inicial com o tabuleiro
+- jogador ve slots locais permanentes no rack
+- jogador move pecas reais livremente entre pecas e slots
+- slots nascem sem vinculo inicial com o tabuleiro
 
-### Etapa 3 — mover lacunas e grupos de forma coerente
+### Etapa 3 — reordenacao fluida com slots e pecas
 Objetivo:
 - manter reordenacao local funcionando com itens mistos
 - preservar reordenacao em grupo para pecas reais selecionadas
+- tornar a manipulacao no rack previsivel e user friendly
 
 Saida esperada:
 - grupo de pecas continua movel
-- lacuna continua movel
+- slots continuam moviveis
 - nenhuma dessas operacoes afeta backend
 
-### Etapa 4 — preservar submit oficial
+### Etapa 4 — rascunho local nos slots
 Objetivo:
-- garantir que lacunas e drafts nunca contaminem o submit real
+- permitir letra de rascunho em slot local
+- manter esse rascunho 100% fora do submit oficial
+
+Saida esperada:
+- slot pode receber letra de rascunho
+- draft continua apenas local
+
+### Etapa 5 — associacao local do slot ao tabuleiro
+Objetivo:
+- permitir que o jogador clique em um slot local e depois em uma peca/casa do tabuleiro
+- registrar essa associacao apenas no frontend
+- manter a associacao reversivel e nao oficial
+
+Saida esperada:
+- slot pode guardar associacao local com o tabuleiro
+- associacao continua fora do backend
+
+### Etapa 6 — preservar submit oficial
+Objetivo:
+- garantir que slots, drafts e associacoes locais nunca contaminem o submit real
 
 Saida esperada:
 - `placedTilesPreview` permanece correto
 - submit continua aceitando apenas pecas reais
 
-### Etapa 5 — refino visual minimo
+### Etapa 7 — refino visual minimo
 Objetivo:
 - diferenciar melhor:
   - peca real
-  - lacuna local
+  - slot local
   - letra de rascunho
+  - associacao local com o tabuleiro
 - manter legibilidade da mesa de composicao
 
 ## 8. Fora de escopo neste plano
@@ -138,6 +163,7 @@ Nao entra nesta implementacao:
 - drag rack -> board
 - reserva de letra do tabuleiro
 - reserva de casa do tabuleiro
+- associacao local tratada como reserva oficial
 - alteracao do contrato de wildcard
 - alteracao do submit oficial
 - alteracao do backend
@@ -145,12 +171,13 @@ Nao entra nesta implementacao:
 
 ## 9. Riscos que devem ser evitados
 
-- misturar item local de lacuna com peca real
+- misturar slot local com peca real
 - quebrar selecao multipla ja validada
 - quebrar reordenacao em grupo ja validada
-- deixar lacuna entrar em `placedTilesPreview`
+- deixar slot entrar em `placedTilesPreview`
 - deixar draft local interferir em wildcard real
 - acoplar composicao local ao board oficial
+- tratar associacao local com o tabuleiro como estado oficial
 
 ## 10. Checklist de validacao
 
@@ -163,10 +190,11 @@ Nao entra nesta implementacao:
 - selecao simples continua funcionando
 - selecao multipla continua funcionando
 - reordenacao em grupo continua funcionando
-- lacuna pode ser criada entre duas pecas reais selecionadas
-- lacuna pode receber letra de rascunho
-- lacuna nasce sem vinculo inicial com o tabuleiro
-- submit continua ignorando lacunas
+- slots locais permanentes existem na composicao
+- slots podem receber letra de rascunho
+- slots nascem sem vinculo inicial com o tabuleiro
+- associacao local do slot ao tabuleiro nao altera backend
+- submit continua ignorando slots locais
 - submit continua ignorando drafts
 
 ## 11. Fechamento correto desta frente
