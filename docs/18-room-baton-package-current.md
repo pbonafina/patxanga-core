@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-03-15 11:15:36
+Generated at: 2026-03-15 18:00:48
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,21 +93,18 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## develop...origin/develop
+## develop...origin/develop [ahead 1]
  M .gitignore
-MM docs/18-room-baton-package-current.md
-M  docs/18-room-baton-process-v1.0.md
-M  docs/frontend-browser-validation-procedure-v1.0.md
+ M docs/18-room-baton-package-current.md
+ M docs/18-room-baton-process-v1.0.md
+ M docs/frontend-browser-validation-procedure-v1.0.md
  M docs/frontend-rack-composition-implementation-plan-v1.0.md
  M docs/frontend-rack-composition-ux-v1.0.md
+ M frontend/.gitignore
  M frontend/lib/backend/matchBootstrap.mock.ts
-M  frontend/package-lock.json
-M  frontend/package.json
-M  frontend/pages/index.tsx
-A  frontend/playwright.config.ts
-A  frontend/tests/browser-validation.spec.ts
+ M frontend/next.config.js
+ M frontend/playwright.config.ts
  M frontend/types/match.ts
-M  generate-room-baton-package.sh
  M sql/migrations/001_initial_schema.sql
  M sql/rpc/create_match.sql
  M sql/rpc/join_match.sql
@@ -115,12 +112,11 @@ M  generate-room-baton-package.sh
 ?? docs/.DS_Store
 ?? docs/15-pacote-final-colagem-v1.2-ultra-blindado.md
 ?? docs/frontend-backend-operational-contract-v1.0.md
-?? frontend/.env.local
 ?? frontend/lib/backend/matchOperations.mock.ts
 ?? frontend/lib/backend/matchOperations.real.ts
 ?? frontend/lib/backend/matchOperations.ts
 ?? frontend/lib/backend/matchOperations.types.ts
-?? frontend/test-results/
+?? frontend/node_modules/
 ?? generate-continuity-package.sh
 ?? scripts/
 ?? sql/tests/test_direct_invite_decline.sql
@@ -164,7 +160,8 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-9e0feae (HEAD -> develop, origin/develop) Formalize same-room resume continuity protocol
+d584091 (HEAD -> develop) Add browser validation scenarios and Playwright coverage
+9e0feae (origin/develop) Formalize same-room resume continuity protocol
 54da7e4 Implement rack UX and backend move preview
 339e716 Inclui comando local de abertura na frase de passagem de bastao
 4b181f0 Refina frase oficial de passagem de bastao
@@ -178,7 +175,6 @@ f0f8022 Adiciona contrato de UX para composicao local do rack
 245dac5 Adiciona selecao multipla e reordenacao em grupo no rack
 aa64609 Destaca turno ativo no rack com cronometro visual
 48bdea5 Refina composicao visual da tela jogavel
-53cc1ec Refinado room restart prompt com arquivos concretos do frontend
 ```
 
 ### tail -n 60 ../project-log.md
@@ -1999,6 +1995,7 @@ npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
 
 Regras:
 - a automacao sobe uma instancia isolada do frontend em `http://127.0.0.1:3101`
+- a automacao usa `distDir` isolado (`.next-e2e`) para nao contaminar o artefato padrao de `next build`
 - essa execucao nao deve substituir revisao visual humana quando o marco depender de julgamento visual fino
 - quando o fluxo validado for objetivo e totalmente automatizado, o resultado do Playwright pode compor a validacao operacional registrada
 
@@ -3288,6 +3285,7 @@ Deve constar explicitamente:
 - como criar uma match local de teste
 - quando a pagina suportar, como gerar cenarios reais de browser diretamente pela UI
 - quando houver automacao disponivel, como executar a validacao Playwright em ambiente isolado
+- quando houver automacao Playwright, que ela usa `distDir` isolado para nao contaminar o `next build`
 - como obter `match_id`
 - como obter `host_user_id`
 - como obter `guest_user_id`

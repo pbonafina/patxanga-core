@@ -1,7 +1,6 @@
 -- ============================================================
--- PATXANGA - RPC: create_match()
--- Version: 1.0
--- Mode: Synchronous
+-- PATXANGA - RPC: create_patxanga_match()
+-- Version: 1.1
 -- ============================================================
 
 create or replace function public.create_patxanga_match(
@@ -22,30 +21,19 @@ declare
     v_match_id uuid;
     v_board_state jsonb;
     v_bag_state jsonb;
+    v_host_player_id uuid;
+    v_host_display_name text;
 begin
-
-    -- =============================
-    -- Validations
-    -- =============================
 
     if p_language not in ('pt-BR', 'pt-PT') then
         raise exception 'Invalid language';
     end if;
 
-    if p_match_mode not in ('synchronous', 'asynchronous') then
-        raise exception 'Invalid match mode';
+    if p_host_user_id is null and p_host_guest_name is null then
+        raise exception 'Host identity is required';
     end if;
 
-    if p_max_players < 2 or p_max_players > 4 then
-        raise exception 'Invalid number of players';
-    end if;
-
-    -- =============================
-    -- Initialize Board (15x15 empty)
-    -- Represented as 2D array stored in JSONB
-    -- Each cell: null initially
-    -- =============================
-
+    -- 15x15 empty board
     v_board_state :=
     (
         select jsonb_agg(row_data)
@@ -56,20 +44,12 @@ begin
         generate_series(1,15)
     );
 
-    -- =============================
-    -- Initialize Bag State
-    -- Placeholder: will be replaced
-    -- by real distribution later
-    -- =============================
-
     v_bag_state := jsonb_build_object(
         'tiles', jsonb_build_array(),
         'remaining', 0
     );
 
-    -- =============================
-    -- Create Match
-    -- =============================
+    v_host_display_name := coalesce(p_host_guest_name, 'Host');
 
     insert into patxanga_matches (
         status,
@@ -103,26 +83,51 @@ begin
     )
     returning id into v_match_id;
 
-    -- =============================
-    -- Replay Event: match_created
-    -- =============================
-
-    insert into patxanga_replay_events (
+    -- Insert Host as First Player
+    insert into patxanga_players (
         match_id,
-        event_type,
-        event_payload,
-        turn_number,
-        created_at
+        user_id,
+        guest_name,
+        display_name,
+        seat_index,
+        turn_order,
+        is_bot,
+        bot_level,
+        bot_profile,
+        rack_state,
+        score,
+        created_at,
+        updated_at
     )
     values (
         v_match_id,
-        'match_created',
-        jsonb_build_object(
-            'language', p_language,
-            'mode', p_match_mode,
-            'max_players', p_max_players
-        ),
+        p_host_user_id,
+        p_host_guest_name,
+        v_host_display_name,
+        1,
         0,
+        false,
+        null,
+        null,
+        jsonb_build_array(),
+        0,
+        now(),
+        now()
+    )
+    returning id into v_host_player_id;
+
+    insert into patxanga_match_presence (
+        match_id,
+        player_id,
+        is_online,
+        last_ping_at,
+        updated_at
+    )
+    values (
+        v_match_id,
+        v_host_player_id,
+        true,
+        now(),
         now()
     );
 

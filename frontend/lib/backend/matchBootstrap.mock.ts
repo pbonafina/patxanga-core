@@ -7,6 +7,7 @@ import type {
 function deriveStatus(matchId: string): MatchStatus {
   if (matchId === "") return "waiting";
   if (matchId.endsWith("v")) return "voting";
+  if (matchId.endsWith("c")) return "cancelled";
   if (matchId.endsWith("f")) return "finished";
   return "active";
 }
@@ -24,9 +25,14 @@ export const mockMatchBootstrapService: MatchBootstrapService = {
       playerId: normalizedPlayerId,
       status,
       currentTurnPlayerId:
-        status === "waiting" || status === "finished" ? null : normalizedPlayerId,
+        status === "waiting" || status === "finished" || status === "cancelled"
+          ? null
+          : normalizedPlayerId,
       winnerPlayerId: status === "finished" ? normalizedPlayerId : null,
-      finishedAt: status === "finished" ? new Date().toISOString() : null,
+      finishedAt:
+        status === "finished" || status === "cancelled"
+          ? new Date().toISOString()
+          : null,
       startedAt: status === "waiting" ? null : new Date().toISOString(),
       turnNumber: status === "waiting" ? 0 : 1,
       boardState: [],

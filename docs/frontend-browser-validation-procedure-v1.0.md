@@ -59,6 +59,7 @@ npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
 
 Regras:
 - a automacao sobe uma instancia isolada do frontend em `http://127.0.0.1:3101`
+- a automacao usa `distDir` isolado (`.next-e2e`) para nao contaminar o artefato padrao de `next build`
 - essa execucao nao deve substituir revisao visual humana quando o marco depender de julgamento visual fino
 - quando o fluxo validado for objetivo e totalmente automatizado, o resultado do Playwright pode compor a validacao operacional registrada
 

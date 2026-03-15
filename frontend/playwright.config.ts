@@ -26,6 +26,9 @@ export default defineConfig({
   ],
   webServer: {
     command: "npx next dev -p 3101 --hostname 127.0.0.1",
+    env: {
+      NEXT_DIST_DIR: ".next-e2e",
+    },
     url: "http://127.0.0.1:3101",
     reuseExistingServer: false,
     stdout: "pipe",

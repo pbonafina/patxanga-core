@@ -84,36 +84,36 @@ begin
     -- =============================
 
     insert into patxanga_players (
-        match_id,
-        user_id,
-        guest_name,
-        display_name,
-        seat_index,
-        turn_order,
-        is_bot,
-        bot_level,
-        bot_profile,
-        rack_state,
-        score,
-        created_at,
-        updated_at
-    )
-    values (
-        p_match_id,
-        p_user_id,
-        p_guest_name,
-        coalesce(p_guest_name, 'Player'),
-        v_seat_index,
-        null, -- IMPORTANT FIX
-        p_is_bot,
-        p_bot_level,
-        p_bot_profile,
-        jsonb_build_array(),
-        0,
-        now(),
-        now()
-    )
-    returning id into v_player_id;
+    match_id,
+    user_id,
+    guest_name,
+    display_name,
+    seat_index,
+    turn_order,
+    is_bot,
+    bot_level,
+    bot_profile,
+    rack_state,
+    score,
+    created_at,
+    updated_at
+)
+values (
+    p_match_id,
+    p_user_id,
+    p_guest_name,
+    coalesce(p_guest_name, 'Player'),
+    v_seat_index,
+    v_seat_index, -- turn_order temporario ate o start redefinir a ordem final
+    p_is_bot,
+    p_bot_level,
+    p_bot_profile,
+    jsonb_build_array(),
+    0,
+    now(),
+    now()
+)
+returning id into v_player_id;
 
     -- =============================
     -- Insert presence

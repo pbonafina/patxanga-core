@@ -68,7 +68,7 @@ create table patxanga_players (
     display_name text not null,
 
     seat_index integer not null,
-    turn_order integer not null default 0,
+    turn_order integer not null,
 
     is_bot boolean not null default false,
     bot_level text null check (bot_level in ('easy','medium','hard')),
