@@ -260,6 +260,7 @@ OUT="docs/18-room-baton-package-current.md"
     docs/frontend-contract-rpcs-v1.0.md \
     docs/frontend-rack-composition-ux-v1.0.md \
     docs/frontend-rack-composition-implementation-plan-v1.0.md \
+    docs/current-development-continuity-spec-v1.0.md \
     docs/18-room-baton-process-v1.0.md
   do
     if [ -f "$file" ]; then

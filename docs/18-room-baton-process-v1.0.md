@@ -144,6 +144,7 @@ A ordem correta de leitura e:
 O processo deve gerar e manter:
 - `docs/18-room-baton-process-v1.0.md`
 - `docs/18-room-baton-package-current.md`
+- `docs/current-development-continuity-spec-v1.0.md`
 - `generate-room-baton-package.sh`
 
 ## 7. Conteudo minimo do arquivo unico
@@ -161,6 +162,7 @@ O arquivo unico deve consolidar:
 - modos de atuacao e bloco de escolha obrigatorio
 - protocolo de retomada na mesma sala apos interrupcao
 - contratos ativos essenciais
+- especificacao viva do ponto atual do desenvolvimento
 - frente atual e proximos passos
 - frase padrao de passagem de bastao
 
