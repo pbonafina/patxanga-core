@@ -1,0 +1,154 @@
+-- ============================================================
+-- PATXANGA - DETERMINISTIC PENDING VOTE TEST
+-- submit_patxanga_move()
+-- Version: 1.0
+-- ============================================================
+
+do $$
+declare
+    v_user1 uuid := gen_random_uuid();
+    v_user2 uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_current_player_id uuid;
+    v_forced_rack jsonb;
+    v_tile1_id uuid := gen_random_uuid();
+    v_tile2_id uuid := gen_random_uuid();
+    v_submit_result jsonb;
+begin
+
+    -- 1. Create match
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_user1,
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    raise notice 'Match created: %', v_match_id;
+
+    -- 2. Join second player
+    perform public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_user2
+    );
+
+    raise notice 'Second player joined: %', v_user2;
+
+    -- 3. Start match
+    perform public.start_patxanga_match(v_match_id);
+
+    raise notice 'Match started';
+
+    -- 4. Discover current turn PLAYER id
+    select current_turn_player_id
+    into v_current_player_id
+    from patxanga_matches
+    where id = v_match_id;
+
+    raise notice 'Current turn player_id: %', v_current_player_id;
+
+    -- 5. Force invalid opening word "TS"
+    v_forced_rack := jsonb_build_array(
+        jsonb_build_object(
+            'id', v_tile1_id::text,
+            'letter', 'T',
+            'points', 2,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', v_tile2_id::text,
+            'letter', 'S',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'A',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'E',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'M',
+            'points', 2,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'O',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'R',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        )
+    );
+
+    update patxanga_players
+    set rack_state = v_forced_rack,
+        updated_at = now()
+    where id = v_current_player_id;
+
+    raise notice 'Forced invalid rack injected for current player';
+
+    -- 6. Submit invalid opening word "TS"
+    v_submit_result := public.submit_patxanga_move(
+        v_match_id,
+        v_current_player_id,
+        jsonb_build_array(
+            jsonb_build_object(
+                'tile_id', v_tile1_id::text,
+                'row', 8,
+                'col', 8,
+                'declared_letter', null
+            ),
+            jsonb_build_object(
+                'tile_id', v_tile2_id::text,
+                'row', 8,
+                'col', 9,
+                'declared_letter', null
+            )
+        )
+    );
+
+    raise notice 'Submit result: %', v_submit_result;
+
+    raise notice 'Match status: %',
+    (
+        select status
+        from patxanga_matches
+        where id = v_match_id
+    );
+
+    raise notice 'Moves pending_vote count: %',
+    (
+        select count(*)
+        from patxanga_moves
+        where match_id = v_match_id
+          and status = 'pending_vote'
+    );
+
+    raise notice 'Board unchanged at center: %',
+    (
+        select board_state->7->7->'tile'
+        from patxanga_matches
+        where id = v_match_id
+    );
+
+end $$;

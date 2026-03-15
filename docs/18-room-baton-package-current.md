@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-03-15 18:00:48
+Generated at: 2026-03-15 18:07:51
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,62 +93,26 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## develop...origin/develop [ahead 1]
+## develop...origin/develop [ahead 2]
  M .gitignore
  M docs/18-room-baton-package-current.md
  M docs/18-room-baton-process-v1.0.md
- M docs/frontend-browser-validation-procedure-v1.0.md
  M docs/frontend-rack-composition-implementation-plan-v1.0.md
  M docs/frontend-rack-composition-ux-v1.0.md
- M frontend/.gitignore
- M frontend/lib/backend/matchBootstrap.mock.ts
- M frontend/next.config.js
- M frontend/playwright.config.ts
- M frontend/types/match.ts
- M sql/migrations/001_initial_schema.sql
- M sql/rpc/create_match.sql
- M sql/rpc/join_match.sql
 ?? .DS_Store
 ?? docs/.DS_Store
 ?? docs/15-pacote-final-colagem-v1.2-ultra-blindado.md
-?? docs/frontend-backend-operational-contract-v1.0.md
-?? frontend/lib/backend/matchOperations.mock.ts
-?? frontend/lib/backend/matchOperations.real.ts
-?? frontend/lib/backend/matchOperations.ts
-?? frontend/lib/backend/matchOperations.types.ts
 ?? frontend/node_modules/
 ?? generate-continuity-package.sh
-?? scripts/
-?? sql/tests/test_direct_invite_decline.sql
-?? sql/tests/test_direct_invite_flow.sql
+?? scripts/run-sql-test-suite.sh
 ?? sql/tests/test_exchange_tiles.sql
-?? sql/tests/test_forfeit_all_players.sql
-?? sql/tests/test_forfeit_single_player.sql
-?? sql/tests/test_list_pending_invites.sql
-?? sql/tests/test_list_resumable_matches.sql
 ?? sql/tests/test_match_end_all_passed.sql
 ?? sql/tests/test_match_end_empty_rack.sql
 ?? sql/tests/test_match_end_final_penalty.sql
 ?? sql/tests/test_pass_turn.sql
-?? sql/tests/test_resume_match.sql
-?? sql/tests/test_start_match_from_lobby.sql
 ?? sql/tests/test_submit_move_pending_vote.sql
 ?? sql/tests/test_submit_move_pending_vote_accept.sql
 ?? sql/tests/test_submit_move_pending_vote_reject.sql
-?? supabase/.gitignore
-?? supabase/config.toml
-?? supabase/migrations/20260312152457_01_initial_schema.sql
-?? supabase/migrations/20260312152509_02_dictionary.sql
-?? supabase/migrations/20260312152520_03_distribution_seed.sql
-?? supabase/migrations/20260312152534_04_core_rpcs.sql
-?? supabase/migrations/20260312152552_05_submit_engine.sql
-?? supabase/migrations/20260313091238_07_pending_vote_resolution.sql
-?? supabase/migrations/20260313091843_08_pass_turn.sql
-?? supabase/migrations/20260313092219_09_exchange_tiles.sql
-?? supabase/migrations/20260313093158_10_evaluate_match_end.sql
-?? supabase/migrations/20260313102126_11_lobby_direct.sql
-?? supabase/migrations/20260313103446_12_presence_resume_forfeit.sql
-?? supabase/migrations/20260313104105_13_frontend_entrypoints.sql
 ?? tmp/
 ```
 
@@ -160,7 +124,8 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-d584091 (HEAD -> develop) Add browser validation scenarios and Playwright coverage
+372d0e7 (HEAD -> develop) Add operational lobby invite baseline
+d584091 Add browser validation scenarios and Playwright coverage
 9e0feae (origin/develop) Formalize same-room resume continuity protocol
 54da7e4 Implement rack UX and backend move preview
 339e716 Inclui comando local de abertura na frase de passagem de bastao
@@ -174,7 +139,6 @@ f0f8022 Adiciona contrato de UX para composicao local do rack
 3fa60d5 Adiciona procedimento de validacao manual no browser
 245dac5 Adiciona selecao multipla e reordenacao em grupo no rack
 aa64609 Destaca turno ativo no rack com cronometro visual
-48bdea5 Refina composicao visual da tela jogavel
 ```
 
 ### tail -n 60 ../project-log.md
@@ -3286,6 +3250,7 @@ Deve constar explicitamente:
 - quando a pagina suportar, como gerar cenarios reais de browser diretamente pela UI
 - quando houver automacao disponivel, como executar a validacao Playwright em ambiente isolado
 - quando houver automacao Playwright, que ela usa `distDir` isolado para nao contaminar o `next build`
+- quando houver suites SQL reutilizaveis, como executar `zsh scripts/run-sql-test-suite.sh lobby_ops|engine_regression|all`
 - como obter `match_id`
 - como obter `host_user_id`
 - como obter `guest_user_id`

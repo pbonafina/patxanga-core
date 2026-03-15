@@ -190,6 +190,7 @@ Deve constar explicitamente:
 - quando a pagina suportar, como gerar cenarios reais de browser diretamente pela UI
 - quando houver automacao disponivel, como executar a validacao Playwright em ambiente isolado
 - quando houver automacao Playwright, que ela usa `distDir` isolado para nao contaminar o `next build`
+- quando houver suites SQL reutilizaveis, como executar `zsh scripts/run-sql-test-suite.sh lobby_ops|engine_regression|all`
 - como obter `match_id`
 - como obter `host_user_id`
 - como obter `guest_user_id`
