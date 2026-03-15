@@ -11,23 +11,32 @@ Base normativa:
 
 ## 1. Objetivo
 
-Definir o contrato de UX da composicao local do rack/deck do jogador.
+Definir o contrato de UX da composicao do rack/deck do jogador
+na fase atual do frontend do Patxanga.
 
-Este documento fixa o que pode existir como camada local de usabilidade
-para montagem mental da jogada sem alterar o modelo server-authoritative
-do Patxanga.
+Este documento fixa como a tela jogavel pode usar slots locais permanentes
+como superficie oficial de preparo de jogada
+sem alterar a autoridade do backend
+nem o formato oficial de `submit_patxanga_move(...)`.
 
 ## 2. Regra central
 
-A composicao do rack e uma camada local de frontend.
+A composicao do rack continua sendo orquestrada no frontend.
 
-Ela:
-- ajuda o jogador a organizar pecas
-- ajuda o jogador a testar arranjos mentais
-- nao substitui o estado oficial do backend
-- nao altera o rack persistido no servidor
-- nao altera o board oficial
-- nao altera o payload oficial de submit
+Mas, nesta fase, ela deixa de ser apenas um lembrete visual.
+
+Leitura correta:
+- o backend continua server-authoritative
+- `board_state`, `rack_state`, `status` e validacao de jogada continuam oficiais
+- o frontend pode usar uma superficie oficial de composicao local
+  para derivar `p_placed_tiles`
+- o payload enviado ao backend continua contendo apenas pecas reais
+  colocadas na jogada atual
+
+Leitura incorreta:
+- tratar slot local como entidade persistida no backend
+- enviar slot, associacao ou metadata local como parte da RPC
+- substituir a validacao do backend por validacao local
 
 ## 3. Fonte de verdade
 
@@ -38,71 +47,85 @@ Continuam como fonte oficial:
 - `status` da match
 - validacao de jogada pelo backend
 
-A composicao local do rack:
-- nao e fonte de verdade
-- nao pode ser tratada como reserva oficial de jogada
-- nao pode ser tratada como estado persistido da partida
+A superficie de composicao do rack:
+- nao e estado persistido da partida
+- nao muda a autoridade do backend
+- pode, sim, ser a origem oficial do `p_placed_tiles`
+  antes do submit real
 
 ## 4. Escopo deste contrato
 
-Este contrato cobre apenas:
+Este contrato cobre:
 - reorganizacao local do rack
 - selecao local de pecas
 - grupos locais de pecas
 - slots locais permanentes
-- letras de rascunho em slots
-- associacoes locais opcionais com o tabuleiro
+- vinculacao oficial `slot -> tile real`
+- associacao `slot -> casa do tabuleiro`
+- uso condicional da letra digitada no slot como `declared_letter`
+- derivacao de `placedTilesPreview` a partir dessa composicao
 
 Este contrato nao redefine:
 - engine
-- submit real
+- RPC de backend
 - validacao lexical
 - regras do board
 - replay
 - ordem oficial de turno
-
 
 ## 5. Conceitos operacionais
 
 ### 5.1 Rack oficial
 Conjunto de pecas reais retornadas pelo backend em `rack_state`.
 
-### 5.2 Superficie local de composicao
-Camada de UX onde o frontend pode organizar visualmente:
+### 5.2 Superficie oficial de composicao
+Camada de frontend onde o jogador pode organizar visualmente:
 - pecas reais do rack oficial
-- slots locais permanentes de composicao
+- slots locais permanentes
+
+Essa superficie pode gerar jogada real,
+desde que o frontend compile a composicao
+para o payload oficial de `submit_patxanga_move(...)`.
 
 ### 5.3 Slot local permanente
 Espaco visual local, sempre disponivel na superficie de composicao,
-usado para dar folga de montagem mental ao jogador.
+usado para dar folga de montagem e ancorar uma jogada.
 
 O slot local permanente:
-- nao e uma peca real
 - nao existe no backend
-- nao entra no submit
-- nao altera score
-- nao altera board
+- nao entra no payload como slot
 - nao altera `rack_state` oficial
+- nao altera `board_state` oficial por conta propria
 
-### 5.4 Letra de rascunho
-Letra digitada pelo jogador dentro de um slot local apenas como lembrete.
+### 5.4 Vinculacao oficial `slot -> tile real`
+Vinculo local, explicito e reversivel entre um slot permanente
+e uma peca real do rack oficial.
 
-A letra de rascunho:
-- nao e `declared_letter` de backend
-- nao e reserva de letra no tabuleiro
-- nao altera o jogo real
-- nao pode ser enviada como parte da jogada oficial
+Quando esse vinculo existe:
+- a peca continua sendo a entidade oficial enviada ao backend
+- o slot passa a representar essa peca na composicao do frontend
+- a peca nao pode aparecer ao mesmo tempo em outro preparo oficial da mesma jogada
 
-### 5.5 Associacao local com o tabuleiro
-Associacao local, explicita e reversivel entre um slot de composicao
-e uma peca/casa do tabuleiro escolhida pelo jogador.
+### 5.5 Associacao `slot -> casa do tabuleiro`
+Associacao local, explicita e reversivel entre um slot
+e uma casa do tabuleiro.
 
 Essa associacao:
-- e apenas local
-- nao reserva a peca do tabuleiro
-- nao reserva a casa do tabuleiro
-- nao altera o backend
-- pode se tornar invalida se o tabuleiro mudar antes da jogada
+- nao reserva a casa
+- nao reserva a letra do board
+- nao altera o backend sozinha
+- so vira parte da jogada oficial quando o slot tambem tiver uma peca real vinculada
+
+### 5.6 Letra digitada no slot
+A letra digitada no slot continua podendo ser apenas rascunho visual.
+
+Mas, quando estas condicoes forem verdadeiras ao mesmo tempo:
+- o slot tem uma peca real vinculada
+- a peca vinculada exige `declared_letter`
+- o slot esta associado a uma casa do tabuleiro
+
+entao a letra do slot passa a ser usada como `declared_letter`
+daquela peca na geracao de `p_placed_tiles`.
 
 ## 6. Comportamentos permitidos
 
@@ -111,9 +134,11 @@ O frontend pode permitir:
 - selecionar uma ou mais pecas localmente
 - mover grupos locais dentro da superficie do rack
 - usar slots locais permanentes como apoio de composicao
-- digitar letra de rascunho em slots locais
-- associar localmente um slot a uma peca/casa do tabuleiro
-- remover ou refazer essa associacao local
+- vincular uma peca real a um slot
+- desfazer ou refazer esse vinculo
+- associar um slot ativo a uma casa do tabuleiro
+- remover ou refazer essa associacao
+- continuar oferecendo o fluxo direto de selecao + clique no board
 
 ## 7. Regra de composicao com slots permanentes
 
@@ -122,49 +147,56 @@ sempre disponiveis no rack local do jogador.
 
 Leitura correta:
 - o jogador organiza pecas reais no rack
-- o jogador move pecas livremente entre pecas reais e slots locais
-- um slot vazio pode receber letra de rascunho
-- depois, se desejar, o jogador pode associar localmente esse slot
-  a uma peca/casa do tabuleiro
+- o jogador pode vincular uma peca real a um slot
+- o jogador pode associar esse slot a uma casa do tabuleiro
+- se houver peca real + associacao valida,
+  isso entra no preparo oficial da jogada
 - a composicao inteira continua movel dentro do rack local
 
 Leitura incorreta:
-- depender de criar lacuna dinamica para cada montagem
-- tratar slot local como peca oficial
-- criar vinculo inicial automatico entre slot e tabuleiro
-- tratar associacao local como reserva oficial do board
-
+- tratar o slot vazio como jogada oficial
+- enviar o `slotId` ao backend
+- tratar associacao sem peca real como jogada oficial
+- tratar a associacao local como reserva oficial do board
 
 ## 8. Relacao com o tabuleiro
 
-A composicao local do rack pode refletir a intencao do jogador
-de usar uma letra ou casa ja existente no tabuleiro.
+A composicao por slots pode refletir a intencao real do jogador
+de colocar uma peca em uma casa especifica.
 
 Mas essa intencao:
-- e apenas local
-- nao reserva a letra no board
+- continua local ate o submit
 - nao bloqueia outros jogadores
-- nao cria prioridade sobre a casa ou sobre a letra
-- pode ficar invalida antes do turno do jogador
+- nao cria prioridade sobre a casa
+- pode ficar invalida antes do submit se o board oficial mudar
 
 Portanto:
-- a letra digitada no slot e apenas lembrete estrategico
-- a associacao local com o tabuleiro e apenas referencia de composicao
-- o jogador pode precisar revisar sua composicao depois
+- o frontend pode mostrar badges, preview e estado de preparo
+- o backend continua validando a jogada real
 
 ## 9. Relacao com submit de jogada
 
 O submit oficial continua obedecendo o contrato vigente de `submit_patxanga_move(...)`.
 
 Logo:
-- apenas pecas reais colocadas entram em `p_placed_tiles`
-- slots locais nao entram em `p_placed_tiles`
-- letras de rascunho nao entram em `p_placed_tiles`
-- associacoes locais com o tabuleiro nao entram em `p_placed_tiles`
+- apenas pecas reais entram em `p_placed_tiles`
+- `slotId` nao entra em `p_placed_tiles`
+- associacao local nao entra como estrutura propria em `p_placed_tiles`
+- a composicao por slot apenas ajuda o frontend a derivar:
+  - `tile_id`
+  - `row`
+  - `col`
+  - `declared_letter`, quando aplicavel
+
+Leitura correta:
+- slots nao sao enviados
+- pecas vinculadas aos slots podem ser enviadas
+- a letra do slot pode virar `declared_letter`
+  se a peca vinculada exigir isso
 
 ## 10. Relacao com o estado local temporario
 
-A composicao local do rack e estado temporario de UX.
+A composicao do rack continua sendo estado temporario de frontend.
 
 Ela pode ser descartada quando houver:
 - reload oficial da partida
@@ -181,46 +213,47 @@ Este contrato nao define drag and drop do rack para o tabuleiro como fluxo ofici
 Ate nova definicao:
 - drag no rack serve para reorganizacao local
 - posicionamento no board continua podendo usar fluxo de selecao + clique
-- qualquer futuro suporte a drag rack -> board deve ser definido em contrato proprio ou revisao formal deste documento
+- a composicao por slot usa clique e associacao explicita
 
 ## 12. Proibicoes
 
-A composicao local do rack nao pode:
+A composicao do rack nao pode:
 - alterar `rack_state` oficial
-- alterar `board_state` oficial
+- alterar `board_state` oficial sem RPC
 - reservar letra do tabuleiro
 - reservar casa do tabuleiro
 - alterar validacao da engine
-- gerar payload oficial com slots locais
-- substituir `declared_letter` oficial de wildcard
+- enviar slot local como entidade de backend
+- substituir validacao oficial do wildcard no backend
 - alterar score
 - alterar turno
-
 
 ## 13. Leitura correta desta fase
 
 Nesta fase do projeto:
-- o rack pode evoluir como mesa local de composicao
-- essa evolucao deve permanecer no frontend
+- o rack evoluiu de mesa local de composicao
+  para superficie oficial de preparo de jogada
 - o backend continua server-authoritative
-- o submit oficial continua separado da montagem mental local
+- a composicao por slot ja pode alimentar preview e submit
+- o formato do payload oficial nao mudou
 
 ## 14. Criterio de saida desta linha de UX
 
 Esta frente pode ser considerada coerente quando:
 - o jogador conseguir reorganizar pecas livremente no rack local
-- o jogador conseguir usar slots locais permanentes de composicao
-- o jogador conseguir usar letras de rascunho como lembrete
-- o jogador conseguir associar localmente slots ao tabuleiro sem afetar o backend
-- o jogador entender que isso nao altera o jogo real
-- o fluxo continuar compativel com o backend atual
+- o jogador conseguir usar slots locais permanentes
+- o jogador conseguir vincular pecas reais a slots
+- o jogador conseguir associar slots ao tabuleiro
+- `placedTilesPreview` refletir essa composicao oficial
+- submit continuar compativel com o backend atual
+- Playwright e build confirmarem o fluxo objetivo
 
 ## 15. Limites deste documento
 
 Este documento:
 - nao redefine engine
 - nao redefine RPCs
-- nao redefine payload de submit
+- nao redefine o formato do payload oficial
 - nao redefine replay
 - nao altera o modelo server-authoritative
 

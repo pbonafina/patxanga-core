@@ -1,6 +1,6 @@
 # PATXANGA — FRONTEND: Rack Composition Implementation Plan
 Version: 1.0
-Status: ACTIVE WORKING PLAN
+Status: ACTIVE IMPLEMENTED BASELINE
 
 Base normativa:
 - docs/frontend-rack-composition-ux-v1.0.md
@@ -10,208 +10,223 @@ Base normativa:
 
 ## 1. Objetivo
 
-Definir o plano tecnico incremental para implementar a composicao local do rack
-no frontend sem alterar backend, engine ou contrato oficial de submit.
+Documentar a implementacao atual da composicao do rack
+e congelar a leitura correta da superficie que passou a ser oficial
+para preparar jogadas no frontend.
 
 ## 2. Regra central
 
-Toda a implementacao desta frente deve permanecer frontend-only.
+A implementacao continua frontend-led,
+mas agora ela pode gerar a jogada oficial
+sem mudar o formato da RPC de backend.
 
-Nao entra neste plano:
-- alteracao de engine
-- alteracao de RPC
-- alteracao de payload oficial
-- drag and drop rack -> board como fluxo oficial
+Leitura correta:
+- nao houve mudanca de engine
+- nao houve mudanca do formato de `submit_patxanga_move(...)`
+- o frontend passou a compilar a composicao do rack
+  em `p_placed_tiles`
 
-## 3. Resultado esperado
+## 3. Resultado efetivamente entregue
 
-Ao fim desta frente, o jogador deve conseguir:
+O jogador ja consegue:
 - reorganizar pecas reais no rack local
 - usar slots locais permanentes de composicao
-- mover pecas livremente entre pecas reais e slots locais
-- escrever letras de rascunho nos slots
-- associar localmente slots ao tabuleiro sem contaminar o submit
-- continuar enviando jogadas reais sem contaminar o submit
-
+- mover pecas livremente entre pecas e slots na ordem visual do rack
+- escrever letra em slots
+- vincular uma peca real a um slot
+- associar o slot a uma casa do tabuleiro
+- ver `placedTilesPreview` e preview do backend refletindo essa composicao
+- limpar essa composicao oficial sem afetar o backend
 
 ## 4. Arquivos principais afetados
 
 ### 4.1 `frontend/pages/index.tsx`
-Responsabilidades nesta frente:
+Responsabilidades atuais:
 - manter estado local da superficie de composicao do rack
 - coordenar selecao de pecas reais
 - coordenar slots locais permanentes
 - coordenar drafts locais de letras nos slots
-- coordenar associacoes locais opcionais entre slot e tabuleiro
-- preservar geracao correta de `placedTilesPreview`
-- garantir que slots nao entrem em submit
+- coordenar vinculacao `slot -> tile real`
+- coordenar associacoes `slot -> casa do tabuleiro`
+- compilar `placedTilesPreview` a partir de:
+  - colocacao direta no board
+  - composicao oficial por slot
 
 ### 4.2 `frontend/components/RackSection.tsx`
-Responsabilidades nesta frente:
+Responsabilidades atuais:
 - renderizar pecas reais e slots locais na mesma superficie visual
-- permitir reordenacao local coerente
-- permitir edicao da letra de rascunho nos slots
-- manter clareza visual entre item real e item local
-- manter manipulacao simples e previsivel no rack
+- expor visualmente quando um slot tem peca vinculada
+- expor visualmente quando uma peca esta vinculada a um slot
+- permitir limpar a vinculacao oficial do slot
+- manter legibilidade entre:
+  - peca real
+  - slot
+  - associacao de slot
+  - peca oficial vinculada ao slot
 
-### 4.3 `frontend/components/GamePlayScreen.tsx`
-Responsabilidades nesta frente:
-- continuar orquestrando o rack como parte da tela jogavel
-- repassar props novas de composicao local sem assumir regra de backend
+### 4.3 `frontend/components/BoardSection.tsx`
+Responsabilidades atuais:
+- renderizar preview oriundo da composicao oficial por slot
+- diferenciar visualmente preview direto e preview por slot
+- manter badges de slot associados no board
 
-## 5. Estrutura de estado recomendada
+### 4.4 `frontend/components/GamePlayScreen.tsx`
+Responsabilidades atuais:
+- orquestrar a tela jogavel
+- repassar a composicao oficial para rack e board
+- refletir o contador real de pecas em preparo
 
-A superficie local do rack deve deixar de depender apenas de uma lista de ids reais.
+## 5. Estrutura de estado implementada
 
-Modelo recomendado:
-- itens locais heterogeneos
+### 5.1 Ordem local do rack
+- itens heterogeneos
 - cada item pode ser:
   - peca real
   - slot local permanente
 
-Exemplo conceitual:
-- `{ kind: "tile", tileId: "..." }`
-- `{ kind: "slot", slotId: "slot-1" }`
-
-Estado adicional:
+### 5.2 Estado adicional ativo
 - drafts por slot
-- associacao opcional do slot ao tabuleiro
+- associacao `slot -> casa`
+- vinculacao `slot -> tile real`
 - selecao atual de pecas reais
-- ordem local da superficie de composicao
+- ordem local da superficie
+- colocacao direta no board, mantida por compatibilidade operacional
+
+### 5.3 Derivacao oficial
+`placedTilesPreview` passa a ser derivado de duas origens oficiais de frontend:
+
+1. colocacao direta de peca no board
+2. composicao por slot com:
+   - peca real vinculada
+   - slot associado ao tabuleiro
 
 ## 6. Invariantes obrigatorios
 
 - peca real continua identificada por `tileId`
 - slot local continua sem existencia no backend
-- submit oficial continua ignorando slots
-- submit oficial continua ignorando drafts
-- submit oficial continua ignorando associacoes locais com o tabuleiro
-- `placedTilesPreview` continua derivado apenas de pecas reais colocadas no board
+- o payload enviado continua contendo apenas pecas reais
+- `slotId` nunca entra em `p_placed_tiles`
+- associacao de slot nunca entra como estrutura propria da RPC
+- `declared_letter` pode vir do slot quando:
+  - houver peca especial vinculada
+  - houver associacao ativa no tabuleiro
 - reidratacao oficial pode descartar estado local temporario
 
-
-## 7. Etapas de implementacao
+## 7. Etapas implementadas
 
 ### Etapa 1 — normalizar a superficie local do rack
-Objetivo:
-- substituir a ordem local baseada apenas em ids por uma ordem local baseada em itens de composicao
+Status:
+- implementada
 
-Saida esperada:
-- rack local aceita itens reais e slots locais
+Saida entregue:
+- rack aceita pecas reais e slots locais na mesma ordem visual
 
 ### Etapa 2 — slots locais permanentes de composicao
-Objetivo:
-- substituir lacunas dinamicas por slots locais permanentes
-- manter sempre folga de composicao no rack local
-- simplificar a montagem mental sem depender de criacao pontual de lacuna
+Status:
+- implementada
 
-Saida esperada:
-- jogador ve slots locais permanentes no rack
-- jogador move pecas reais livremente entre pecas e slots
-- slots nascem sem vinculo inicial com o tabuleiro
+Saida entregue:
+- slots locais permanentes sempre disponiveis no rack
 
 ### Etapa 3 — reordenacao fluida com slots e pecas
-Objetivo:
-- manter reordenacao local funcionando com itens mistos
-- preservar reordenacao em grupo para pecas reais selecionadas
-- tornar a manipulacao no rack previsivel e user friendly
+Status:
+- implementada
 
-Saida esperada:
+Saida entregue:
 - grupo de pecas continua movel
 - slots continuam moviveis
-- nenhuma dessas operacoes afeta backend
 
-### Etapa 4 — rascunho local nos slots
-Objetivo:
-- permitir letra de rascunho em slot local
-- manter esse rascunho 100% fora do submit oficial
+### Etapa 4 — letra no slot
+Status:
+- implementada
 
-Saida esperada:
-- slot pode receber letra de rascunho
-- draft continua apenas local
+Saida entregue:
+- slot aceita letra local
+- quando aplicavel, essa letra pode virar `declared_letter`
 
-### Etapa 5 — associacao local do slot ao tabuleiro
-Objetivo:
-- permitir que o jogador clique em um slot local e depois em uma peca/casa do tabuleiro
-- registrar essa associacao apenas no frontend
-- manter a associacao reversivel e nao oficial
+### Etapa 5 — vinculacao oficial `slot -> tile real`
+Status:
+- implementada
 
-Saida esperada:
-- slot pode guardar associacao local com o tabuleiro
-- associacao continua fora do backend
+Saida entregue:
+- clique em peca + clique em slot vincula a peca ao slot
+- clique em peca com slot ativo tambem vincula
+- limpar vinculacao desfaz a composicao oficial daquele slot
 
-### Etapa 6 — preservar submit oficial
-Objetivo:
-- garantir que slots, drafts e associacoes locais nunca contaminem o submit real
+### Etapa 6 — associacao `slot -> casa do tabuleiro`
+Status:
+- implementada
 
-Saida esperada:
-- `placedTilesPreview` permanece correto
-- submit continua aceitando apenas pecas reais
+Saida entregue:
+- slot ativo pode ser associado a uma casa do tabuleiro
+- badges no board e no rack refletem essa composicao
 
-### Etapa 7 — refino visual minimo
-Objetivo:
-- diferenciar melhor:
-  - peca real
-  - slot local
-  - letra de rascunho
-  - associacao local com o tabuleiro
-- manter legibilidade da mesa de composicao
+### Etapa 7 — compilacao oficial para preview e submit
+Status:
+- implementada
 
-## 8. Fora de escopo neste plano
+Saida entregue:
+- `placedTilesPreview` agora reflete a composicao por slot
+- preview do backend responde a essa nova superficie
+- submit continua usando a mesma RPC oficial
 
-Nao entra nesta implementacao:
-- drag rack -> board
+## 8. Fora de escopo atual
+
+Nao entra nesta baseline:
+- drag rack -> board como fluxo oficial
 - reserva de letra do tabuleiro
 - reserva de casa do tabuleiro
-- associacao local tratada como reserva oficial
-- alteracao do contrato de wildcard
-- alteracao do submit oficial
-- alteracao do backend
+- alteracao de engine
+- alteracao de backend
+- mudanca do formato de `submit_patxanga_move(...)`
 
+## 9. Riscos que continuam relevantes
 
-## 9. Riscos que devem ser evitados
+- misturar slot local vazio com jogada oficial
+- deixar a mesma peca aparecer em mais de uma origem de composicao
+- regredir selecao multipla ou reordenacao em grupo
+- regredir pending_vote
+- quebrar o fluxo direto de clique no board por causa da composicao por slot
 
-- misturar slot local com peca real
-- quebrar selecao multipla ja validada
-- quebrar reordenacao em grupo ja validada
-- deixar slot entrar em `placedTilesPreview`
-- deixar draft local interferir em wildcard real
-- acoplar composicao local ao board oficial
-- tratar associacao local com o tabuleiro como estado oficial
-
-## 10. Checklist de validacao
+## 10. Checklist de validacao atual
 
 ### Build
-- frontend build verde
+- `cd frontend && npm run build`
 
-### Browser
-- host ve rack normalmente fora do turno
-- guest ve rack normalmente no turno
-- selecao simples continua funcionando
-- selecao multipla continua funcionando
-- reordenacao em grupo continua funcionando
-- slots locais permanentes existem na composicao
-- slots podem receber letra de rascunho
-- slots nascem sem vinculo inicial com o tabuleiro
-- associacao local do slot ao tabuleiro nao altera backend
-- submit continua ignorando slots locais
-- submit continua ignorando drafts
+### Browser automatizado
+- `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
 
-## 11. Fechamento correto desta frente
+Coberturas minimas atuais:
+- convites/lobby/retomada/desistencia
+- associacao local de slot sem contaminar gameplay
+- composicao oficial por slot alimentando `placedTilesPreview`
 
-A frente so deve ser encerrada quando:
+## 11. Proximos passos produtivos
+
+Depois desta baseline, os proximos passos com melhor retorno sao:
+
+1. validar submit real e preview real com cenarios mais ricos da composicao por slot
+2. decidir se o fluxo direto de peca -> board continua coexistindo
+   ou se a tela jogavel converge para um unico fluxo oficial
+3. ampliar Playwright para limpar, trocar e recompor slots em uma mesma jogada
+4. revisar UX de destaque para slot especial sem `declared_letter`
+
+## 12. Fechamento correto desta frente
+
+Esta linha de implementacao so deve ser considerada fechada quando:
 - build passar
-- browser validation passar
+- Playwright passar
+- a documentacao normativa estiver sincronizada
 - commit/push/logstep forem executados
-- for avaliado se continuity package precisa refletir a nova capacidade
+- o kit de continuidade for atualizado
 
-## 12. Limites deste plano
+## 13. Limites deste plano
 
 Este plano:
 - nao substitui o contrato de UX
 - nao redefine engine
 - nao redefine backend
-- nao redefine RPC
-- nao redefine fluxo oficial do board
+- nao redefine a RPC oficial
+- nao redefine o fluxo final de produto alem da baseline atual
 
 Fim do documento.

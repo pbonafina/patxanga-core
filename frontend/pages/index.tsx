@@ -34,6 +34,24 @@ type RackCompositionItem =
   | { kind: "tile"; tileId: string }
   | { kind: "slot"; slotId: string };
 
+type MoveCompositionSource = "board" | "slot";
+
+type MoveCompositionPlacement = {
+  cellKey: string;
+  tileId: string;
+  declaredLetter: string | null;
+  source: MoveCompositionSource;
+  slotId?: string;
+};
+
+type RackTileState = {
+  id?: string;
+  letter?: string;
+  points?: number;
+  is_special?: boolean;
+  special_type?: string | null;
+};
+
 type SessionRole = "host" | "guest";
 
 type SessionSwitchDraft = {
@@ -278,6 +296,76 @@ function formatBoardCoordinates(cellKey: string): string {
   return `${parsed.rowIndex + 1},${parsed.colIndex + 1}`;
 }
 
+function sortCellKeys(left: string, right: string): number {
+  const leftParsed = parseCellKey(left);
+  const rightParsed = parseCellKey(right);
+
+  if (!leftParsed || !rightParsed) {
+    return left.localeCompare(right);
+  }
+
+  if (leftParsed.rowIndex !== rightParsed.rowIndex) {
+    return leftParsed.rowIndex - rightParsed.rowIndex;
+  }
+
+  return leftParsed.colIndex - rightParsed.colIndex;
+}
+
+function removeTileFromPlacements(
+  placements: Record<string, string>,
+  tileId: string
+): {
+  nextPlacements: Record<string, string>;
+  removedCellKeys: string[];
+} {
+  const nextPlacements: Record<string, string> = {};
+  const removedCellKeys: string[] = [];
+
+  for (const [cellKey, placedTileId] of Object.entries(placements)) {
+    if (placedTileId === tileId) {
+      removedCellKeys.push(cellKey);
+      continue;
+    }
+
+    nextPlacements[cellKey] = placedTileId;
+  }
+
+  return {
+    nextPlacements,
+    removedCellKeys,
+  };
+}
+
+function removeDeclaredLettersForCellKeys(
+  declaredLetters: Record<string, string>,
+  cellKeys: string[]
+): Record<string, string> {
+  if (cellKeys.length === 0) {
+    return declaredLetters;
+  }
+
+  const next = { ...declaredLetters };
+  for (const cellKey of cellKeys) {
+    delete next[cellKey];
+  }
+  return next;
+}
+
+function removeTileFromSlotAssignments(
+  slotAssignments: Record<string, string>,
+  tileId: string
+): Record<string, string> {
+  const next = { ...slotAssignments };
+
+  for (const [slotId, assignedTileId] of Object.entries(slotAssignments)) {
+    if (assignedTileId === tileId) {
+      delete next[slotId];
+    }
+  }
+
+  return next;
+}
+
 function getBoardAssociationLabel(cellKey: string, boardState: unknown[]): string {
   const parsed = parseCellKey(cellKey);
 
@@ -334,6 +422,9 @@ export default function HomePage() {
   const [localDeclaredLetters, setLocalDeclaredLetters] = useState<Record<string, string>>({});
   const [localRackComposition, setLocalRackComposition] = useState<RackCompositionItem[]>([]);
   const [localRackSlotDrafts, setLocalRackSlotDrafts] = useState<Record<string, string>>({});
+  const [localRackSlotTileAssignments, setLocalRackSlotTileAssignments] = useState<
+    Record<string, string>
+  >({});
   const [localRackSlotAssociations, setLocalRackSlotAssociations] = useState<
     Record<string, string>
   >({});
@@ -415,60 +506,121 @@ export default function HomePage() {
     return null;
   }, [matchIdInput, playerIdInput, sessionSwitchDraft]);
 
-  const placedTilesPreview = useMemo(() => {
+  const rackTilesById = useMemo(() => {
+    const rackState = (resolvedBootstrap.playerContext?.rack_state ?? []) as RackTileState[];
+
+    return new Map(
+      rackState
+        .filter((tile) => tile.id)
+        .map((tile) => [tile.id as string, tile])
+    );
+  }, [resolvedBootstrap.playerContext]);
+
+  const moveCompositionPlacements = useMemo(() => {
     if (!resolvedBootstrap.playerContext) {
-      return [];
+      return [] as MoveCompositionPlacement[];
     }
 
-    return Object.entries(localPlacements)
-      .map(([cellKey, tileId]) => {
-        const [rowIndexText, colIndexText] = cellKey.split("-");
-        const rowIndex = Number(rowIndexText);
-        const colIndex = Number(colIndexText);
+    const placements: MoveCompositionPlacement[] = [];
+    const usedTileIds = new Set<string>();
+    const usedCellKeys = new Set<string>();
 
-        const tile = resolvedBootstrap.playerContext?.rack_state.find((item) => {
-          const typedTile = item as {
-            id?: string;
-            letter?: string;
-            is_special?: boolean;
-            special_type?: string | null;
-          };
+    for (const cellKey of Object.keys(localPlacements).sort(sortCellKeys)) {
+      const tileId = localPlacements[cellKey];
+      const tile = rackTilesById.get(tileId);
 
-          return typedTile.id === tileId;
-        }) as
-          | {
-              id?: string;
-              letter?: string;
-              is_special?: boolean;
-              special_type?: string | null;
-            }
-          | undefined;
+      if (!tile?.id || usedTileIds.has(tileId) || usedCellKeys.has(cellKey)) {
+        continue;
+      }
 
-        if (!tile?.id) {
+      placements.push({
+        cellKey,
+        tileId,
+        declaredLetter: requiresDeclaredLetter(tile.special_type)
+          ? (localDeclaredLetters[cellKey] ?? null)
+          : null,
+        source: "board",
+      });
+      usedTileIds.add(tileId);
+      usedCellKeys.add(cellKey);
+    }
+
+    for (const slotId of DEFAULT_RACK_SLOT_IDS) {
+      const cellKey = localRackSlotAssociations[slotId];
+      const tileId = localRackSlotTileAssignments[slotId];
+
+      if (!cellKey || !tileId || usedTileIds.has(tileId) || usedCellKeys.has(cellKey)) {
+        continue;
+      }
+
+      const tile = rackTilesById.get(tileId);
+      if (!tile?.id) {
+        continue;
+      }
+
+      placements.push({
+        cellKey,
+        tileId,
+        declaredLetter: requiresDeclaredLetter(tile.special_type)
+          ? (localRackSlotDrafts[slotId] ?? null)
+          : null,
+        source: "slot",
+        slotId,
+      });
+      usedTileIds.add(tileId);
+      usedCellKeys.add(cellKey);
+    }
+
+    return placements.sort((left, right) => sortCellKeys(left.cellKey, right.cellKey));
+  }, [
+    localDeclaredLetters,
+    localPlacements,
+    localRackSlotAssociations,
+    localRackSlotDrafts,
+    localRackSlotTileAssignments,
+    rackTilesById,
+    resolvedBootstrap.playerContext,
+  ]);
+
+  const placedTilesPreview = useMemo(() => {
+    return moveCompositionPlacements
+      .map(({ cellKey, tileId, declaredLetter }) => {
+        const parsed = parseCellKey(cellKey);
+        const tile = rackTilesById.get(tileId);
+
+        if (!parsed || !tile?.id) {
           return null;
         }
 
-        const declaredLetter = requiresDeclaredLetter(tile.special_type)
-          ? (localDeclaredLetters[cellKey] ?? null)
-          : null;
-
         return {
           tile_id: tile.id,
-          row: rowIndex + 1,
-          col: colIndex + 1,
+          row: parsed.rowIndex + 1,
+          col: parsed.colIndex + 1,
           declared_letter: declaredLetter,
         };
       })
-      .filter((item): item is NonNullable<typeof item> => item !== null)
-      .sort((a, b) => {
-        if (a.row !== b.row) return a.row - b.row;
-        return a.col - b.col;
-      });
-  }, [localDeclaredLetters, localPlacements, resolvedBootstrap.playerContext]);
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+  }, [moveCompositionPlacements, rackTilesById]);
 
   const previewTileIds = useMemo(
-    () => [...new Set(Object.values(localPlacements))],
-    [localPlacements]
+    () => moveCompositionPlacements.map((placement) => placement.tileId),
+    [moveCompositionPlacements]
+  );
+
+  const compositionPlacementsByCell = useMemo(
+    () =>
+      Object.fromEntries(
+        moveCompositionPlacements.map((placement) => [
+          placement.cellKey,
+          {
+            tileId: placement.tileId,
+            declaredLetter: placement.declaredLetter,
+            source: placement.source,
+            slotId: placement.slotId,
+          },
+        ])
+      ),
+    [moveCompositionPlacements]
   );
 
   const rackSlotAssociationLabels = useMemo(
@@ -629,36 +781,37 @@ export default function HomePage() {
 
     setLocalRackComposition(buildInitialRackComposition(nextIds));
     setLocalRackSlotDrafts(buildInitialRackSlotDrafts());
+    setLocalRackSlotTileAssignments({});
     setLocalRackSlotAssociations({});
     setSelectedRackSlotId(null);
   }, [resolvedBootstrap.playerContext]);
 
   const orderedPlayerRackState = useMemo(() => {
-    const rackState = (resolvedBootstrap.playerContext?.rack_state ?? []) as Array<{
-      id?: string;
-    }>;
+    const rackState = (resolvedBootstrap.playerContext?.rack_state ?? []) as Array<RackTileState>;
 
     if (rackState.length === 0 && localRackComposition.length === 0) {
       return [];
     }
 
-    const byId = new Map(
-      rackState
-        .filter((tile) => tile.id)
-        .map((tile) => [tile.id as string, tile])
-    );
-
     const ordered = localRackComposition
       .map((item) => {
         if (item.kind === "slot") {
+          const assignedTileId = localRackSlotTileAssignments[item.slotId] ?? null;
+          const assignedTile = assignedTileId ? rackTilesById.get(assignedTileId) : null;
+
           return {
             kind: "slot" as const,
             slotId: item.slotId,
             draftLetter: localRackSlotDrafts[item.slotId] ?? "",
+            assignedTileId: assignedTileId ?? undefined,
+            assignedTileLetter: assignedTile?.letter ?? "",
+            assignedTilePoints: assignedTile?.points ?? 0,
+            assignedTileSpecialType: assignedTile?.special_type ?? null,
+            assignedTileIsSpecial: assignedTile?.is_special ?? false,
           };
         }
 
-        return byId.get(item.tileId) ?? null;
+        return rackTilesById.get(item.tileId) ?? null;
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
 
@@ -673,7 +826,13 @@ export default function HomePage() {
     );
 
     return [...ordered, ...missing];
-  }, [localRackComposition, localRackSlotDrafts, resolvedBootstrap.playerContext]);
+  }, [
+    localRackComposition,
+    localRackSlotDrafts,
+    localRackSlotTileAssignments,
+    rackTilesById,
+    resolvedBootstrap.playerContext,
+  ]);
 
   async function openMatchSession(matchId: string, userId: string) {
     setIsLoading(true);
@@ -687,6 +846,7 @@ export default function HomePage() {
     setLocalPlacements({});
     setLocalDeclaredLetters({});
     setLocalRackSlotDrafts({});
+    setLocalRackSlotTileAssignments({});
     setLocalRackSlotAssociations({});
     setMovePreview(null);
 
@@ -706,6 +866,55 @@ export default function HomePage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  function handleAssignTileToRackSlot(slotId: string, tileId: string) {
+    const { nextPlacements, removedCellKeys } = removeTileFromPlacements(localPlacements, tileId);
+    const nextSlotAssignments = removeTileFromSlotAssignments(
+      localRackSlotTileAssignments,
+      tileId
+    );
+    const shouldUnassign = localRackSlotTileAssignments[slotId] === tileId;
+
+    setLocalPlacements(nextPlacements);
+    setLocalDeclaredLetters((current) =>
+      removeDeclaredLettersForCellKeys(current, removedCellKeys)
+    );
+    setLocalRackSlotTileAssignments(() => {
+      if (shouldUnassign) {
+        delete nextSlotAssignments[slotId];
+        return nextSlotAssignments;
+      }
+
+      return {
+        ...nextSlotAssignments,
+        [slotId]: tileId,
+      };
+    });
+    setSelectedTileIds((current) => current.filter((id) => id !== tileId));
+    setSelectedTileId(null);
+    setSelectedRackSlotId(slotId);
+    setMovePreview(null);
+  }
+
+  function handleClearRackSlotAssignment(slotId: string) {
+    setLocalRackSlotTileAssignments((current) => {
+      const next = { ...current };
+      delete next[slotId];
+      return next;
+    });
+    setMovePreview(null);
+  }
+
+  function clearMoveCompositionPreview() {
+    setLocalPlacements({});
+    setLocalDeclaredLetters({});
+    setLocalRackSlotTileAssignments({});
+    setLocalRackSlotAssociations({});
+    setSelectedTileId(null);
+    setSelectedTileIds([]);
+    setSelectedRackSlotId(null);
+    setMovePreview(null);
   }
 
   function handlePrepareSession(matchId: string, userId: string) {
@@ -1248,6 +1457,7 @@ export default function HomePage() {
       setLocalPlacements({});
       setLocalDeclaredLetters({});
       setLocalRackSlotDrafts({});
+      setLocalRackSlotTileAssignments({});
       setLocalRackSlotAssociations({});
       setMovePreview(null);
     } catch (error) {
@@ -1432,6 +1642,9 @@ export default function HomePage() {
       ...current,
       [cellKey]: selectedTileId,
     }));
+    setLocalRackSlotTileAssignments((current) =>
+      removeTileFromSlotAssignments(current, selectedTileId)
+    );
 
     setLocalDeclaredLetters((current) => {
       const next = { ...current };
@@ -1450,6 +1663,11 @@ export default function HomePage() {
   }
 
   function handleToggleTile(tileId: string) {
+    if (selectedRackSlotId) {
+      handleAssignTileToRackSlot(selectedRackSlotId, tileId);
+      return;
+    }
+
     setSelectedRackSlotId(null);
     setSelectedTileIds((current) => {
       if (current.includes(tileId)) {
@@ -1465,6 +1683,11 @@ export default function HomePage() {
   }
 
   function handleToggleRackSlot(slotId: string) {
+    if (selectedTileId && selectedTileIds.length <= 1) {
+      handleAssignTileToRackSlot(slotId, selectedTileId);
+      return;
+    }
+
     setSelectedTileId(null);
     setSelectedTileIds([]);
     setSelectedRackSlotId((current) => (current === slotId ? null : slotId));
@@ -1970,8 +2193,7 @@ export default function HomePage() {
         playersSummary={resolvedBootstrap.playersSummary}
         currentTurnPlayerId={resolvedBootstrap.currentTurnPlayerId}
         boardState={resolvedBootstrap.boardState}
-        localPlacements={localPlacements}
-        localDeclaredLetters={localDeclaredLetters}
+        compositionPlacementsByCell={compositionPlacementsByCell}
         pendingVoteTilesByCell={pendingVoteTilesByCell}
         selectedTileId={selectedTileId}
         selectedTileIds={selectedTileIds}
@@ -1997,14 +2219,8 @@ export default function HomePage() {
         onPlaceTile={handlePlaceTile}
         onToggleTile={handleToggleTile}
         onToggleRackSlot={handleToggleRackSlot}
-        onClearPreview={() => {
-          setLocalPlacements({});
-          setLocalDeclaredLetters({});
-          setSelectedTileId(null);
-          setSelectedTileIds([]);
-          setSelectedRackSlotId(null);
-          setMovePreview(null);
-        }}
+        onClearRackSlotAssignment={handleClearRackSlotAssignment}
+        onClearPreview={clearMoveCompositionPreview}
         onChangeRackSlotDraft={handleChangeRackSlotDraft}
         onReorderTile={handleReorderRackItem}
         onSubmitMove={handleSubmitMove}
@@ -2036,8 +2252,7 @@ export default function HomePage() {
       {(isActive || isVoting) ? (
       <BoardSection
         boardState={resolvedBootstrap.boardState}
-        localPlacements={localPlacements}
-        localDeclaredLetters={localDeclaredLetters}
+        compositionPlacementsByCell={compositionPlacementsByCell}
         pendingVoteTilesByCell={pendingVoteTilesByCell}
         selectedTileId={selectedTileId}
         selectedRackSlotId={selectedRackSlotId}
@@ -2061,14 +2276,8 @@ export default function HomePage() {
         isPlayersTurn={isActive}
         onToggleTile={handleToggleTile}
         onToggleSlot={handleToggleRackSlot}
-        onClearPreview={() => {
-          setLocalPlacements({});
-          setLocalDeclaredLetters({});
-          setSelectedTileId(null);
-          setSelectedTileIds([]);
-          setSelectedRackSlotId(null);
-          setMovePreview(null);
-        }}
+        onClearSlotAssignment={handleClearRackSlotAssignment}
+        onClearPreview={clearMoveCompositionPreview}
         onChangeSlotDraft={handleChangeRackSlotDraft}
         onReorderTile={handleReorderRackItem}
       />

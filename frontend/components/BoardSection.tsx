@@ -14,6 +14,13 @@ type RackTile = {
   special_type?: string | null;
 };
 
+type CompositionPlacement = {
+  tileId: string;
+  declaredLetter?: string | null;
+  source: "board" | "slot";
+  slotId?: string;
+};
+
 function isRackTile(item: unknown): item is RackTile & { id: string } {
   return Boolean(
     item &&
@@ -63,8 +70,7 @@ function getBoardSpecialTone(specialType?: string | null) {
 
 type BoardSectionProps = {
   boardState: unknown[];
-  localPlacements: Record<string, string>;
-  localDeclaredLetters: Record<string, string>;
+  compositionPlacementsByCell: Record<string, CompositionPlacement>;
   pendingVoteTilesByCell: Record<string, { letter?: string }>;
   selectedTileId: string | null;
   selectedRackSlotId: string | null;
@@ -82,8 +88,7 @@ type BoardSectionProps = {
 
 export function BoardSection({
   boardState,
-  localPlacements,
-  localDeclaredLetters,
+  compositionPlacementsByCell,
   pendingVoteTilesByCell,
   selectedTileId,
   selectedRackSlotId,
@@ -126,7 +131,8 @@ export function BoardSection({
               rackSlotAssociations[selectedRackSlotId ?? ""] === cellKey;
             const label = renderCellLabel(typedCell);
             const isCenter = rowIndex === 7 && colIndex === 7;
-            const localTileId = localPlacements[cellKey];
+            const compositionPlacement = compositionPlacementsByCell[cellKey];
+            const localTileId = compositionPlacement?.tileId;
 
             const rackTiles = ((playerRackState ?? []) as unknown[]).filter(isRackTile);
             const localTile = localTileId
@@ -137,7 +143,7 @@ export function BoardSection({
             const fixedSpecialType = normalizeSpecialType(typedCell?.tile?.special_type);
             const localPreviewLetter =
               requiresDeclaredLetter(localTile?.special_type)
-                ? (localDeclaredLetters[cellKey] ?? "?")
+                ? (compositionPlacement?.declaredLetter ?? "?")
                 : (localTile?.letter ?? "");
             const hasLocalPreview = Boolean(localTile);
             const hasFixedTile = Boolean(typedCell?.tile?.letter);
@@ -164,7 +170,13 @@ export function BoardSection({
                   width: 38,
                   height: 38,
                   border: hasLocalPreview
-                    ? `2px solid ${localSpecialType ? specialTone.borderColor : "#16a34a"}`
+                    ? `2px solid ${
+                        compositionPlacement?.source === "slot"
+                          ? "#7c3aed"
+                          : localSpecialType
+                            ? specialTone.borderColor
+                            : "#16a34a"
+                      }`
                     : hasPendingVoteOverlay
                       ? "2px dashed #b45309"
                       : hasFixedTile
@@ -175,7 +187,9 @@ export function BoardSection({
                   alignItems: "center",
                   justifyContent: "center",
                   background: hasLocalPreview
-                    ? (localSpecialType ? specialTone.cellBackground : "#dcfce7")
+                    ? compositionPlacement?.source === "slot"
+                      ? "#f5f3ff"
+                      : (localSpecialType ? specialTone.cellBackground : "#dcfce7")
                     : hasFixedTile
                       ? (fixedSpecialType ? specialTone.cellBackground : "#f5f5f4")
                     : renderCellBackground(typedCell, rowIndex, colIndex),
@@ -241,7 +255,9 @@ export function BoardSection({
                     borderRadius: 3,
                     background: hasVisibleTile
                       ? hasLocalPreview
-                        ? (localSpecialType ? specialTone.faceBackground : "#ecfdf5")
+                        ? compositionPlacement?.source === "slot"
+                          ? "#faf5ff"
+                          : (localSpecialType ? specialTone.faceBackground : "#ecfdf5")
                         : hasPendingVoteOverlay
                           ? "#fffbeb"
                           : (fixedSpecialType ? specialTone.faceBackground : "#fafaf9")

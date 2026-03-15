@@ -124,7 +124,8 @@ Validar, conforme o marco:
 - reordenacao em grupo
 - slots locais permanentes
 - rascunho local nos slots
-- associacao local de slot com o tabuleiro
+- vinculacao `slot -> tile real`
+- associacao `slot -> casa do tabuleiro`
 - cronometro visual
 - destaque de turno
 
@@ -132,6 +133,7 @@ Validar, conforme o marco:
 Validar:
 - selecao de pecas
 - preview no board
+- preview gerado a partir de composicao oficial por slot
 - limpeza do preview
 - estabilidade visual
 
@@ -139,7 +141,8 @@ Validar:
 Validar:
 - submit continua funcionando
 - backend continua como fonte de verdade
-- UX local nao contaminou payload nem estado oficial
+- a composicao por slot gera payload oficial correto sem enviar metadata local
+- UX local nao contaminou estado oficial
 
 ## 8. Checklist padrao
 

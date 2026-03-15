@@ -40,7 +40,8 @@ Ele não redefine engine, não substitui RPCs e não altera a autoridade do back
 ## 4. Tela de partida / estado `active`
 
 ### Ações permitidas ao jogador do turno
-- montar jogada localmente
+- montar jogada localmente por clique direto no board
+- montar jogada pela superficie oficial de composicao por slots do rack
 - enviar jogada por `submit_patxanga_move()`
 - passar turno por `submit_patxanga_pass_turn()`
 - trocar peças por `submit_patxanga_exchange_tiles()`
@@ -99,6 +100,8 @@ Ele não redefine engine, não substitui RPCs e não altera a autoridade do back
 - `player_id` continua sendo a identidade correta nas RPCs de gameplay
 - `user_id` não substitui `player_id` no fluxo interno da partida
 - `pending_vote` deve ser tratado como fluxo real de produto
+- a composicao oficial por slots pode alimentar preview e submit
+  sem mudar o formato da RPC oficial
 
 ## 8. Limites deste documento
 

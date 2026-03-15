@@ -111,6 +111,14 @@ Submeter uma jogada de colocação de peças.
 - frontend não envia board completo
 - frontend não envia score calculado
 - frontend não envia validação lexical como fonte de verdade
+- frontend pode derivar `p_placed_tiles` tanto da colocacao direta no board
+  quanto da composicao oficial por slots do rack
+- mesmo quando a origem for a composicao por slots,
+  o payload continua enviando apenas:
+  - `tile_id`
+  - `row`
+  - `col`
+  - `declared_letter`, quando aplicavel
 
 #### Saída esperada
 Um dos ramos operacionais abaixo:
@@ -128,6 +136,8 @@ Um dos ramos operacionais abaixo:
 - frontend não avança turno por conta própria
 
 #### Comportamento esperado na UI
+- permitir montar a jogada por clique direto no board
+  ou pela superficie oficial de composicao por slots
 - se accepted: atualizar estado oficial retornado ou recarregado
 - se `pending_vote`: não aplicar a jogada ao board oficial e abrir fluxo de votação
 - se erro: manter estado oficial anterior

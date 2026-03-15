@@ -16,16 +16,13 @@ e orienta a continuidade da frente principal.
 ## 2. Estado local verificado
 
 - branch atual: `develop`
-- marco de versionamento que introduziu esta especificacao: `978c27c`
 - upstream: `origin/develop`
-- status remoto apos o versionamento desta etapa: `develop` alinhado com `origin/develop`
-- commits recentes mais relevantes desta frente:
-  - `978c27c` Atualiza kit de continuidade com especificacao do estado atual
-  - `13fa822` Tighten local ignore rules
-  - `9fa27ce` Implement local rack slot associations
-  - `0722828` Add SQL regression test suites
-  - `372d0e7` Add operational lobby invite baseline
-  - `d584091` Add browser validation scenarios and Playwright coverage
+- o `git log` recente desta frente precisa refletir, no minimo:
+  - baseline operacional de lobby/convites/retomada/desistencia
+  - cobertura Playwright da pagina de teste
+  - suite SQL de regressao
+  - slots locais permanentes no rack
+  - promocao da composicao por slots a contrato oficial de preview/submit
 - working tree verificado nesta leitura:
   - `M docs/18-room-baton-package-current.md`
   - `?? docs/15-pacote-final-colagem-v1.2-ultra-blindado.md`
@@ -108,7 +105,10 @@ A tela jogavel atual ja possui:
 - destaque de turno e cronometro visual
 - preview operacional de jogada
 - suporte a `declared_letter` nas pecas especiais
-- associacao local permanente de slots do rack ao tabuleiro
+- slots locais permanentes de composicao
+- vinculacao oficial `slot -> tile real`
+- associacao `slot -> casa do tabuleiro`
+- derivacao oficial de `placedTilesPreview` a partir dessa composicao
 
 Artefatos principais:
 - `frontend/components/RackSection.tsx`
@@ -130,20 +130,20 @@ Validacoes confirmadas antes deste refresh documental:
 
 Leitura correta deste ponto:
 - a baseline funcional estava verde no `HEAD 13fa822`
-- a formalizacao documental desta etapa foi versionada em `978c27c`
+- a formalizacao documental e contractual desta etapa deve ser confirmada no `git log`
 - o refresh posterior do pacote `current` e local, para refletir o estado mais recente de continuidade
 
 ## 5. O que ainda nao esta fechado
 
-### 5.1 Associacao de slots ainda e local
+### 5.1 O contrato oficial por slots ja existe, mas ainda precisa consolidacao
 
-A associacao permanente entre slot do rack e casa do tabuleiro
-ja existe na UX local, mas ainda nao foi promovida a contrato oficial
-da composicao/submissao de jogada.
+A associacao entre slot, peca real e casa do tabuleiro
+ja foi promovida a contrato oficial de composicao no frontend.
 
 Consequencia:
-- ainda ha uma lacuna entre a UX local de composicao
-  e a superficie oficial que efetivamente chega ao backend
+- preview e submit ja podem nascer dessa superficie
+- o proximo risco deixa de ser "promover a contrato"
+  e passa a ser consolidar a UX e ampliar a cobertura de validacao
 
 ### 5.2 Validacao humana visual continua util
 
@@ -224,20 +224,16 @@ Sequencia recomendada:
 Resultado esperado:
 - retomada segura em outra sala sem depender da memoria desta conversa
 
-### 6.2 Proxima frente funcional: elevar slot associations a contrato oficial
+### 6.2 Proxima frente funcional: consolidar a composicao oficial por slots
 
-Decisao que precisa ser tomada:
-- a associacao `slot local -> casa do tabuleiro`
-  sera apenas affordance visual
-  ou passara a ser a base oficial da composicao da jogada
+Sequencia recomendada:
 
-Se a resposta for sim, a sequencia recomendada e:
-
-1. congelar contrato de composicao local
-2. alinhar preview e submit com essa superficie
-3. definir comportamento de limpar, mover, substituir e cancelar
-4. validar a integridade com testes de frontend e SQL onde aplicavel
-5. atualizar docs de UX e implementacao
+1. validar submit real com cenarios mais ricos da nova composicao
+2. revisar comportamento de limpar, mover, substituir e recompor slots
+3. decidir se o fluxo direto peca -> board continua coexistindo
+   ou se a tela converge para um unico fluxo oficial
+4. ampliar Playwright para cobrir recomposicao e pending_vote nessa superficie
+5. manter docs de UX, RPC e validacao sincronizados
 
 ### 6.3 Consolidar a primeira tela jogavel como baseline de produto
 
@@ -252,7 +248,7 @@ Depois da etapa acima, a frente mais produtiva e:
 
 Coberturas mais valiosas a seguir:
 
-1. preview + submit a partir da nova composicao local
+1. submit real a partir da composicao oficial por slots
 2. cancelamento/limpeza parcial de composicao
 3. estados de pending vote e resolucao
 4. regressao do rack apos acoes de partida real
@@ -265,7 +261,7 @@ Ao retomar esta frente em outra sala:
 2. escolher modo de atuacao
 3. validar `git status --short --branch`
 4. validar `git log --oneline --decorate -5`
-5. confirmar que `origin/develop` contem `978c27c`
+5. confirmar que `origin/develop` contem os commits mais recentes desta frente
 6. usar este documento para decidir a proxima frente
 
 ## 8. Comandos de validacao recomendados
@@ -296,7 +292,7 @@ zsh scripts/run-sql-test-suite.sh all
 ## 9. Frase curta de continuidade recomendada
 
 Retomar pela especificacao atual de desenvolvimento,
-confirmar que `origin/develop` ja contem `978c27c`,
+confirmar que `origin/develop` ja contem os commits normativos mais recentes,
 triar os 2 untracked ambiguos
-e seguir para a decisao arquitetural sobre transformar
-as slot associations em contrato oficial de composicao de jogada.
+e seguir para a consolidacao da composicao oficial por slots
+com submit real, cobertura automatizada e refinamento de UX.

@@ -33,8 +33,15 @@ type GamePlayScreenProps = {
   currentTurnPlayerId: string | null;
 
   boardState: unknown[];
-  localPlacements: Record<string, string>;
-  localDeclaredLetters: Record<string, string>;
+  compositionPlacementsByCell: Record<
+    string,
+    {
+      tileId: string;
+      declaredLetter?: string | null;
+      source: "board" | "slot";
+      slotId?: string;
+    }
+  >;
   pendingVoteTilesByCell: Record<string, { letter?: string }>;
   selectedTileId: string | null;
   selectedTileIds: string[];
@@ -68,6 +75,7 @@ type GamePlayScreenProps = {
   onPlaceTile: (cellKey: string, typedCell: BoardCell) => void;
   onToggleTile: (tileId: string) => void;
   onToggleRackSlot: (slotId: string) => void;
+  onClearRackSlotAssignment: (slotId: string) => void;
   onClearPreview: () => void;
   onReorderTile: (draggedItemId: string, dropTargetId: string) => void;
   onChangeRackSlotDraft: (slotId: string, nextValue: string) => void;
@@ -99,8 +107,7 @@ export function GamePlayScreen({
   currentTurnPlayerId,
 
   boardState,
-  localPlacements,
-  localDeclaredLetters,
+  compositionPlacementsByCell,
   pendingVoteTilesByCell,
   selectedTileId,
   selectedTileIds,
@@ -130,6 +137,7 @@ export function GamePlayScreen({
   onPlaceTile,
   onToggleTile,
   onToggleRackSlot,
+  onClearRackSlotAssignment,
   onClearPreview,
   onReorderTile,
   onChangeRackSlotDraft,
@@ -354,8 +362,7 @@ export function GamePlayScreen({
             >
               <BoardSection
                 boardState={boardState}
-                localPlacements={localPlacements}
-                localDeclaredLetters={localDeclaredLetters}
+                compositionPlacementsByCell={compositionPlacementsByCell}
                 pendingVoteTilesByCell={pendingVoteTilesByCell}
                 selectedTileId={selectedTileId}
                 selectedRackSlotId={selectedRackSlotId}
@@ -450,6 +457,7 @@ export function GamePlayScreen({
                 isPlayersTurn={isPlayersTurn}
                 onToggleTile={onToggleTile}
                 onToggleSlot={onToggleRackSlot}
+                onClearSlotAssignment={onClearRackSlotAssignment}
                 onClearPreview={onClearPreview}
                 onReorderTile={onReorderTile}
                 onChangeSlotDraft={onChangeRackSlotDraft}
@@ -469,7 +477,7 @@ export function GamePlayScreen({
                   {isPlayersTurn
                     ? placedTileCount > 0
                       ? `Jogada preparada com ${placedTileCount} peça${placedTileCount === 1 ? "" : "s"}.`
-                      : "Selecione peças do rack e clique no tabuleiro para montar a jogada."
+                      : "Selecione peças do rack para jogar direto no tabuleiro ou vincule uma peça a um slot antes de associá-lo ao board."
                     : "Você pode reorganizar o rack, mas a confirmação da jogada só libera no seu turno."}
                 </div>
 

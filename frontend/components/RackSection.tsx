@@ -12,6 +12,11 @@ type RackSlotItem = {
   kind: "slot";
   slotId: string;
   draftLetter?: string;
+  assignedTileId?: string;
+  assignedTileLetter?: string;
+  assignedTilePoints?: number;
+  assignedTileIsSpecial?: boolean;
+  assignedTileSpecialType?: string | null;
 };
 
 type RackSectionProps = {
@@ -24,6 +29,7 @@ type RackSectionProps = {
   isPlayersTurn: boolean;
   onToggleTile: (tileId: string) => void;
   onToggleSlot: (slotId: string) => void;
+  onClearSlotAssignment: (slotId: string) => void;
   onClearPreview: () => void;
   onReorderTile: (draggedItemId: string, dropTargetId: string) => void;
   onChangeSlotDraft: (slotId: string, nextValue: string) => void;
@@ -202,6 +208,7 @@ export function RackSection({
   isPlayersTurn,
   onToggleTile,
   onToggleSlot,
+  onClearSlotAssignment,
   onClearPreview,
   onReorderTile,
   onChangeSlotDraft,
@@ -248,6 +255,15 @@ export function RackSection({
   const selectedCount = selectedTileIds.length;
   const slotCount = rackTiles.filter((item) => isSlotItem(item)).length;
   const previewTileIdSet = useMemo(() => new Set(previewTileIds), [previewTileIds]);
+  const assignedSlotLabelByTileId = useMemo(
+    () =>
+      Object.fromEntries(
+        rackTiles
+          .filter((item): item is RackSlotItem => isSlotItem(item) && Boolean(item.assignedTileId))
+          .map((item) => [item.assignedTileId as string, getSlotShortLabel(item.slotId)])
+      ),
+    [rackTiles]
+  );
 
   const rackFrameStyle = isPlayersTurn
     ? {
@@ -290,10 +306,10 @@ export function RackSection({
                 : "Você pode reorganizar as peças enquanto aguarda sua vez."}
             </div>
             <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
-              Arraste para reorganizar no rack. Para levar ao tabuleiro, selecione a peça e clique na casa desejada.
+              Arraste para reorganizar no rack. Para jogar, selecione a peça e clique na casa desejada ou vincule a peça a um slot antes de associá-lo ao tabuleiro.
             </div>
             <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
-              Solte uma peça sobre um slot para reorganizar a folga local dentro do rack.
+              Solte uma peça sobre um slot para reorganizar a folga local dentro do rack. Clique numa peça e depois num slot para transformar esse slot em composição oficial.
             </div>
             {selectedCount > 0 ? (
               <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
@@ -307,7 +323,7 @@ export function RackSection({
             ) : null}
             {activeSlotId ? (
               <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
-                {getSlotShortLabel(activeSlotId)} selecionado. Clique numa casa ou letra do tabuleiro para criar um vinculo local.
+                {getSlotShortLabel(activeSlotId)} selecionado. Clique numa peça para vinculá-la ao slot ou clique no tabuleiro para associar essa composição ao board.
               </div>
             ) : null}
           </div>
@@ -365,7 +381,7 @@ export function RackSection({
 
       <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end", gap: 12, flexWrap: "wrap" }}>
         <div style={{ fontSize: 12, color: "#6b7280", alignSelf: "center" }}>
-          A letra digitada no slot é só rascunho visual e não altera a jogada real.
+          A letra digitada no slot continua local por padrão, mas vira `declared_letter` oficial quando o slot tiver peça especial vinculada e associação ativa no board.
         </div>
       </div>
 
@@ -403,6 +419,23 @@ export function RackSection({
                 const slotTestId = getSlotTestId(slotId);
                 const isActiveSlot = activeSlotId === slotId;
                 const associationLabel = slotAssociationLabels[slotId] ?? null;
+                const assignedTileId = tile.assignedTileId ?? null;
+                const assignedTile = assignedTileId
+                  ? {
+                      id: assignedTileId,
+                      letter: tile.assignedTileLetter,
+                      points: tile.assignedTilePoints,
+                      is_special: tile.assignedTileIsSpecial,
+                      special_type: tile.assignedTileSpecialType,
+                    }
+                  : null;
+                const assignedTileFace = assignedTile ? getRackTileFace(assignedTile) : null;
+                const requiresDeclaredLetterForAssignedTile = Boolean(
+                  assignedTile?.special_type &&
+                    ["wildcard", "skip_turn", "patxanga_real"].includes(
+                      assignedTile.special_type.toLowerCase()
+                    )
+                );
 
                 return (
                   <div
@@ -450,9 +483,80 @@ export function RackSection({
                       cursor: "pointer",
                     }}
                   >
+                    {assignedTile ? (
+                      <button
+                        type="button"
+                        data-testid={`${slotTestId}-clear-assignment`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onClearSlotAssignment(slotId);
+                        }}
+                        style={{
+                          position: "absolute",
+                          top: 4,
+                          right: 4,
+                          width: 16,
+                          height: 16,
+                          border: "none",
+                          borderRadius: 999,
+                          background: "#ddd6fe",
+                          color: "#5b21b6",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          lineHeight: 1,
+                        }}
+                        title="Desvincular peça do slot"
+                      >
+                        ×
+                      </button>
+                    ) : null}
+
                     <div style={{ marginTop: 4, fontSize: 9, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#7c3aed" }}>
                       slot
                     </div>
+
+                    {assignedTile && assignedTileFace ? (
+                      <div
+                        data-testid={`${slotTestId}-bound-tile`}
+                        style={{
+                          minWidth: 30,
+                          minHeight: 24,
+                          padding: "2px 6px",
+                          borderRadius: 8,
+                          background: "#ffffff",
+                          border: "1px solid #c4b5fd",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 3,
+                        }}
+                        title={`Peça vinculada oficialmente a ${getSlotShortLabel(slotId)}`}
+                      >
+                        <span
+                          style={{
+                            fontSize: assignedTileFace.fontSize >= 24 ? 18 : 14,
+                            fontWeight: 700,
+                            color: "#111827",
+                            lineHeight: 1,
+                          }}
+                        >
+                          {assignedTileFace.label}
+                        </span>
+                        {assignedTileFace.showPoints ? (
+                          <span
+                            style={{
+                              fontSize: 9,
+                              color: "#4b5563",
+                              lineHeight: 1,
+                              transform: "translateY(2px)",
+                            }}
+                          >
+                            {assignedTile.points ?? 0}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
 
                     <input
                       value={draftLetter}
@@ -467,8 +571,15 @@ export function RackSection({
                       placeholder="?"
                       style={{
                         width: 28,
-                        border: "none",
-                        background: "transparent",
+                        border:
+                          requiresDeclaredLetterForAssignedTile && associationLabel && !draftLetter
+                            ? "1px solid #f59e0b"
+                            : "none",
+                        borderRadius: 6,
+                        background:
+                          requiresDeclaredLetterForAssignedTile && associationLabel
+                            ? "#fff7ed"
+                            : "transparent",
                         textAlign: "center",
                         fontSize: 20,
                         fontWeight: 700,
@@ -510,11 +621,13 @@ export function RackSection({
               const isSelected = selectedTileIds.includes(tileId);
               const isInPreview = previewTileIdSet.has(tileId);
               const tileFace = getRackTileFace(typedTile);
+              const assignedSlotLabel = assignedSlotLabelByTileId[tileId] ?? null;
 
               return (
                 <button
                   key={tileId}
                   type="button"
+                  data-testid={`rack-tile-${tileId}`}
                   draggable
                   onDragStart={(event) => {
                     event.dataTransfer.setData("text/plain", tileId);
@@ -541,10 +654,14 @@ export function RackSection({
                       ? "2px solid #2563eb"
                       : isInPreview
                         ? "1px solid #94a3b8"
-                        : "1px solid #cbd5e1",
+                        : assignedSlotLabel
+                          ? "1px solid #c4b5fd"
+                          : "1px solid #cbd5e1",
                     borderRadius: 12,
                     background: isSelected
                       ? "#dbeafe"
+                      : assignedSlotLabel
+                        ? "#f5f3ff"
                       : isInPreview
                         ? "#e5e7eb"
                         : "#fffdf7",
@@ -601,6 +718,27 @@ export function RackSection({
                     />
                   ) : null}
 
+                  {assignedSlotLabel ? (
+                    <div
+                      data-testid={`rack-tile-${tileId}-slot-assignment`}
+                      style={{
+                        position: "absolute",
+                        top: 4,
+                        left: 4,
+                        padding: "2px 5px",
+                        borderRadius: 999,
+                        background: "#ede9fe",
+                        color: "#6d28d9",
+                        fontSize: 9,
+                        fontWeight: 800,
+                        lineHeight: 1.1,
+                      }}
+                      title={`Vinculada oficialmente a ${assignedSlotLabel}`}
+                    >
+                      {assignedSlotLabel}
+                    </div>
+                  ) : null}
+
                   {showDebug ? (
                     <div
                       style={{
@@ -636,8 +774,8 @@ export function RackSection({
               {selectedCount > 1
                 ? "Arraste qualquer peça destacada para mover o grupo dentro do rack."
                 : activeSlotId
-                  ? "Clique no tabuleiro para associar localmente o slot selecionado."
-                  : "Arraste peças e slots livremente. Solte a peça sobre um slot para reorganizar a folga local."}
+                  ? "Clique numa peça para vinculá-la ao slot ativo ou clique no tabuleiro para associar esse slot a uma casa."
+                  : "Arraste peças e slots livremente. Solte a peça sobre um slot para reorganizar a folga local ou clique num slot para compor uma jogada oficial."}
             </div>
 
             <button

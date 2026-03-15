@@ -74,4 +74,37 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("rack-slot-1-association")).toHaveCount(0);
     await expect(page.getByTestId("board-cell-0-0-slot-badges")).toHaveCount(0);
   });
+
+  test("uses slot composition as an official move preparation surface", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await page.getByTestId("quick-match-create").click();
+
+    const firstRackTile = page.locator('[data-testid^="rack-tile-"]').first();
+    const slot = page.getByTestId("rack-slot-1");
+    const centerCell = page.getByTestId("board-cell-7-7");
+
+    await expect(firstRackTile).toBeVisible();
+    await expect(slot).toBeVisible();
+    await expect(centerCell).toBeVisible();
+
+    await firstRackTile.click();
+    await slot.click();
+
+    await expect(page.getByTestId("rack-slot-1-bound-tile")).toBeVisible();
+
+    await centerCell.click();
+
+    await expect(page.getByTestId("rack-slot-1-association")).toHaveText("8,8");
+    await expect(page.getByText("1 peça em preparo")).toBeVisible();
+    await expect(page.getByTestId("board-cell-7-7-slot-badges")).toContainText("S1");
+
+    await page.getByRole("button", { name: "Limpar jogada" }).click();
+
+    await expect(page.getByText("0 peças em preparo")).toBeVisible();
+    await expect(page.getByTestId("rack-slot-1-bound-tile")).toHaveCount(0);
+    await expect(page.getByTestId("rack-slot-1-association")).toHaveCount(0);
+  });
 });
