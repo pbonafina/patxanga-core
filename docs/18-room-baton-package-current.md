@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-03-14 16:30:12
+Generated at: 2026-03-15 11:15:36
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -95,14 +95,19 @@ Resposta obrigatoria da IA apos a frase de retomada:
 ```
 ## develop...origin/develop
  M .gitignore
- M docs/18-room-baton-package-current.md
- M docs/18-room-baton-process-v1.0.md
+MM docs/18-room-baton-package-current.md
+M  docs/18-room-baton-process-v1.0.md
+M  docs/frontend-browser-validation-procedure-v1.0.md
  M docs/frontend-rack-composition-implementation-plan-v1.0.md
  M docs/frontend-rack-composition-ux-v1.0.md
- M frontend/components/BoardSection.tsx
- M frontend/components/RackSection.tsx
- M frontend/pages/index.tsx
- M generate-room-baton-package.sh
+ M frontend/lib/backend/matchBootstrap.mock.ts
+M  frontend/package-lock.json
+M  frontend/package.json
+M  frontend/pages/index.tsx
+A  frontend/playwright.config.ts
+A  frontend/tests/browser-validation.spec.ts
+ M frontend/types/match.ts
+M  generate-room-baton-package.sh
  M sql/migrations/001_initial_schema.sql
  M sql/rpc/create_match.sql
  M sql/rpc/join_match.sql
@@ -111,7 +116,13 @@ Resposta obrigatoria da IA apos a frase de retomada:
 ?? docs/15-pacote-final-colagem-v1.2-ultra-blindado.md
 ?? docs/frontend-backend-operational-contract-v1.0.md
 ?? frontend/.env.local
+?? frontend/lib/backend/matchOperations.mock.ts
+?? frontend/lib/backend/matchOperations.real.ts
+?? frontend/lib/backend/matchOperations.ts
+?? frontend/lib/backend/matchOperations.types.ts
+?? frontend/test-results/
 ?? generate-continuity-package.sh
+?? scripts/
 ?? sql/tests/test_direct_invite_decline.sql
 ?? sql/tests/test_direct_invite_flow.sql
 ?? sql/tests/test_exchange_tiles.sql
@@ -153,7 +164,10 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-4b181f0 (HEAD -> develop, origin/develop) Refina frase oficial de passagem de bastao
+9e0feae (HEAD -> develop, origin/develop) Formalize same-room resume continuity protocol
+54da7e4 Implement rack UX and backend move preview
+339e716 Inclui comando local de abertura na frase de passagem de bastao
+4b181f0 Refina frase oficial de passagem de bastao
 1ddb5a6 Adiciona processo e pacote unico de passagem de bastao
 9092d55 Refina regra de lacuna entre duas pecas selecionadas
 71716b1 Normaliza superficie local de composicao do rack
@@ -165,25 +179,10 @@ f0f8022 Adiciona contrato de UX para composicao local do rack
 aa64609 Destaca turno ativo no rack com cronometro visual
 48bdea5 Refina composicao visual da tela jogavel
 53cc1ec Refinado room restart prompt com arquivos concretos do frontend
-2fa2cd6 Ajustado room restart prompt para aguardar todos os arquivos
-8dea51e Atualizado kit de continuidade com tela jogavel e drag and drop
-a48c292 Adicionado drag and drop local no rack
 ```
 
 ### tail -n 60 ../project-log.md
 ```
-## 2026-03-13 18:47
-- Atualizado room restart prompt com recomendacao de iniciar pela primeira tela de jogo orientada a produto.
-
-## 2026-03-13 21:37
-- Ajustado rack para tiles quadrados e registrado requisito de reordenacao local do rack na primeira tela jogavel.
-
-## 2026-03-13 21:40
-- Simplificada a tela jogavel: removidos titulos e caixas intermediarias, mantendo apenas botoes de acao.
-
-## 2026-03-13 22:27
-- Adicionado drag and drop local no rack da tela jogavel, mantendo a reordenacao apenas no frontend.
-
 ## 2026-03-13 22:29
 - Adicionado drag and drop local no rack da tela jogavel, mantendo a reordenacao apenas no frontend.
 
@@ -232,20 +231,17 @@ a48c292 Adicionado drag and drop local no rack
 ## 2026-03-14 15:06
 - Refinada frase oficial de passagem de bastao
 
-## 2026-03-14 21:30
-- Adicionada RPC read-only `preview_patxanga_move` para estimar score e status da jogada sem persistencia.
-- Frontend passou a consultar o backend durante o preview local para mostrar palavra principal, score estimado e indicacao de votacao.
-- Board perdeu a margem superior fixa e o rack ficou mais proximo do tabuleiro para reduzir rolagem na validacao manual.
+## 2026-03-14 16:30
+- Incluido comando local de abertura na frase de passagem de bastao
 
-## 2026-03-14 23:36
-- Revisado o protocolo de continuidade para oferecer explicitamente os modos PADRAO, GATE e GATE_CHECKLIST.
-- A nova sala agora deve apresentar o bloco de escolha de modo logo apos a leitura inicial do pacote de bastao.
-- GATE_CHECKLIST passa a exigir resposta inicial estruturada antes de qualquer atuacao.
+## 2026-03-14 23:23
+- Commit 54da7e4: refinada a UX do rack e do tabuleiro, exigido declared_letter para todas as pecas especiais e adicionada RPC preview_patxanga_move com score estimado no frontend.
 
-## 2026-03-14 23:43
-- Formalizado protocolo de retomada na mesma sala apos interrupcao.
-- A retomada passa a usar checkpoint curto, frase padrao de retomada e resposta estruturada da IA antes de continuar.
-- A continuidade dentro da mesma sala agora depende de estado real verificado, e nao de memoria implicita apenas.
+## 2026-03-14 23:38
+- Revisado o protocolo de continuidade para exigir escolha explicita entre PADRAO, GATE e GATE_CHECKLIST apos a leitura inicial do pacote de bastao.
+
+## 2026-03-14 23:44
+- Formalizado protocolo de retomada na mesma sala com checkpoint curto, frase padrao de retomada e revalidacao do ultimo passo incerto.
 
 ```
 
@@ -279,6 +275,15 @@ lsof -nP -iTCP:3001 -sTCP:LISTEN
 curl -I http://localhost:3001
 ```
 
+### Validacao automatizada com Playwright
+```bash
+cd ~/patxanga-bootstrap/patxanga-core/frontend
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+```
+- a automacao sobe uma instancia isolada em http://127.0.0.1:3101
+- essa execucao nao interfere na porta operacional 3001
+- usar Playwright para fluxos objetivos; manter revisao humana quando houver dependencia de julgamento visual fino
+
 ### Abrir no browser
 ```bash
 cd ~/patxanga-bootstrap/patxanga-core
@@ -295,7 +300,13 @@ tail -n 20 tmp/browser-validation-notes.txt
 
 ## PROCEDIMENTO DE CRIACAO DE PARTIDA DE TESTE
 
-### Criar host, guest e match de teste
+### Fluxo preferencial pela UI
+- abrir http://localhost:3001
+- usar a secao `Cenarios de validacao browser` e clicar `Gerar cenarios de validacao`
+- usar `Usar host` / `Usar guest` para preencher o formulario principal
+- usar `Carregar no alternador` para trocar entre host e guest sem recolar UUIDs
+
+### Fallback SQL para criar host, guest e match de teste
 ```bash
 cd ~/patxanga-bootstrap/patxanga-core && docker exec -i supabase_db_patxanga-core psql -U postgres -d postgres <<'SQL'
 \pset tuples_only on
@@ -349,9 +360,8 @@ SQL
 
 ### Uso na UI
 - abrir http://localhost:3001
-- preencher match_id
-- usar host_user_id para validar host
-- usar guest_user_id para validar guest
+- preencher match_id e user_id no formulario principal, ou usar `Usar host` / `Usar guest`
+- se disponivel, carregar os IDs na secao `Alternar host e guest` para trocar de papel sem recolar UUIDs
 
 ## FILE: docs/17-continuity-activation-brief-v1.0.md
 
@@ -1664,6 +1674,268 @@ A ordem oficial de referência entre salas é:
 - não encerrar milestones sem avaliar formalmente a continuidade
 - tratar continuidade como requisito de engenharia do projeto
 
+## FILE: docs/frontend-backend-operational-contract-v1.0.md
+
+# PATXANGA — FRONTEND/BACKEND OPERATIONAL CONTRACT
+Version: 1.0
+Status: ACTIVE OPERATIONAL BASELINE
+Base normativa:
+- docs/frontend-contract-rpcs-v1.0.md
+- docs/frontend-contract-match-bootstrap-v1.0.md
+- docs/game-lobby-and-invite-architecture-v1.0.md
+- docs/presence-resume-forfeit-architecture-v1.0.md
+
+## 1. Objetivo
+
+Consolidar a superficie operacional minima entre frontend e backend para:
+
+- entrada em lobby
+- aceitacao e recusa de convite
+- listagem de convites pendentes
+- listagem de partidas retomaveis
+- retomada de presenca na partida
+- inicio de partida a partir do lobby
+- desistência formal
+
+Este documento nao redefine engine, nao substitui migrations e nao altera a
+autoridade do backend.
+
+## 2. Regras centrais
+
+- backend continua server-authoritative
+- `user_id` e identidade de sessao/produto
+- `player_id` e identidade interna de gameplay
+- frontend nao deve substituir `player_id` por `user_id` nas acoes de gameplay
+- `resume_patxanga_match(...)` nao substitui bootstrap oficial da match
+- depois de qualquer acao mutavel, o frontend deve reidratar estado oficial
+
+## 3. Superficie oficial atual
+
+### 3.1 RPCs orientadas a `user_id`
+
+- `list_patxanga_user_pending_invites(p_user_id uuid)`
+- `list_patxanga_user_resumable_matches(p_user_id uuid)`
+- `accept_patxanga_invite(p_invite_id uuid, p_user_id uuid)`
+- `decline_patxanga_invite(p_invite_id uuid, p_user_id uuid)`
+- `resume_patxanga_match(p_match_id uuid, p_user_id uuid)`
+
+### 3.2 RPCs orientadas a `player_id`
+
+- `start_patxanga_match_from_lobby(p_match_id uuid, p_host_player_id uuid)`
+- `forfeit_patxanga_match(p_match_id uuid, p_player_id uuid)`
+
+## 4. Contrato operacional por RPC
+
+### 4.1 `list_patxanga_user_pending_invites(...)`
+
+#### Finalidade
+Listar convites diretos pendentes para um usuario.
+
+#### Entrada
+- `p_user_id uuid`
+
+#### Saida operacional esperada
+Lista JSON com, no minimo:
+- `invite_id`
+- `match_id`
+- `invite_status`
+- `created_at`
+- `expires_at`
+- `lobby_id`
+- `lobby_status`
+- `invite_mode`
+- `match_mode`
+- `language`
+- `max_players`
+- `host_user_id`
+- `host_guest_name`
+
+#### Regra de consumo
+- frontend usa essa RPC para a caixa de convites pendentes
+- resultado vazio deve ser tratado como lista vazia, nao como erro
+
+### 4.2 `accept_patxanga_invite(...)`
+
+#### Finalidade
+Aceitar convite direto e ingressar formalmente na match.
+
+#### Entrada
+- `p_invite_id uuid`
+- `p_user_id uuid`
+
+#### Saida operacional esperada
+- `invite_id`
+- `match_id`
+- `player_id`
+- `invite_status = accepted`
+- `lobby_status`
+
+#### Regra de consumo
+- frontend deve usar o mesmo `user_id` da sessao para seguir ao bootstrap oficial da match
+- `player_id` retornado confirma a identidade interna criada/associada no backend
+
+### 4.3 `decline_patxanga_invite(...)`
+
+#### Finalidade
+Recusar convite direto sem entrar na match.
+
+#### Entrada
+- `p_invite_id uuid`
+- `p_user_id uuid`
+
+#### Saida operacional esperada
+- `invite_id`
+- `match_id`
+- `invite_status = declined`
+
+#### Regra de consumo
+- frontend deve remover ou atualizar o convite da lista local apos sucesso
+
+### 4.4 `list_patxanga_user_resumable_matches(...)`
+
+#### Finalidade
+Listar partidas nas quais o usuario ja entrou e ainda pode retomar.
+
+#### Entrada
+- `p_user_id uuid`
+
+#### Saida operacional esperada
+Lista JSON com, no minimo:
+- `match_id`
+- `match_status`
+- `match_mode`
+- `language`
+- `turn_number`
+- `current_turn_player_id`
+- `winner_player_id`
+- `created_at`
+- `started_at`
+- `finished_at`
+- `player_id`
+- `display_name`
+- `score`
+- `seat_index`
+- `turn_order`
+- `has_forfeited`
+- `is_online`
+- `last_ping_at`
+
+#### Regra de consumo
+- frontend usa essa RPC para a lista de partidas retomaveis
+- partidas `finished` e `cancelled` nao devem aparecer
+- jogadores com `has_forfeited = true` nao devem aparecer
+
+### 4.5 `resume_patxanga_match(...)`
+
+#### Finalidade
+Reativar presenca online de um usuario dentro de uma match ja existente.
+
+#### Entrada
+- `p_match_id uuid`
+- `p_user_id uuid`
+
+#### Saida operacional esperada
+Quando nao puder retomar:
+- `can_resume = false`
+- `reason`
+- `match_status`, quando aplicavel
+
+Quando puder retomar:
+- `can_resume = true`
+- `match_id`
+- `player_id`
+- `match_status`
+- `current_turn_player_id`
+
+#### Efeito operacional confirmado
+- marca `patxanga_match_presence.is_online = true`
+- atualiza `last_ping_at`
+- nao distribui estado completo da partida
+- nao altera gameplay
+
+#### Regra de consumo
+- frontend deve chamar bootstrap oficial da match logo depois de um `resume`
+- `resume` serve para restabelecer presenca, nao para substituir reidratacao
+
+### 4.6 `start_patxanga_match_from_lobby(...)`
+
+#### Finalidade
+Iniciar uma match a partir de um lobby elegivel e marcar o lobby como `started`.
+
+#### Entrada
+- `p_match_id uuid`
+- `p_host_player_id uuid`
+
+#### Saida operacional esperada
+- `lobby_status = started`
+- `match_result` com payload oficial de `start_patxanga_match(...)`
+
+#### Regra de autoridade
+- apenas o host do lobby pode iniciar
+- frontend nao muda localmente `lobby_status` nem `match.status` antes da confirmacao oficial
+
+### 4.7 `forfeit_patxanga_match(...)`
+
+#### Finalidade
+Registrar a desistência formal de um jogador.
+
+#### Entrada
+- `p_match_id uuid`
+- `p_player_id uuid`
+
+#### Saida operacional esperada
+Ramo normal:
+- `status = success`
+- `match_status`
+- `player_forfeited`
+- `everyone_forfeited = false`
+- `next_player` e `turn_number`, quando a desistência ocorre no turno atual
+
+Ramo de cancelamento total:
+- `status = cancelled`
+- `match_status = cancelled`
+- `everyone_forfeited = true`
+
+#### Efeito operacional confirmado
+- marca `has_forfeited = true`
+- define `forfeited_at`
+- coloca presenca offline
+- registra replay de `player_forfeited`
+- avanca turno quando o desistente era o jogador atual
+- cancela a match quando todos desistiram
+
+#### Regra de consumo
+- frontend deve remover acoes de gameplay para jogador desistente
+- depois de `forfeit`, o frontend deve reidratar estado oficial da match
+
+## 5. Regras de integracao para o frontend
+
+- listas de descoberta e retomada usam `user_id`
+- acoes de match ativa usam `player_id`
+- `resume_patxanga_match(...)` e ponte entre `user_id` e `player_id`, mas nao entrega bootstrap completo
+- qualquer retorno mutavel deve ser seguido de reidratacao minima oficial
+- o frontend nao deve inferir que `waiting` implica `current_turn_player_id`
+
+## 6. Estado real validado localmente
+
+Validado nesta rodada, no banco local Supabase:
+
+- `sql/tests/test_resume_match.sql`
+- `sql/tests/test_forfeit_single_player.sql`
+- `sql/tests/test_forfeit_all_players.sql`
+- `sql/tests/test_list_pending_invites.sql`
+- `sql/tests/test_list_resumable_matches.sql`
+- `sql/tests/test_start_match_from_lobby.sql`
+
+## 7. Riscos e limites atuais
+
+- as migrations executaveis `12` e `13` continuam agregadas em `supabase/migrations/`, mas agora sao sincronizadas a partir de `sql/` por `scripts/sync-supabase-entrypoint-migrations.sh`
+- outras frentes SQL do projeto ainda mantem duplicacao estrutural semelhante fora deste recorte
+- este documento consolida a superficie operacional, mas nao elimina a necessidade de manter a arvore modular `sql/` e a arvore executavel `supabase/migrations/` coerentes
+- este documento nao substitui o contrato de bootstrap nem os contratos de gameplay
+
+Fim do documento.
+
 ## FILE: docs/frontend-browser-validation-procedure-v1.0.md
 
 # PATXANGA — Frontend Browser Validation Procedure
@@ -1712,6 +1984,24 @@ lsof -nP -iTCP:3001 -sTCP:LISTEN
 curl -I http://localhost:3001
 ```
 
+### 4.1 Validacao automatizada opcional
+
+Quando o objetivo for validar fluxos operacionais objetivos da pagina de teste,
+Playwright pode ser usado como evidência de validacao de browser em ambiente
+isolado.
+
+Comando:
+
+```bash
+cd ~/patxanga-bootstrap/patxanga-core/frontend
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+```
+
+Regras:
+- a automacao sobe uma instancia isolada do frontend em `http://127.0.0.1:3101`
+- essa execucao nao deve substituir revisao visual humana quando o marco depender de julgamento visual fino
+- quando o fluxo validado for objetivo e totalmente automatizado, o resultado do Playwright pode compor a validacao operacional registrada
+
 ## 5. Registro da rodada
 
 Toda rodada deve registrar:
@@ -1741,9 +2031,12 @@ Depois fazer hard refresh:
 ### 6.2 Carregar a partida
 
 Na UI:
+- se a pagina expuser a secao `Cenarios de validacao browser`, usar `Gerar cenarios de validacao` para obter `match_id`, `host_user_id` e `guest_user_id` reais sem SQL manual
+- usar `Usar host` / `Usar guest` para preencher os campos principais rapidamente
 - preencher `match_id`
 - preencher `user_id`
 - carregar/bootstrap da partida
+- se a pagina expuser a secao `Alternar host e guest`, preencher `match_id`, `host_user_id` e `guest_user_id` uma unica vez e usar `Abrir como host` / `Abrir como guest` para alternar durante a rodada
 
 ### 6.3 Validar bootstrap
 
@@ -2821,26 +3114,103 @@ de inicializacao.
 A passagem de bastao deve usar:
 - uma frase de entrada padrao
 - um arquivo unico de passagem de bastao
+- uma escolha explicita entre modos de atuacao apos a leitura inicial do pacote
+- um protocolo de retomada na mesma sala apos interrupcao
 - validacao posterior de branch, commits e `../project-log.md`
 
 ## 3. Frase de entrada da nova sala
 
 Texto base:
 
-Voce esta assumindo a continuidade do projeto Patxanga, um jogo por turnos
-com backend authoritative, frontend em evolucao orientada a produto e processo
-operacional rigoroso de continuidade, rastreabilidade, documentacao,
-versionamento e validacao.
+ATENCAO: VOCE esta assumindo a continuidade do projeto Patxanga. Nao assuma
+contexto, nao altere nada antes de verificar o estado real e trate
+continuidade, rastreabilidade, seguranca, validacao e documentacao como
+requisitos obrigatorios. Peca explicitamente o arquivo
+`docs/18-room-baton-package-current.md` para receber diretivas, contexto
+operacional e status atualizado do projeto e, no ambiente local deste
+operador, solicite que ele rode o comando
+`cd ~/patxanga-bootstrap/patxanga-core && open -a TextEdit docs/18-room-baton-package-current.md`
+para abrir o arquivo no Mac.
 
-Seu papel nesta sala e preservar e estender esse trabalho sem perder contexto,
-sem assumir estado nao verificado e sem romper o processo estabelecido.
-A continuidade do projeto e condicao imutavel desta atuacao.
+Depois da leitura inicial do pacote de bastao, apresente obrigatoriamente ao
+operador uma escolha explicita entre tres modos de atuacao: `PADRAO`, `GATE`
+e `GATE_CHECKLIST`. Explique cada modo em uma linha, recomende `PADRAO` como
+opcao default e aguarde a decisao do operador antes de prosseguir.
 
-Antes de qualquer proposta ou alteracao, voce deve pedir o arquivo unico de
-passagem de bastao com instrucoes detalhadas e, a partir dele, se inicializar
-corretamente. So depois disso voce podera pedir os comandos e arquivos
-complementares necessarios para validar branch, commits, logs, documentacao,
-estado operacional e frente atual.
+Definido o modo, valide branch atual, `HEAD`, upstream, commits recentes,
+`../project-log.md`, working tree, ambiente operacional, ultimo build/teste
+validado e artefatos de inicializacao com o rigor correspondente ao modo
+escolhido. Se houver divergencia entre memoria, conversa, documentacao e
+repositorio local, o estado local verificado prevalece. O arquivo
+`docs/18-room-baton-package-current.md` deve ser atualizado sempre que o
+operador solicitar ou sempre que houver mudanca relevante suficiente para
+impactar a retomada segura.
+
+### 3.1 Modos de atuacao da nova sala
+
+- `PADRAO` (Recomendado): continuidade normal, com validacao objetiva do estado
+  real e seguimento mais agil.
+- `GATE`: nenhuma conclusao, plano fechando assunto ou alteracao antes de uma
+  checagem forte do estado real.
+- `GATE_CHECKLIST`: igual ao `GATE`, mas com resposta inicial obrigatoriamente
+  estruturada em checklist operacional.
+
+Bloco obrigatorio que a nova sala deve apresentar ao operador apos ler o
+pacote:
+
+- `PADRAO` (Recomendado): continuidade normal, com validacao objetiva do estado real e seguimento mais agil.
+- `GATE`: nenhuma conclusao, plano fechando assunto ou alteracao antes de uma checagem forte do estado real.
+- `GATE_CHECKLIST`: igual ao `GATE`, mas com resposta inicial obrigatoriamente estruturada em checklist operacional.
+
+Pergunta obrigatoria:
+`Escolha o modo de atuacao para esta sala: PADRAO, GATE ou GATE_CHECKLIST.`
+
+### 3.2 Resposta obrigatoria quando o modo for GATE_CHECKLIST
+
+- arquivo de bastao lido
+- branch atual
+- `HEAD` atual
+- upstream
+- ultimos commits relevantes
+- estado do working tree
+- ultimo build validado
+- ultimos testes validados
+- frente atual
+- riscos ou bloqueios
+- divergencias encontradas
+- status do pacote de bastao: atualizado ou precisa refresh
+
+### 3.3 Retomada na mesma sala apos interrupcao
+
+Quando houver interrupcao na mesma sala, nao se deve confiar em memoria
+implícita da conversa como fonte unica de continuidade.
+
+A retomada deve usar:
+- checkpoint curto registrado pelo assistente durante a atuacao
+- historico da conversa
+- estado real verificado do working tree e dos arquivos em foco
+- build/teste ja concluido e confirmado
+
+Frase padrao de retomada na mesma sala:
+`RETOMADA MESMA SALA: recupere o ultimo checkpoint confirmado, diferencie o que ficou concluido do que ficou pendente, revalide qualquer acao que possa ter sido interrompida e continue apenas a partir do estado real verificado.`
+
+Conteudo minimo do checkpoint curto:
+- modo ativo
+- objetivo atual
+- ultimo passo confirmado como concluido
+- ponto pendente ou interrompido
+- arquivos em foco
+- ultima validacao confirmada
+- proximo passo
+
+Resposta obrigatoria da IA apos a frase de retomada:
+- modo ativo
+- objetivo atual
+- ultimo ponto confirmado
+- ponto incerto ou interrompido
+- arquivos em foco
+- ultima validacao confirmada
+- proximo passo
 
 
 ## 4. Prompt interno no topo do arquivo unico
@@ -2887,6 +3257,8 @@ O arquivo unico deve consolidar:
 - modo de trabalho com o operador
 - procedimentos de teste
 - procedimento de criacao de partida de teste
+- modos de atuacao e bloco de escolha obrigatorio
+- protocolo de retomada na mesma sala apos interrupcao
 - contratos ativos essenciais
 - frente atual e proximos passos
 - frase padrao de passagem de bastao
@@ -2914,10 +3286,13 @@ Deve constar explicitamente:
 
 Deve constar explicitamente:
 - como criar uma match local de teste
+- quando a pagina suportar, como gerar cenarios reais de browser diretamente pela UI
+- quando houver automacao disponivel, como executar a validacao Playwright em ambiente isolado
 - como obter `match_id`
 - como obter `host_user_id`
 - como obter `guest_user_id`
 - como usar esses ids na validacao browser
+- quando houver suporte na pagina de teste, como registrar esses ids na secao `Alternar host e guest` para trocar de papel sem recolar UUIDs
 
 
 ## 8. Regra de atualizacao do arquivo unico
@@ -2998,6 +3373,8 @@ Obrigacao operacional da IA:
 - reapresentar essa frase obrigatoriamente apos marcos importantes
 - apresentar a escolha entre `PADRAO`, `GATE` e `GATE_CHECKLIST` logo apos a
   leitura inicial do pacote
+- manter checkpoints curtos durante marcos relevantes para permitir retomada
+  segura na mesma sala
 - considerar essa reapresentacao parte imutavel do protocolo de continuidade
 
 ## 10. Fechamento
@@ -3010,7 +3387,5 @@ Fim do documento.
 ## FRASE PADRAO DE PASSAGEM DE BASTAO
 
 ATENCAO: VOCE esta assumindo a continuidade do projeto Patxanga. Nao assuma contexto, nao altere nada antes de verificar o estado real e trate continuidade, rastreabilidade, seguranca, validacao e documentacao como requisitos obrigatorios. Peca explicitamente o arquivo docs/18-room-baton-package-current.md para receber diretivas, contexto operacional e status atualizado do projeto e, no ambiente local deste operador, solicite que ele rode o comando cd ~/patxanga-bootstrap/patxanga-core && open -a TextEdit docs/18-room-baton-package-current.md para abrir o arquivo no Mac.
-
 Depois da leitura inicial do pacote de bastao, apresente obrigatoriamente ao operador uma escolha explicita entre tres modos de atuacao: PADRAO, GATE e GATE_CHECKLIST. Explique cada modo em uma linha, recomende PADRAO como opcao default e aguarde a decisao do operador antes de prosseguir.
-
 Definido o modo, valide branch atual, HEAD, upstream, commits recentes, ../project-log.md, working tree, ambiente operacional, ultimo build/teste validado e artefatos de inicializacao com o rigor correspondente ao modo escolhido. Se houver divergencia entre memoria, conversa, documentacao e repositorio local, o estado local verificado prevalece. O arquivo docs/18-room-baton-package-current.md deve ser atualizado sempre que o operador solicitar ou sempre que houver mudanca relevante suficiente para impactar a retomada segura.

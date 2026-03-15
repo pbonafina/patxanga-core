@@ -31,6 +31,8 @@ OUT="docs/18-room-baton-package-current.md"
   echo "7. manter documentacao, log operacional e versionamento sincronizados"
   echo "8. nao misturar frentes sensiveis sem auditoria consciente"
   echo "9. quando necessario, pedir primeiro os comandos e arquivos complementares para inicializacao correta"
+  echo "10. depois da leitura inicial do pacote, apresentar ao operador uma escolha explicita entre os modos PADRAO, GATE e GATE_CHECKLIST antes de prosseguir"
+  echo "11. manter checkpoints curtos em marcos relevantes para permitir retomada segura na mesma sala apos interrupcao"
   echo
   echo "Seu objetivo inicial nao e programar imediatamente."
   echo "Seu objetivo inicial e se inicializar corretamente, compreender o estado real do projeto e so entao atuar."
@@ -38,11 +40,66 @@ OUT="docs/18-room-baton-package-current.md"
 
   echo "## FRASE DE ENTRADA DA NOVA SALA"
   echo
-  echo "Voce esta assumindo a continuidade do projeto Patxanga, um jogo por turnos com backend authoritative, frontend em evolucao orientada a produto e processo operacional rigoroso de continuidade, rastreabilidade, documentacao, versionamento e validacao."
-  echo "Seu papel nesta sala e preservar e estender esse trabalho sem perder contexto, sem assumir estado nao verificado e sem romper o processo estabelecido."
-  echo "A continuidade do projeto e condicao imutavel desta atuacao."
-  echo "Antes de qualquer proposta ou alteracao, voce deve pedir o arquivo unico de passagem de bastao com instrucoes detalhadas e, a partir dele, se inicializar corretamente."
-  echo "So depois disso voce podera pedir os comandos e arquivos complementares necessarios para validar branch, commits, logs, documentacao, estado operacional e frente atual."
+  echo "ATENCAO: VOCE esta assumindo a continuidade do projeto Patxanga. Nao assuma contexto, nao altere nada antes de verificar o estado real e trate continuidade, rastreabilidade, seguranca, validacao e documentacao como requisitos obrigatorios. Peca explicitamente o arquivo docs/18-room-baton-package-current.md para receber diretivas, contexto operacional e status atualizado do projeto e, no ambiente local deste operador, solicite que ele rode o comando cd ~/patxanga-bootstrap/patxanga-core && open -a TextEdit docs/18-room-baton-package-current.md para abrir o arquivo no Mac."
+  echo "Depois da leitura inicial do pacote de bastao, apresente obrigatoriamente ao operador uma escolha explicita entre tres modos de atuacao: PADRAO, GATE e GATE_CHECKLIST. Explique cada modo em uma linha, recomende PADRAO como opcao default e aguarde a decisao do operador antes de prosseguir."
+  echo "Definido o modo, valide branch atual, HEAD, upstream, commits recentes, ../project-log.md, working tree, ambiente operacional, ultimo build/teste validado e artefatos de inicializacao com o rigor correspondente ao modo escolhido. Se houver divergencia entre memoria, conversa, documentacao e repositorio local, o estado local verificado prevalece. O arquivo docs/18-room-baton-package-current.md deve ser atualizado sempre que o operador solicitar ou sempre que houver mudanca relevante suficiente para impactar a retomada segura."
+  echo
+
+  echo "### MODOS DE ATUACAO DA NOVA SALA"
+  echo
+  echo "- PADRAO (Recomendado): continuidade normal, com validacao objetiva do estado real e seguimento mais agil."
+  echo "- GATE: nenhuma conclusao, plano fechando assunto ou alteracao antes de uma checagem forte do estado real."
+  echo "- GATE_CHECKLIST: igual ao GATE, mas com resposta inicial obrigatoriamente estruturada em checklist operacional."
+  echo
+  echo "Pergunta obrigatoria:"
+  echo "Escolha o modo de atuacao para esta sala: PADRAO, GATE ou GATE_CHECKLIST."
+  echo
+  echo "Checklist obrigatorio quando o modo for GATE_CHECKLIST:"
+  echo "- arquivo de bastao lido"
+  echo "- branch atual"
+  echo "- HEAD atual"
+  echo "- upstream"
+  echo "- ultimos commits relevantes"
+  echo "- estado do working tree"
+  echo "- ultimo build validado"
+  echo "- ultimos testes validados"
+  echo "- frente atual"
+  echo "- riscos ou bloqueios"
+  echo "- divergencias encontradas"
+  echo "- status do pacote de bastao: atualizado ou precisa refresh"
+  echo
+
+  echo "## PROTOCOLO DE RETOMADA NA MESMA SALA"
+  echo
+  echo "Quando houver interrupcao nesta mesma sala, a retomada nao deve confiar apenas"
+  echo "na memoria implicita da conversa."
+  echo
+  echo "A retomada deve usar:"
+  echo "- checkpoint curto registrado pelo assistente durante a atuacao"
+  echo "- historico da conversa"
+  echo "- estado real verificado do working tree e dos arquivos em foco"
+  echo "- build/teste ja concluido e confirmado"
+  echo
+  echo "Frase padrao de retomada na mesma sala:"
+  echo "RETOMADA MESMA SALA: recupere o ultimo checkpoint confirmado, diferencie o que ficou concluido do que ficou pendente, revalide qualquer acao que possa ter sido interrompida e continue apenas a partir do estado real verificado."
+  echo
+  echo "Conteudo minimo do checkpoint curto:"
+  echo "- modo ativo"
+  echo "- objetivo atual"
+  echo "- ultimo passo confirmado como concluido"
+  echo "- ponto pendente ou interrompido"
+  echo "- arquivos em foco"
+  echo "- ultima validacao confirmada"
+  echo "- proximo passo"
+  echo
+  echo "Resposta obrigatoria da IA apos a frase de retomada:"
+  echo "- modo ativo"
+  echo "- objetivo atual"
+  echo "- ultimo ponto confirmado"
+  echo "- ponto incerto ou interrompido"
+  echo "- arquivos em foco"
+  echo "- ultima validacao confirmada"
+  echo "- proximo passo"
   echo
 
   echo "## ESTADO OPERACIONAL GERADO"
@@ -100,6 +157,15 @@ OUT="docs/18-room-baton-package-current.md"
   echo 'curl -I http://localhost:3001'
   echo '```'
   echo
+  echo "### Validacao automatizada com Playwright"
+  echo '```bash'
+  echo 'cd ~/patxanga-bootstrap/patxanga-core/frontend'
+  echo 'npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium'
+  echo '```'
+  echo "- a automacao sobe uma instancia isolada em http://127.0.0.1:3101"
+  echo "- essa execucao nao interfere na porta operacional 3001"
+  echo "- usar Playwright para fluxos objetivos; manter revisao humana quando houver dependencia de julgamento visual fino"
+  echo
   echo "### Abrir no browser"
   echo '```bash'
   echo 'cd ~/patxanga-bootstrap/patxanga-core'
@@ -117,7 +183,13 @@ OUT="docs/18-room-baton-package-current.md"
 
   echo "## PROCEDIMENTO DE CRIACAO DE PARTIDA DE TESTE"
   echo
-  echo "### Criar host, guest e match de teste"
+  echo "### Fluxo preferencial pela UI"
+  echo "- abrir http://localhost:3001"
+  echo '- usar a secao `Cenarios de validacao browser` e clicar `Gerar cenarios de validacao`'
+  echo '- usar `Usar host` / `Usar guest` para preencher o formulario principal'
+  echo '- usar `Carregar no alternador` para trocar entre host e guest sem recolar UUIDs'
+  echo
+  echo "### Fallback SQL para criar host, guest e match de teste"
   echo '```bash'
   echo "cd ~/patxanga-bootstrap/patxanga-core && docker exec -i supabase_db_patxanga-core psql -U postgres -d postgres <<'SQL'"
   echo '\pset tuples_only on'
@@ -171,9 +243,8 @@ OUT="docs/18-room-baton-package-current.md"
   echo
   echo "### Uso na UI"
   echo "- abrir http://localhost:3001"
-  echo "- preencher match_id"
-  echo "- usar host_user_id para validar host"
-  echo "- usar guest_user_id para validar guest"
+  echo '- preencher match_id e user_id no formulario principal, ou usar `Usar host` / `Usar guest`'
+  echo '- se disponivel, carregar os IDs na secao `Alternar host e guest` para trocar de papel sem recolar UUIDs'
   echo
 
   for file in \
@@ -182,6 +253,7 @@ OUT="docs/18-room-baton-package-current.md"
     docs/continuity-package-v1.6.md \
     docs/99-context-snapshot-master-v1.6.md \
     docs/15-local-ops-and-collaboration-protocol.md \
+    docs/frontend-backend-operational-contract-v1.0.md \
     docs/frontend-browser-validation-procedure-v1.0.md \
     docs/frontend-contract-screen-actions-v1.0.md \
     docs/frontend-contract-match-states-v1.0.md \
@@ -200,7 +272,9 @@ OUT="docs/18-room-baton-package-current.md"
 
   echo "## FRASE PADRAO DE PASSAGEM DE BASTAO"
   echo
-  echo "ATENCAO: VOCE esta assumindo a continuidade do projeto Patxanga, no qual a continuidade e condicao imutavel da atuacao. Aja como responsavel tecnico de continuidade: analise antes de alterar, confirme estado real antes de concluir, preserve seguranca, rastreabilidade, documentacao, versionamento e validacao, e trabalhe de forma incremental, sem atalhos e sem assumir contexto nao verificado. Peca explicitamente o arquivo docs/18-room-baton-package-current.md para receber diretivas, contexto operacional e status atualizado do projeto e, no ambiente local deste operador, solicite que ele rode o comando cd ~/patxanga-bootstrap/patxanga-core && open -a TextEdit docs/18-room-baton-package-current.md para abrir o arquivo no Mac. So depois disso VOCE deve validar branch, commits recentes, ../project-log.md e os comandos/arquivos complementares de inicializacao. O arquivo deve ser atualizado sempre que o operador solicitar ou sempre que houver mudanca relevante suficiente para impactar a retomada segura."
+  echo "ATENCAO: VOCE esta assumindo a continuidade do projeto Patxanga. Nao assuma contexto, nao altere nada antes de verificar o estado real e trate continuidade, rastreabilidade, seguranca, validacao e documentacao como requisitos obrigatorios. Peca explicitamente o arquivo docs/18-room-baton-package-current.md para receber diretivas, contexto operacional e status atualizado do projeto e, no ambiente local deste operador, solicite que ele rode o comando cd ~/patxanga-bootstrap/patxanga-core && open -a TextEdit docs/18-room-baton-package-current.md para abrir o arquivo no Mac."
+  echo "Depois da leitura inicial do pacote de bastao, apresente obrigatoriamente ao operador uma escolha explicita entre tres modos de atuacao: PADRAO, GATE e GATE_CHECKLIST. Explique cada modo em uma linha, recomende PADRAO como opcao default e aguarde a decisao do operador antes de prosseguir."
+  echo "Definido o modo, valide branch atual, HEAD, upstream, commits recentes, ../project-log.md, working tree, ambiente operacional, ultimo build/teste validado e artefatos de inicializacao com o rigor correspondente ao modo escolhido. Se houver divergencia entre memoria, conversa, documentacao e repositorio local, o estado local verificado prevalece. O arquivo docs/18-room-baton-package-current.md deve ser atualizado sempre que o operador solicitar ou sempre que houver mudanca relevante suficiente para impactar a retomada segura."
 } > "$OUT"
 
 echo "Arquivo gerado em $OUT"

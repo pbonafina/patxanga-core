@@ -1,8 +1,17 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMatchBootstrap } from "../hooks/useMatchBootstrap";
 import { loadMatchBootstrap } from "../lib/backend/loadMatchBootstrap";
+import {
+  acceptInvite,
+  declineInvite,
+  forfeitMatch,
+  listPendingInvites,
+  listResumableMatches,
+  resumeMatch,
+  startMatchFromLobby,
+} from "../lib/backend/matchOperations";
 import { getSupabaseEnv } from "../lib/supabase/env";
-import type { MatchBootstrap } from "../types/match";
+import type { MatchBootstrap, PendingInvite, ResumableMatch } from "../types/match";
 import { VotingSection } from "../components/VotingSection";
 import { BoardSection } from "../components/BoardSection";
 import { RackSection } from "../components/RackSection";
@@ -24,6 +33,44 @@ type BoardCell = {
 type RackCompositionItem =
   | { kind: "tile"; tileId: string }
   | { kind: "gap"; gapId: string };
+
+type SessionRole = "host" | "guest";
+
+type SessionSwitchDraft = {
+  matchId: string;
+  hostUserId: string;
+  guestUserId: string;
+};
+
+type BrowserValidationScenarioKey =
+  | "acceptStartResumeForfeit"
+  | "declineInvite";
+
+type BrowserValidationScenario = {
+  key: BrowserValidationScenarioKey;
+  title: string;
+  objective: string;
+  matchId: string;
+  hostUserId: string;
+  guestUserId: string;
+  inviteId: string;
+  hostPlayerId: string;
+};
+
+type RpcCreateMatchLobbyResult = {
+  match_id: string;
+  lobby_id: string;
+  host_player_id: string;
+  status: string;
+  invite_mode: string;
+};
+
+type RpcInvitePlayerResult = {
+  invite_id: string;
+  match_id: string;
+  invited_user_id: string;
+  status: string;
+};
 
 const DEFAULT_RACK_SLOT_IDS = ["__slot__:1", "__slot__:2", "__slot__:3"] as const;
 const INSERTION_TARGET_PREFIX = "__insert__:";
@@ -255,10 +302,32 @@ export default function HomePage() {
     hostUserId: string;
     guestUserId: string;
   } | null>(null);
+  const [browserValidationScenarios, setBrowserValidationScenarios] = useState<
+    BrowserValidationScenario[]
+  >([]);
+  const [isGeneratingBrowserValidationScenarios, setIsGeneratingBrowserValidationScenarios] =
+    useState(false);
+  const [browserValidationScenariosError, setBrowserValidationScenariosError] =
+    useState<string | null>(null);
+  const [sessionSwitchDraft, setSessionSwitchDraft] = useState<SessionSwitchDraft>({
+    matchId: "",
+    hostUserId: "",
+    guestUserId: "",
+  });
+  const [sessionSwitchError, setSessionSwitchError] = useState<string | null>(null);
   const [isCreatingQuickMatch, setIsCreatingQuickMatch] = useState(false);
   const [quickMatchError, setQuickMatchError] = useState<string | null>(null);
   const [movePreview, setMovePreview] = useState<MovePreviewResult | null>(null);
   const [isLoadingMovePreview, setIsLoadingMovePreview] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [resumableMatches, setResumableMatches] = useState<ResumableMatch[]>([]);
+  const [isLoadingSessionLists, setIsLoadingSessionLists] = useState(false);
+  const [sessionListsLoaded, setSessionListsLoaded] = useState(false);
+  const [sessionListsError, setSessionListsError] = useState<string | null>(null);
+  const [sessionActionMessage, setSessionActionMessage] = useState<string | null>(null);
+  const [inviteActionInFlightId, setInviteActionInFlightId] = useState<string | null>(null);
+  const [isStartingCurrentLobby, setIsStartingCurrentLobby] = useState(false);
+  const [isForfeitingCurrentMatch, setIsForfeitingCurrentMatch] = useState(false);
 
   const resolvedBootstrap = useMatchBootstrap(bootstrapData ?? undefined);
   const { isConfigured } = getSupabaseEnv();
@@ -266,7 +335,8 @@ export default function HomePage() {
   const isWaiting = resolvedBootstrap.status === "waiting";
   const isActive = resolvedBootstrap.status === "active";
   const isVoting = resolvedBootstrap.status === "voting";
-  const isFinished = resolvedBootstrap.status === "finished";
+  const isCancelled = resolvedBootstrap.status === "cancelled";
+  const isFinished = resolvedBootstrap.status === "finished" || isCancelled;
 
   const stateLabel = useMemo(() => {
     switch (resolvedBootstrap.status) {
@@ -278,10 +348,31 @@ export default function HomePage() {
         return "Fluxo de votação";
       case "finished":
         return "Partida encerrada";
+      case "cancelled":
+        return "Partida cancelada";
       default:
         return "Estado desconhecido";
     }
   }, [resolvedBootstrap.status]);
+
+  const activeSessionRole = useMemo<SessionRole | null>(() => {
+    const normalizedMatchId = matchIdInput.trim();
+    const normalizedUserId = playerIdInput.trim();
+
+    if (!normalizedMatchId || normalizedMatchId !== sessionSwitchDraft.matchId.trim()) {
+      return null;
+    }
+
+    if (normalizedUserId && normalizedUserId === sessionSwitchDraft.hostUserId.trim()) {
+      return "host";
+    }
+
+    if (normalizedUserId && normalizedUserId === sessionSwitchDraft.guestUserId.trim()) {
+      return "guest";
+    }
+
+    return null;
+  }, [matchIdInput, playerIdInput, sessionSwitchDraft]);
 
   const placedTilesPreview = useMemo(() => {
     if (!resolvedBootstrap.playerContext) {
@@ -561,6 +652,142 @@ export default function HomePage() {
     }
   }
 
+  function handlePrepareSession(matchId: string, userId: string) {
+    setMatchIdInput(matchId);
+    setPlayerIdInput(userId);
+  }
+
+  function handleApplyScenarioToSwitcher(scenario: BrowserValidationScenario) {
+    setSessionSwitchError(null);
+    setSessionSwitchDraft({
+      matchId: scenario.matchId,
+      hostUserId: scenario.hostUserId,
+      guestUserId: scenario.guestUserId,
+    });
+  }
+
+  function handleUseScenarioIdentity(
+    scenario: BrowserValidationScenario,
+    role: SessionRole
+  ) {
+    const nextUserId = role === "host" ? scenario.hostUserId : scenario.guestUserId;
+    handlePrepareSession(scenario.matchId, nextUserId);
+  }
+
+  async function getConfiguredBrowserClient() {
+    const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
+    const client = getSupabaseBrowserClient();
+
+    if (!client) {
+      throw new Error("Supabase client not configured in frontend environment.");
+    }
+
+    return client;
+  }
+
+  async function createBrowserValidationScenario(
+    key: BrowserValidationScenarioKey,
+    title: string,
+    objective: string,
+    hostGuestName: string
+  ): Promise<BrowserValidationScenario> {
+    const client = await getConfiguredBrowserClient();
+    const hostUserId = crypto.randomUUID();
+    const guestUserId = crypto.randomUUID();
+
+    const { data: createData, error: createError } = await client.rpc(
+      "create_patxanga_match_lobby",
+      {
+        p_language: "pt-BR",
+        p_match_mode: "synchronous",
+        p_turn_time_seconds: null,
+        p_hint_mode_enabled: false,
+        p_host_user_id: hostUserId,
+        p_host_guest_name: hostGuestName,
+        p_max_players: 2,
+      }
+    );
+
+    if (createError) {
+      throw new Error(createError.message);
+    }
+
+    if (!createData) {
+      throw new Error("Empty create match lobby payload returned by backend.");
+    }
+
+    const createResult = createData as RpcCreateMatchLobbyResult;
+
+    const { data: inviteData, error: inviteError } = await client.rpc(
+      "invite_patxanga_player",
+      {
+        p_match_id: createResult.match_id,
+        p_invited_by_player_id: createResult.host_player_id,
+        p_invited_user_id: guestUserId,
+        p_expires_at: null,
+      }
+    );
+
+    if (inviteError) {
+      throw new Error(inviteError.message);
+    }
+
+    if (!inviteData) {
+      throw new Error("Empty invite payload returned by backend.");
+    }
+
+    const inviteResult = inviteData as RpcInvitePlayerResult;
+
+    return {
+      key,
+      title,
+      objective,
+      matchId: createResult.match_id,
+      hostUserId,
+      guestUserId,
+      inviteId: inviteResult.invite_id,
+      hostPlayerId: createResult.host_player_id,
+    };
+  }
+
+  async function handleGenerateBrowserValidationScenarios() {
+    setIsGeneratingBrowserValidationScenarios(true);
+    setBrowserValidationScenariosError(null);
+
+    try {
+      const [acceptScenario, declineScenario] = await Promise.all([
+        createBrowserValidationScenario(
+          "acceptStartResumeForfeit",
+          "Cenario A",
+          "Aceitar convite, iniciar lobby, retomar partida e desistir.",
+          "Host Browser Flow A"
+        ),
+        createBrowserValidationScenario(
+          "declineInvite",
+          "Cenario B",
+          "Recusar convite pendente.",
+          "Host Browser Flow B"
+        ),
+      ]);
+
+      setBrowserValidationScenarios([acceptScenario, declineScenario]);
+      handleApplyScenarioToSwitcher(acceptScenario);
+      handlePrepareSession(acceptScenario.matchId, acceptScenario.guestUserId);
+      setSessionActionMessage(
+        "Cenarios de validacao gerados. O formulario foi preenchido com o guest do Cenario A."
+      );
+    } catch (error) {
+      setBrowserValidationScenarios([]);
+      setBrowserValidationScenariosError(
+        error instanceof Error
+          ? error.message
+          : "Falha ao gerar cenarios de validacao no backend."
+      );
+    } finally {
+      setIsGeneratingBrowserValidationScenarios(false);
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await openMatchSession(matchIdInput, playerIdInput);
@@ -572,12 +799,7 @@ export default function HomePage() {
     setIsCreatingQuickMatch(true);
 
     try {
-      const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
-      const client = getSupabaseBrowserClient();
-
-      if (!client) {
-        throw new Error("Supabase client not configured in frontend environment.");
-      }
+      const client = await getConfiguredBrowserClient();
 
       const hostUserId = crypto.randomUUID();
       const guestUserId = crypto.randomUUID();
@@ -615,11 +837,15 @@ export default function HomePage() {
         throw new Error(startError.message);
       }
 
-      setQuickMatchSession({
+      const nextQuickMatchSession = {
         matchId,
         hostUserId,
         guestUserId,
-      });
+      };
+
+      setQuickMatchSession(nextQuickMatchSession);
+      setSessionSwitchDraft(nextQuickMatchSession);
+      setSessionSwitchError(null);
 
       setMatchIdInput(matchId);
       setPlayerIdInput(hostUserId);
@@ -638,9 +864,276 @@ export default function HomePage() {
       return;
     }
 
-    setMatchIdInput(quickMatchSession.matchId);
-    setPlayerIdInput(userId);
+    handlePrepareSession(quickMatchSession.matchId, userId);
     await openMatchSession(quickMatchSession.matchId, userId);
+  }
+
+  function handleChangeSessionSwitchDraft(
+    field: keyof SessionSwitchDraft,
+    value: string
+  ) {
+    setSessionSwitchError(null);
+    setSessionSwitchDraft((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function handleCaptureCurrentSession(role: SessionRole) {
+    const normalizedMatchId = matchIdInput.trim();
+    const normalizedUserId = playerIdInput.trim();
+
+    if (!normalizedMatchId || !normalizedUserId) {
+      setSessionSwitchError("Preencha match_id e user_id atuais antes de capturar a sessao.");
+      return;
+    }
+
+    setSessionSwitchError(null);
+    setSessionSwitchDraft((current) => ({
+      matchId: normalizedMatchId,
+      hostUserId: role === "host" ? normalizedUserId : current.hostUserId,
+      guestUserId: role === "guest" ? normalizedUserId : current.guestUserId,
+    }));
+  }
+
+  function handleUseQuickMatchSessionForSwitch() {
+    if (!quickMatchSession) {
+      return;
+    }
+
+    setSessionSwitchError(null);
+    setSessionSwitchDraft(quickMatchSession);
+  }
+
+  async function handleOpenSessionRole(role: SessionRole) {
+    const normalizedMatchId = sessionSwitchDraft.matchId.trim();
+    const normalizedHostUserId = sessionSwitchDraft.hostUserId.trim();
+    const normalizedGuestUserId = sessionSwitchDraft.guestUserId.trim();
+
+    if (!normalizedMatchId || !normalizedHostUserId || !normalizedGuestUserId) {
+      setSessionSwitchError(
+        "Informe match_id, host_user_id e guest_user_id para alternar entre host e guest."
+      );
+      return;
+    }
+
+    const nextUserId = role === "host" ? normalizedHostUserId : normalizedGuestUserId;
+
+    setSessionSwitchError(null);
+    handlePrepareSession(normalizedMatchId, nextUserId);
+    await openMatchSession(normalizedMatchId, nextUserId);
+  }
+
+  async function handleLoadSessionLists() {
+    const userId = playerIdInput.trim();
+
+    if (!userId) {
+      setSessionListsError("Informe um user_id para carregar convites e partidas retomaveis.");
+      setSessionListsLoaded(false);
+      setPendingInvites([]);
+      setResumableMatches([]);
+      return;
+    }
+
+    setIsLoadingSessionLists(true);
+    setSessionListsError(null);
+    setSessionActionMessage(null);
+
+    try {
+      const [nextPendingInvites, nextResumableMatches] = await Promise.all([
+        listPendingInvites(userId),
+        listResumableMatches(userId),
+      ]);
+
+      setPendingInvites(nextPendingInvites);
+      setResumableMatches(nextResumableMatches);
+      setSessionListsLoaded(true);
+    } catch (error) {
+      setSessionListsError(
+        error instanceof Error
+          ? error.message
+          : "Falha ao carregar convites e partidas retomaveis."
+      );
+      setSessionListsLoaded(false);
+      setPendingInvites([]);
+      setResumableMatches([]);
+    } finally {
+      setIsLoadingSessionLists(false);
+    }
+  }
+
+  async function handleResumeListedMatch(matchId: string) {
+    const userId = playerIdInput.trim();
+
+    if (!userId) {
+      setSessionListsError("Informe um user_id para retomar a partida.");
+      return;
+    }
+
+    setSessionListsError(null);
+    setSessionActionMessage(null);
+
+    try {
+      const result = await resumeMatch({
+        matchId,
+        userId,
+      });
+
+      if (!result.canResume) {
+        setSessionListsError(
+          `Nao foi possivel retomar a partida: ${result.reason ?? "motivo nao informado"}.`
+        );
+        return;
+      }
+
+      setMatchIdInput(matchId);
+      await openMatchSession(matchId, userId);
+      await handleLoadSessionLists();
+      setSessionActionMessage("Partida retomada com sucesso.");
+    } catch (error) {
+      setSessionListsError(
+        error instanceof Error ? error.message : "Falha ao retomar a partida."
+      );
+    }
+  }
+
+  async function handleAcceptInvite(inviteId: string) {
+    const userId = playerIdInput.trim();
+
+    if (!userId) {
+      setSessionListsError("Informe um user_id para aceitar o convite.");
+      return;
+    }
+
+    setInviteActionInFlightId(inviteId);
+    setSessionListsError(null);
+    setSessionActionMessage(null);
+
+    try {
+      const result = await acceptInvite({
+        inviteId,
+        userId,
+      });
+
+      setMatchIdInput(result.matchId);
+      await openMatchSession(result.matchId, userId);
+      await handleLoadSessionLists();
+      setSessionActionMessage("Convite aceito. A partida foi aberta nesta sessão.");
+    } catch (error) {
+      setSessionListsError(
+        error instanceof Error ? error.message : "Falha ao aceitar o convite."
+      );
+    } finally {
+      setInviteActionInFlightId(null);
+    }
+  }
+
+  async function handleDeclineInvite(inviteId: string) {
+    const userId = playerIdInput.trim();
+
+    if (!userId) {
+      setSessionListsError("Informe um user_id para recusar o convite.");
+      return;
+    }
+
+    setInviteActionInFlightId(inviteId);
+    setSessionListsError(null);
+    setSessionActionMessage(null);
+
+    try {
+      await declineInvite({
+        inviteId,
+        userId,
+      });
+
+      await handleLoadSessionLists();
+      setSessionActionMessage("Convite recusado com sucesso.");
+    } catch (error) {
+      setSessionListsError(
+        error instanceof Error ? error.message : "Falha ao recusar o convite."
+      );
+    } finally {
+      setInviteActionInFlightId(null);
+    }
+  }
+
+  async function handleStartCurrentLobby() {
+    if (!resolvedBootstrap.matchId) {
+      setErrorMessage("match_id nao carregado.");
+      return;
+    }
+
+    if (!resolvedBootstrap.playerId) {
+      setErrorMessage("player_id resolvido nao disponivel para iniciar o lobby.");
+      return;
+    }
+
+    setIsStartingCurrentLobby(true);
+    setErrorMessage(null);
+    setSessionActionMessage(null);
+
+    try {
+      await startMatchFromLobby({
+        matchId: resolvedBootstrap.matchId,
+        hostPlayerId: resolvedBootstrap.playerId,
+      });
+
+      await openMatchSession(resolvedBootstrap.matchId, playerIdInput.trim());
+      await handleLoadSessionLists();
+      setSessionActionMessage("Lobby iniciado com sucesso.");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Falha ao iniciar a partida a partir do lobby."
+      );
+    } finally {
+      setIsStartingCurrentLobby(false);
+    }
+  }
+
+  async function handleForfeitCurrentMatch() {
+    if (!resolvedBootstrap.matchId) {
+      setErrorMessage("match_id nao carregado.");
+      return;
+    }
+
+    if (!resolvedBootstrap.playerId) {
+      setErrorMessage("player_id resolvido nao disponivel para desistir.");
+      return;
+    }
+
+    const shouldForfeit = window.confirm(
+      "Confirma a desistência desta partida? Esta ação é persistida no backend."
+    );
+
+    if (!shouldForfeit) {
+      return;
+    }
+
+    setIsForfeitingCurrentMatch(true);
+    setErrorMessage(null);
+    setSessionActionMessage(null);
+
+    try {
+      const result = await forfeitMatch({
+        matchId: resolvedBootstrap.matchId,
+        playerId: resolvedBootstrap.playerId,
+      });
+
+      await openMatchSession(resolvedBootstrap.matchId, playerIdInput.trim());
+      await handleLoadSessionLists();
+
+      setSessionActionMessage(
+        result.status === "cancelled"
+          ? "Desistência registrada. Todos desistiram e a partida foi cancelada."
+          : "Desistência registrada com sucesso."
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Falha ao desistir da partida."
+      );
+    } finally {
+      setIsForfeitingCurrentMatch(false);
+    }
   }
 
 
@@ -976,6 +1469,193 @@ export default function HomePage() {
       </section>
 
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
+        <h2>Cenarios de validacao browser</h2>
+        <p>
+          Gera no backend os IDs reais para a rodada manual de convite, lobby, retomada e
+          desistência, e deixa tudo exposto na pagina para uso imediato.
+        </p>
+
+        <button
+          type="button"
+          onClick={handleGenerateBrowserValidationScenarios}
+          disabled={!isConfigured || isGeneratingBrowserValidationScenarios}
+          style={{
+            marginTop: 12,
+            padding: "10px 14px",
+            cursor:
+              !isConfigured || isGeneratingBrowserValidationScenarios
+                ? "not-allowed"
+                : "pointer",
+          }}
+        >
+          {isGeneratingBrowserValidationScenarios
+            ? "Gerando cenarios..."
+            : "Gerar cenarios de validacao"}
+        </button>
+
+        {browserValidationScenariosError ? (
+          <p style={{ marginTop: 12, color: "#b00020" }}>
+            <strong>Erro:</strong> {browserValidationScenariosError}
+          </p>
+        ) : null}
+
+        {browserValidationScenarios.length > 0 ? (
+          <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
+            {browserValidationScenarios.map((scenario) => (
+              <div
+                key={scenario.key}
+                data-testid={`browser-scenario-${scenario.key}`}
+                style={{
+                  display: "grid",
+                  gap: 6,
+                  padding: 12,
+                  border: "1px solid #d1d5db",
+                  borderRadius: 8,
+                }}
+              >
+                <div>
+                  <strong>{scenario.title}:</strong> {scenario.objective}
+                </div>
+                <div style={{ fontFamily: "monospace", fontSize: 13 }}>match_id: {scenario.matchId}</div>
+                <div style={{ fontFamily: "monospace", fontSize: 13 }}>host_user_id: {scenario.hostUserId}</div>
+                <div style={{ fontFamily: "monospace", fontSize: 13 }}>guest_user_id: {scenario.guestUserId}</div>
+                <div style={{ fontFamily: "monospace", fontSize: 13 }}>invite_id: {scenario.inviteId}</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+                  <button
+                    type="button"
+                    data-testid={`browser-scenario-${scenario.key}-use-host`}
+                    onClick={() => handleUseScenarioIdentity(scenario, "host")}
+                    style={{ padding: "10px 14px", cursor: "pointer" }}
+                  >
+                    Usar host
+                  </button>
+                  <button
+                    type="button"
+                    data-testid={`browser-scenario-${scenario.key}-use-guest`}
+                    onClick={() => handleUseScenarioIdentity(scenario, "guest")}
+                    style={{ padding: "10px 14px", cursor: "pointer" }}
+                  >
+                    Usar guest
+                  </button>
+                  <button
+                    type="button"
+                    data-testid={`browser-scenario-${scenario.key}-load-switcher`}
+                    onClick={() => handleApplyScenarioToSwitcher(scenario)}
+                    style={{ padding: "10px 14px", cursor: "pointer" }}
+                  >
+                    Carregar no alternador
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </section>
+
+      <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
+        <h2>Alternar host e guest</h2>
+        <p>
+          Registre uma sessao de teste uma vez e reabra a mesma partida como{" "}
+          <strong>host</strong> ou <strong>guest</strong> sem recolar UUIDs a cada etapa.
+        </p>
+
+        <div style={{ display: "grid", gap: 12 }}>
+          <label style={{ display: "grid", gap: 6 }}>
+            <span>match_id da sessao alternavel</span>
+            <input
+              value={sessionSwitchDraft.matchId}
+              onChange={(event) => handleChangeSessionSwitchDraft("matchId", event.target.value)}
+              placeholder="ex: UUID da match"
+              style={{ padding: 8 }}
+            />
+          </label>
+
+          <label style={{ display: "grid", gap: 6 }}>
+            <span>host_user_id</span>
+            <input
+              value={sessionSwitchDraft.hostUserId}
+              onChange={(event) => handleChangeSessionSwitchDraft("hostUserId", event.target.value)}
+              placeholder="ex: UUID do host"
+              style={{ padding: 8 }}
+            />
+          </label>
+
+          <label style={{ display: "grid", gap: 6 }}>
+            <span>guest_user_id</span>
+            <input
+              value={sessionSwitchDraft.guestUserId}
+              onChange={(event) => handleChangeSessionSwitchDraft("guestUserId", event.target.value)}
+              placeholder="ex: UUID do guest"
+              style={{ padding: 8 }}
+            />
+          </label>
+
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => handleCaptureCurrentSession("host")}
+              style={{ padding: "10px 14px", cursor: "pointer" }}
+            >
+              Capturar atual como host
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCaptureCurrentSession("guest")}
+              style={{ padding: "10px 14px", cursor: "pointer" }}
+            >
+              Capturar atual como guest
+            </button>
+            {quickMatchSession ? (
+              <button
+                type="button"
+                onClick={handleUseQuickMatchSessionForSwitch}
+                style={{ padding: "10px 14px", cursor: "pointer" }}
+              >
+                Usar sessao rapida
+              </button>
+            ) : null}
+          </div>
+
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => handleOpenSessionRole("host")}
+              disabled={isLoading}
+              style={{
+                padding: "10px 14px",
+                cursor: isLoading ? "not-allowed" : "pointer",
+              }}
+            >
+              Abrir como host
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenSessionRole("guest")}
+              disabled={isLoading}
+              style={{
+                padding: "10px 14px",
+                cursor: isLoading ? "not-allowed" : "pointer",
+              }}
+            >
+              Abrir como guest
+            </button>
+          </div>
+
+          {activeSessionRole ? (
+            <p style={{ margin: 0, color: "#166534" }}>
+              <strong>Papel ativo:</strong> {activeSessionRole}
+            </p>
+          ) : null}
+
+          {sessionSwitchError ? (
+            <p style={{ margin: 0, color: "#b00020" }}>
+              <strong>Erro:</strong> {sessionSwitchError}
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
         <h2>Abrir partida</h2>
 
         <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
@@ -1013,7 +1693,186 @@ export default function HomePage() {
             <strong>Erro:</strong> {errorMessage}
           </p>
         ) : null}
+
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #e5e7eb" }}>
+          <h3 style={{ marginTop: 0 }}>Partidas e convites do user_id informado</h3>
+          <p style={{ marginBottom: 12 }}>
+            Usa o mesmo <strong>user_id</strong> do campo acima para listar partidas retomaveis e
+            convites pendentes sem depender de copiar <strong>match_id</strong> manualmente.
+          </p>
+
+          <button
+            type="button"
+            onClick={handleLoadSessionLists}
+            disabled={isLoadingSessionLists}
+            style={{ padding: "10px 14px", cursor: isLoadingSessionLists ? "not-allowed" : "pointer" }}
+          >
+            {isLoadingSessionLists
+              ? "Consultando backend..."
+              : "Carregar convites e partidas retomaveis"}
+          </button>
+
+          {sessionListsError ? (
+            <p style={{ marginTop: 12, color: "#b00020" }}>
+              <strong>Erro:</strong> {sessionListsError}
+            </p>
+          ) : null}
+
+          {sessionActionMessage ? (
+            <p style={{ marginTop: 12, color: "#166534" }}>
+              <strong>Status:</strong> {sessionActionMessage}
+            </p>
+          ) : null}
+
+          {sessionListsLoaded ? (
+            <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
+              <div>
+                <h4 style={{ marginBottom: 8 }}>Partidas retomaveis</h4>
+                {resumableMatches.length === 0 ? (
+                  <p style={{ margin: 0 }}>Nenhuma partida retomavel encontrada para este user_id.</p>
+                ) : (
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {resumableMatches.map((match) => (
+                      <div
+                        key={`${match.matchId}-${match.playerId}`}
+                        style={{
+                          display: "grid",
+                          gap: 6,
+                          padding: 12,
+                          border: "1px solid #d1d5db",
+                          borderRadius: 8,
+                        }}
+                      >
+                        <div><strong>match_id:</strong> {match.matchId}</div>
+                        <div><strong>player_id:</strong> {match.playerId}</div>
+                        <div><strong>status:</strong> {match.matchStatus}</div>
+                        <div><strong>turno:</strong> {match.turnNumber}</div>
+                        <div><strong>online:</strong> {match.isOnline ? "sim" : "nao"}</div>
+                        <button
+                          type="button"
+                          onClick={() => handleResumeListedMatch(match.matchId)}
+                          disabled={isLoading}
+                          style={{
+                            width: 180,
+                            padding: "10px 14px",
+                            cursor: isLoading ? "not-allowed" : "pointer",
+                          }}
+                        >
+                          Retomar partida
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h4 style={{ marginBottom: 8 }}>Convites pendentes</h4>
+                {pendingInvites.length === 0 ? (
+                  <p style={{ margin: 0 }}>Nenhum convite pendente encontrado para este user_id.</p>
+                ) : (
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {pendingInvites.map((invite) => (
+                      <div
+                        key={invite.inviteId}
+                        style={{
+                          display: "grid",
+                          gap: 6,
+                          padding: 12,
+                          border: "1px solid #d1d5db",
+                          borderRadius: 8,
+                        }}
+                      >
+                        <div><strong>invite_id:</strong> {invite.inviteId}</div>
+                        <div><strong>match_id:</strong> {invite.matchId}</div>
+                        <div><strong>lobby:</strong> {invite.lobbyStatus}</div>
+                        <div><strong>modo:</strong> {invite.matchMode}</div>
+                        <div><strong>idioma:</strong> {invite.language}</div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+                          <button
+                            type="button"
+                            onClick={() => handleAcceptInvite(invite.inviteId)}
+                            disabled={inviteActionInFlightId === invite.inviteId || isLoading}
+                            style={{
+                              padding: "10px 14px",
+                              cursor:
+                                inviteActionInFlightId === invite.inviteId || isLoading
+                                  ? "not-allowed"
+                                  : "pointer",
+                            }}
+                          >
+                            {inviteActionInFlightId === invite.inviteId
+                              ? "Processando..."
+                              : "Aceitar convite"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeclineInvite(invite.inviteId)}
+                            disabled={inviteActionInFlightId === invite.inviteId || isLoading}
+                            style={{
+                              padding: "10px 14px",
+                              cursor:
+                                inviteActionInFlightId === invite.inviteId || isLoading
+                                  ? "not-allowed"
+                                  : "pointer",
+                            }}
+                          >
+                            {inviteActionInFlightId === invite.inviteId
+                              ? "Processando..."
+                              : "Recusar convite"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </div>
       </section>
+
+      {resolvedBootstrap.matchId ? (
+        <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
+          <h2>Ações da partida atual</h2>
+
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
+            {isWaiting && resolvedBootstrap.playerId && !resolvedBootstrap.playerContext?.has_forfeited ? (
+              <button
+                type="button"
+                onClick={handleStartCurrentLobby}
+                disabled={isStartingCurrentLobby || isLoading}
+                style={{
+                  padding: "10px 14px",
+                  cursor: isStartingCurrentLobby || isLoading ? "not-allowed" : "pointer",
+                }}
+              >
+                {isStartingCurrentLobby ? "Iniciando lobby..." : "Iniciar partida do lobby"}
+              </button>
+            ) : null}
+
+            {resolvedBootstrap.playerId && !resolvedBootstrap.playerContext?.has_forfeited && !isFinished ? (
+              <button
+                type="button"
+                onClick={handleForfeitCurrentMatch}
+                disabled={isForfeitingCurrentMatch || isLoading}
+                style={{
+                  padding: "10px 14px",
+                  cursor: isForfeitingCurrentMatch || isLoading ? "not-allowed" : "pointer",
+                }}
+              >
+                {isForfeitingCurrentMatch ? "Registrando desistência..." : "Desistir da partida"}
+              </button>
+            ) : null}
+          </div>
+
+          {resolvedBootstrap.playerContext?.has_forfeited ? (
+            <p style={{ marginTop: 12, color: "#92400e" }}>
+              <strong>Status do jogador:</strong> esta sessao ja consta como desistente nesta partida.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <GamePlayScreen
         stateLabel={stateLabel}
@@ -1144,9 +2003,15 @@ export default function HomePage() {
 
       {isFinished ? (
         <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-          <h2>Partida encerrada</h2>
-          <p>Esta partida já foi concluída.</p>
-          <p><strong>Vencedor:</strong> {resolvedBootstrap.winnerPlayerId || "(não disponível)"}</p>
+          <h2>{isCancelled ? "Partida cancelada" : "Partida encerrada"}</h2>
+          <p>
+            {isCancelled
+              ? "Esta partida foi cancelada, incluindo o caso de desistência total."
+              : "Esta partida já foi concluída."}
+          </p>
+          {!isCancelled ? (
+            <p><strong>Vencedor:</strong> {resolvedBootstrap.winnerPlayerId || "(não disponível)"}</p>
+          ) : null}
           <p><strong>Encerrada em:</strong> {resolvedBootstrap.finishedAt || "(não disponível)"}</p>
         </section>
       ) : null}

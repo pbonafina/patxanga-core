@@ -44,6 +44,24 @@ lsof -nP -iTCP:3001 -sTCP:LISTEN
 curl -I http://localhost:3001
 ```
 
+### 4.1 Validacao automatizada opcional
+
+Quando o objetivo for validar fluxos operacionais objetivos da pagina de teste,
+Playwright pode ser usado como evidência de validacao de browser em ambiente
+isolado.
+
+Comando:
+
+```bash
+cd ~/patxanga-bootstrap/patxanga-core/frontend
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+```
+
+Regras:
+- a automacao sobe uma instancia isolada do frontend em `http://127.0.0.1:3101`
+- essa execucao nao deve substituir revisao visual humana quando o marco depender de julgamento visual fino
+- quando o fluxo validado for objetivo e totalmente automatizado, o resultado do Playwright pode compor a validacao operacional registrada
+
 ## 5. Registro da rodada
 
 Toda rodada deve registrar:
@@ -73,9 +91,12 @@ Depois fazer hard refresh:
 ### 6.2 Carregar a partida
 
 Na UI:
+- se a pagina expuser a secao `Cenarios de validacao browser`, usar `Gerar cenarios de validacao` para obter `match_id`, `host_user_id` e `guest_user_id` reais sem SQL manual
+- usar `Usar host` / `Usar guest` para preencher os campos principais rapidamente
 - preencher `match_id`
 - preencher `user_id`
 - carregar/bootstrap da partida
+- se a pagina expuser a secao `Alternar host e guest`, preencher `match_id`, `host_user_id` e `guest_user_id` uma unica vez e usar `Abrir como host` / `Abrir como guest` para alternar durante a rodada
 
 ### 6.3 Validar bootstrap
 
