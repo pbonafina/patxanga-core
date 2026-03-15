@@ -16,22 +16,26 @@ e orienta a continuidade da frente principal.
 ## 2. Estado local verificado
 
 - branch atual: `develop`
-- HEAD verificado: `13fa8228eda65810de93a57aaba2855942b02977`
+- marco de versionamento que introduziu esta especificacao: `978c27c`
 - upstream: `origin/develop`
-- distancia do upstream: `ahead 5`
-- commits locais relevantes acima de `origin/develop`:
+- status remoto apos o versionamento desta etapa: `develop` alinhado com `origin/develop`
+- commits recentes mais relevantes desta frente:
+  - `978c27c` Atualiza kit de continuidade com especificacao do estado atual
   - `13fa822` Tighten local ignore rules
   - `9fa27ce` Implement local rack slot associations
   - `0722828` Add SQL regression test suites
   - `372d0e7` Add operational lobby invite baseline
   - `d584091` Add browser validation scenarios and Playwright coverage
 - working tree verificado nesta leitura:
+  - `M docs/18-room-baton-package-current.md`
   - `?? docs/15-pacote-final-colagem-v1.2-ultra-blindado.md`
   - `?? generate-continuity-package.sh`
 
 Regra de interpretacao:
 - o estado local acima prevalece sobre memoria, conversa e pacote antigo
 - os dois arquivos untracked acima nao devem ser assumidos como parte da frente ativa sem triagem explicita
+- `docs/18-room-baton-package-current.md` pode aparecer modificado localmente apos refresh,
+  porque ele incorpora `git status`, `git log` e trechos do log operacional
 
 ## 3. Frente principal efetivamente entregue ate aqui
 
@@ -126,7 +130,8 @@ Validacoes confirmadas antes deste refresh documental:
 
 Leitura correta deste ponto:
 - a baseline funcional estava verde no `HEAD 13fa822`
-- esta rodada atual e documental/processual; ela nao alterou runtime antes do refresh do pacote
+- a formalizacao documental desta etapa foi versionada em `978c27c`
+- o refresh posterior do pacote `current` e local, para refletir o estado mais recente de continuidade
 
 ## 5. O que ainda nao esta fechado
 
@@ -169,13 +174,40 @@ Os arquivos abaixo continuam fora do baseline confirmado:
 
 Sem triagem explicita, esses itens devem ser tratados como ambiguos.
 
-### 5.5 Versionamento remoto ainda nao foi concluido
+### 5.5 Versionamento remoto principal ja foi concluido
 
-Os 5 commits locais acima ainda nao foram empurrados para `origin/develop`.
+O versionamento remoto dos commits principais desta frente ja foi concluido.
 
 Consequencia:
-- a continuidade fica dependente da maquina local
-- outra sala pode ler um remoto atrasado e tomar decisoes erradas
+- `origin/develop` ja contem a baseline funcional e a especificacao viva desta etapa
+- a continuidade entre salas deixa de depender apenas desta maquina local
+
+### 5.6 O pacote `current` e um artefato vivo e autorreferente
+
+O arquivo `docs/18-room-baton-package-current.md` inclui:
+
+- `git status --short --branch`
+- `git log --oneline --decorate`
+- `tail -n 60 ../project-log.md`
+
+Consequencia:
+- depois de commit, push ou novo `logstep`, um novo refresh do pacote o deixa
+  modificado localmente outra vez
+- isso e esperado e nao deve ser confundido automaticamente com trabalho funcional pendente
+
+Regra pratica:
+- tratar o pacote `current` como artefato vivo de retomada local
+- tratar os commits pushados e esta especificacao como baseline estavel versionado
+
+### 5.7 O `logstep.sh` precisa rodar no diretorio pai
+
+O script `logstep.sh` grava em `project-log.md` relativo ao diretório corrente.
+
+Consequencia:
+- para atualizar o log operacional oficial em `~/patxanga-bootstrap/project-log.md`,
+  o comando deve ser executado a partir de `~/patxanga-bootstrap`
+- rodar o script a partir do root do repo cria ou atualiza um `project-log.md`
+  local no repositório, que nao e o log operacional oficial
 
 ## 6. Proximos passos recomendados
 
@@ -185,9 +217,9 @@ Sequencia recomendada:
 
 1. triar os dois arquivos untracked
 2. manter apenas o que for realmente baseline ou trabalho deliberado
-3. versionar o refresh documental de continuidade
-4. empurrar os commits pendentes para `origin/develop`
-5. registrar `logstep` objetivo para o novo marco
+3. usar esta especificacao e os commits pushados como baseline estavel
+4. regenerar o pacote `current` sempre que o estado real mudar de forma relevante
+5. garantir que o `logstep` seja executado no diretorio pai correto
 
 Resultado esperado:
 - retomada segura em outra sala sem depender da memoria desta conversa
@@ -233,7 +265,7 @@ Ao retomar esta frente em outra sala:
 2. escolher modo de atuacao
 3. validar `git status --short --branch`
 4. validar `git log --oneline --decorate -5`
-5. confirmar se o remoto ja recebeu os 5 commits locais
+5. confirmar que `origin/develop` contem `978c27c`
 6. usar este documento para decidir a proxima frente
 
 ## 8. Comandos de validacao recomendados
@@ -264,7 +296,7 @@ zsh scripts/run-sql-test-suite.sh all
 ## 9. Frase curta de continuidade recomendada
 
 Retomar pela especificacao atual de desenvolvimento,
-confirmar se os 5 commits locais ja foram pushados,
+confirmar que `origin/develop` ja contem `978c27c`,
 triar os 2 untracked ambiguos
 e seguir para a decisao arquitetural sobre transformar
 as slot associations em contrato oficial de composicao de jogada.
