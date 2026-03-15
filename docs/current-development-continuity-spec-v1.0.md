@@ -13,7 +13,30 @@ Este documento nao substitui contratos, migrations, suite SQL
 nem o pacote de bastao. Ele resume o estado atual verificado
 e orienta a continuidade da frente principal.
 
-## 2. Estado local verificado
+## 2. Matriz objetiva de avanco
+
+Percentual global estimado nesta leitura: `75%`
+
+Regra de leitura:
+- este percentual nao mede "linhas prontas"
+- ele mede proximidade de uma baseline de produto coerente,
+  validada e segura para continuidade
+- o percentual global e ponderado pela importancia de cada frente,
+  nao por simples media aritmetica
+
+| Frente | Avanco estimado | Status atual | Falta para considerar maduro |
+| --- | --- | --- | --- |
+| Engine backend server-authoritative | 90% | Core congelado e validado com match lifecycle, submit, pending_vote, pass, exchange e endgame | Tie-break mais sofisticado e qualquer endurecimento final de cobertura que surgir do produto |
+| Fluxos operacionais lobby/convites/retomada/desistencia | 85% | Baseline operacional real implementada e validada | Mais validacao de produto na UI final e possivel refino de ergonomia |
+| Primeira tela jogavel / gameplay frontend | 70% | Rack, preview, wildcard, slots permanentes e composicao oficial por slots ja estao entregues | Consolidar submit real por slots, decidir convergencia do fluxo oficial e refinar UX |
+| Automacao e regressao | 80% | Build verde, Playwright verde e suite SQL reutilizavel verde | Cobrir submit real mais rico, recomposicao, pending_vote e regressao do rack apos jogadas reais |
+| Continuidade operacional e rastreabilidade | 85% | Kit de continuidade, processo de bastao, logstep e baseline documental estao fortes | Triar os 2 untracked ambiguos e manter o pacote `current` sempre refreshado nos marcos certos |
+
+Leitura executiva:
+- se a referencia for "nucleo tecnico jogavel localmente", o projeto esta mais perto de `80%`
+- se a referencia for "produto consolidado, previsivel e com baixo atrito de continuidade", o numero mais honesto hoje e `75%`
+
+## 3. Estado local verificado
 
 - branch atual: `develop`
 - upstream: `origin/develop`
@@ -34,9 +57,9 @@ Regra de interpretacao:
 - `docs/18-room-baton-package-current.md` pode aparecer modificado localmente apos refresh,
   porque ele incorpora `git status`, `git log` e trechos do log operacional
 
-## 3. Frente principal efetivamente entregue ate aqui
+## 4. Frente principal efetivamente entregue ate aqui
 
-### 3.1 Baseline operacional de lobby, convites, retomada e desistencia
+### 4.1 Baseline operacional de lobby, convites, retomada e desistencia
 
 Ja existe baseline operacional coerente entre frontend, backend e docs para:
 
@@ -56,7 +79,7 @@ Artefatos principais:
 - `supabase/migrations/20260313103446_12_presence_resume_forfeit.sql`
 - `supabase/migrations/20260313104105_13_frontend_entrypoints.sql`
 
-### 3.2 Validacao automatizada de browser
+### 4.2 Validacao automatizada de browser
 
 A pagina de teste ja consegue:
 
@@ -70,7 +93,7 @@ Artefatos principais:
 - `frontend/tests/browser-validation.spec.ts`
 - `docs/frontend-browser-validation-procedure-v1.0.md`
 
-### 3.3 Regressao SQL reutilizavel
+### 4.3 Regressao SQL reutilizavel
 
 Ja existe runner reutilizavel e suites agrupadas para cobertura operacional:
 
@@ -97,7 +120,7 @@ Artefatos principais:
 - `sql/tests/test_submit_move_pending_vote_accept.sql`
 - `sql/tests/test_submit_move_pending_vote_reject.sql`
 
-### 3.4 Primeira tela jogavel e composicao local do rack
+### 4.4 Primeira tela jogavel e composicao local do rack
 
 A tela jogavel atual ja possui:
 
@@ -118,7 +141,7 @@ Artefatos principais:
 - `docs/frontend-rack-composition-ux-v1.0.md`
 - `docs/frontend-rack-composition-implementation-plan-v1.0.md`
 
-## 4. Ultima validacao confirmada
+## 5. Ultima validacao confirmada
 
 Validacoes confirmadas antes deste refresh documental:
 
@@ -133,9 +156,9 @@ Leitura correta deste ponto:
 - a formalizacao documental e contractual desta etapa deve ser confirmada no `git log`
 - o refresh posterior do pacote `current` e local, para refletir o estado mais recente de continuidade
 
-## 5. O que ainda nao esta fechado
+## 6. O que ainda nao esta fechado
 
-### 5.1 O contrato oficial por slots ja existe, mas ainda precisa consolidacao
+### 6.1 O contrato oficial por slots ja existe, mas ainda precisa consolidacao
 
 A associacao entre slot, peca real e casa do tabuleiro
 ja foi promovida a contrato oficial de composicao no frontend.
@@ -145,7 +168,7 @@ Consequencia:
 - o proximo risco deixa de ser "promover a contrato"
   e passa a ser consolidar a UX e ampliar a cobertura de validacao
 
-### 5.2 Validacao humana visual continua util
+### 6.2 Validacao humana visual continua util
 
 O Playwright cobre fluxos objetivos e repetiveis.
 Mesmo assim, ainda vale uma rodada humana em `http://localhost:3001`
@@ -156,7 +179,7 @@ quando o foco for:
 - coerencia visual da composicao do rack
 - transicoes que dependem de julgamento humano
 
-### 5.3 Continuidade operacional ainda precisava de refresh
+### 6.3 Continuidade operacional ainda precisava de refresh
 
 Antes desta rodada, `docs/18-room-baton-package-current.md`
 estava defasado e ainda refletia `HEAD 0722828`.
@@ -165,7 +188,7 @@ Consequencia:
 - a retomada em outra sala corria risco de perder os marcos
   `9fa27ce` e `13fa822`
 
-### 5.4 Ha itens locais sem triagem
+### 6.4 Ha itens locais sem triagem
 
 Os arquivos abaixo continuam fora do baseline confirmado:
 
@@ -174,7 +197,7 @@ Os arquivos abaixo continuam fora do baseline confirmado:
 
 Sem triagem explicita, esses itens devem ser tratados como ambiguos.
 
-### 5.5 Versionamento remoto principal ja foi concluido
+### 6.5 Versionamento remoto principal ja foi concluido
 
 O versionamento remoto dos commits principais desta frente ja foi concluido.
 
@@ -182,7 +205,7 @@ Consequencia:
 - `origin/develop` ja contem a baseline funcional e a especificacao viva desta etapa
 - a continuidade entre salas deixa de depender apenas desta maquina local
 
-### 5.6 O pacote `current` e um artefato vivo e autorreferente
+### 6.6 O pacote `current` e um artefato vivo e autorreferente
 
 O arquivo `docs/18-room-baton-package-current.md` inclui:
 
@@ -199,7 +222,7 @@ Regra pratica:
 - tratar o pacote `current` como artefato vivo de retomada local
 - tratar os commits pushados e esta especificacao como baseline estavel versionado
 
-### 5.7 O `logstep.sh` precisa rodar no diretorio pai
+### 6.7 O `logstep.sh` precisa rodar no diretorio pai
 
 O script `logstep.sh` grava em `project-log.md` relativo ao diretório corrente.
 
@@ -209,9 +232,9 @@ Consequencia:
 - rodar o script a partir do root do repo cria ou atualiza um `project-log.md`
   local no repositório, que nao e o log operacional oficial
 
-## 6. Proximos passos recomendados
+## 7. Proximos passos recomendados
 
-### 6.1 Prioridade imediata: fechar continuidade operacional
+### 7.1 Prioridade imediata: fechar continuidade operacional
 
 Sequencia recomendada:
 
@@ -224,7 +247,7 @@ Sequencia recomendada:
 Resultado esperado:
 - retomada segura em outra sala sem depender da memoria desta conversa
 
-### 6.2 Proxima frente funcional: consolidar a composicao oficial por slots
+### 7.2 Proxima frente funcional: consolidar a composicao oficial por slots
 
 Sequencia recomendada:
 
@@ -235,7 +258,7 @@ Sequencia recomendada:
 4. ampliar Playwright para cobrir recomposicao e pending_vote nessa superficie
 5. manter docs de UX, RPC e validacao sincronizados
 
-### 6.3 Consolidar a primeira tela jogavel como baseline de produto
+### 7.3 Consolidar a primeira tela jogavel como baseline de produto
 
 Depois da etapa acima, a frente mais produtiva e:
 
@@ -244,7 +267,7 @@ Depois da etapa acima, a frente mais produtiva e:
 3. eliminar controles temporarios que nao agreguem ao fluxo real
 4. manter apenas ferramentas operacionais que acelerem validacao e debug
 
-### 6.4 Expandir cobertura automatizada com foco no fluxo jogavel
+### 7.4 Expandir cobertura automatizada com foco no fluxo jogavel
 
 Coberturas mais valiosas a seguir:
 
@@ -253,7 +276,7 @@ Coberturas mais valiosas a seguir:
 3. estados de pending vote e resolucao
 4. regressao do rack apos acoes de partida real
 
-## 7. Ordem segura de retomada a partir daqui
+## 8. Ordem segura de retomada a partir daqui
 
 Ao retomar esta frente em outra sala:
 
@@ -264,7 +287,7 @@ Ao retomar esta frente em outra sala:
 5. confirmar que `origin/develop` contem os commits mais recentes desta frente
 6. usar este documento para decidir a proxima frente
 
-## 8. Comandos de validacao recomendados
+## 9. Comandos de validacao recomendados
 
 ### Estado local
 
@@ -289,7 +312,7 @@ supabase db reset
 zsh scripts/run-sql-test-suite.sh all
 ```
 
-## 9. Frase curta de continuidade recomendada
+## 10. Frase curta de continuidade recomendada
 
 Retomar pela especificacao atual de desenvolvimento,
 confirmar que `origin/develop` ja contem os commits normativos mais recentes,
