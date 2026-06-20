@@ -1,7 +1,7 @@
 # PATXANGA — Current Development Continuity Spec
 Version: 1.0
 Status: ACTIVE WORKING BASELINE
-Verified at: 2026-03-15
+Verified at: 2026-06-20
 
 ## 1. Objetivo
 
@@ -12,6 +12,161 @@ para garantir retomada segura com produtividade.
 Este documento nao substitui contratos, migrations, suite SQL
 nem o pacote de bastao. Ele resume o estado atual verificado
 e orienta a continuidade da frente principal.
+
+## 1.1 Atualizacao operacional de continuidade - 2026-06-20
+
+Esta secao registra o estado mais recente desta sala e prevalece sobre
+trechos antigos deste documento quando houver divergencia operacional.
+
+Estado verificado nesta rodada:
+
+- branch atual local: `upgrade/next16-audit`
+- foco imediato: iniciar a frente de bots de teste e simulacao
+- objetivo da frente: criar bots utilitarios para QA, simulacoes e regressao,
+  antes de implementar humano contra bot como produto
+- roadmap consolidado criado em `docs/implementation-roadmap.md`
+- manual inicial de jogador criado em `docs/como-jogar-patxanga.md`
+- contrato inicial de bot criado em `docs/07-bot-engine.md`
+- runner inicial de simulacao criado em `scripts/run-bot-simulation.sh`
+- cenario smoke criado em `sql/simulations/bot_simulation_smoke.sql`
+- cenario pending_vote criado em `sql/simulations/bot_simulation_pending_vote.sql`
+- cenario exchange_tiles criado em `sql/simulations/bot_simulation_exchange_tiles.sql`
+- cenario empty_rack_end criado em `sql/simulations/bot_simulation_empty_rack_end.sql`
+- cenario all_passed_end criado em `sql/simulations/bot_simulation_all_passed_end.sql`
+- cenario invalid_move_expected_error criado em
+  `sql/simulations/bot_simulation_invalid_move_expected_error.sql`
+- persistencia de jogada `place_word` aceita corrigida em `submit_patxanga_move(...)`
+- migration de correcao criada em
+  `supabase/migrations/20260620210000_20_persist_successful_place_word_moves.sql`
+- validacao inicial e regressiva confirmada: `zsh scripts/run-bot-simulation.sh all`
+
+Leitura correta:
+
+- bot de teste/simulacao nao e ainda bot de produto
+- a primeira meta e gerar cenarios deterministas e reproduziveis
+- os bots devem reutilizar RPCs oficiais e nao criar estado paralelo
+- humano contra bot continua posterior, depois da experiencia humano contra humano
+  e depois de uma base minima de simulacao
+
+Comando atual da frente:
+
+```bash
+zsh scripts/run-bot-simulation.sh all
+```
+
+Validacao recomendada apos mudancas nesta frente:
+
+```bash
+zsh scripts/run-bot-simulation.sh all
+zsh scripts/run-sql-test-suite.sh all
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+```
+
+Observacao operacional:
+
+- esta rodada tambem inclui alteracoes locais anteriores da branch de upgrade
+  para Next 16 / React 19, ainda sem commit nesta leitura
+- antes de versionar, separar conscientemente o que pertence ao upgrade,
+  documentacao e bots de simulacao
+
+Validacao confirmada nesta rodada:
+
+- `zsh scripts/run-bot-simulation.sh smoke`
+- `zsh scripts/run-bot-simulation.sh sql/simulations/bot_simulation_pending_vote.sql`
+- `zsh scripts/run-bot-simulation.sh sql/simulations/bot_simulation_exchange_tiles.sql`
+- `zsh scripts/run-bot-simulation.sh sql/simulations/bot_simulation_empty_rack_end.sql`
+- `zsh scripts/run-bot-simulation.sh sql/simulations/bot_simulation_all_passed_end.sql`
+- `zsh scripts/run-bot-simulation.sh sql/simulations/bot_simulation_invalid_move_expected_error.sql`
+- `zsh scripts/run-bot-simulation.sh all`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `cd frontend && npm run lint`
+- `cd frontend && npm run build`
+- `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+
+Nota de execucao:
+
+- o Playwright pode falhar se o dev server permanente estiver rodando em
+  `localhost:3001`, porque Next 16 usa o mesmo `.next`
+- parar temporariamente o dev server antes do E2E resolveu a disputa
+
+Correcao tecnica confirmada pela primeira simulacao:
+
+- a simulacao encontrou que o ramo `success` de `submit_patxanga_move(...)`
+  atualizava board, score, rack, bag, turno e replay `move_submitted`, mas nao
+  persistia uma linha `place_word` aceita em `patxanga_moves`
+- o ramo foi corrigido para gravar `patxanga_moves.status = 'accepted'`,
+  retornar `move_id` e incluir `move_id` no replay `move_submitted`
+- `sql/tests/test_submit_move_auto.sql` cobre a persistencia do `place_word`
+  aceito
+- `sql/simulations/bot_simulation_smoke.sql` tambem valida `move_id`,
+  `place_word` aceito, passe aceito e replay
+
+Segundo cenario de bot confirmado:
+
+- `sql/simulations/bot_simulation_pending_vote.sql` cobre dois matches
+  deterministicos
+- rejeicao: palavra `TS` entra em `pending_vote`, voto rejeita, partida volta
+  para `active`, board segue intacto e turno retorna ao autor
+- aceitacao: palavra `TS` entra em `pending_vote`, voto aceita, partida volta
+  para `active`, board recebe `T` e `S`, score da jogada fica 6 e palavra e
+  registrada em `patxanga_match_accepted_words`
+
+Terceiro cenario de bot confirmado:
+
+- `sql/simulations/bot_simulation_exchange_tiles.sql` cobre troca de duas
+  pecas por bot
+- valida retorno `success`, `move_id`, `exchanged_count = 2`, avanco para o
+  outro bot, `turn_number = 2`, bag preservado, rack final com 7 pecas,
+  remocao das pecas trocadas do rack, move aceito em `patxanga_moves`,
+  replay `tiles_exchanged` e replay `turn_changed`
+
+Quarto cenario de bot confirmado:
+
+- `sql/simulations/bot_simulation_empty_rack_end.sql` cobre fim de partida por
+  rack vazio
+- forca bag vazia, bot atual com rack `DA` e outro bot com 4 pontos restantes
+- valida `submit_patxanga_move(...)` com `end_state.finished = true`,
+  `ended_by_empty_rack = true`, `ended_by_all_passed = false`,
+  `total_penalties = 4`, vencedor igual ao bot que esvaziou o rack,
+  match `finished`, `finished_at`, score final 10 contra -4, rack vazio,
+  jogada `DA` aceita e replay `match_finished`
+
+Quinto cenario de bot confirmado:
+
+- `sql/simulations/bot_simulation_all_passed_end.sql` cobre fim de partida por
+  todos passarem
+- forca bag vazia, dois bots com racks nao vazios, primeiro bot com score 5 e
+  rack de 1 ponto, segundo bot com score 0 e rack de 2 pontos
+- valida primeiro passe sem encerrar (`reason = no_end_condition_met`), segundo
+  passe com `end_state.finished = true`, `ended_by_all_passed = true`,
+  `ended_by_empty_rack = false`, `empty_rack_player_id = null`,
+  `total_penalties = 3`, vencedor esperado, match `finished`, `finished_at`,
+  scores finais 4 contra -2, dois moves de passe aceitos e replay
+  `match_finished`
+
+Sexto cenario de bot confirmado:
+
+- `sql/simulations/bot_simulation_invalid_move_expected_error.sql` cobre falhas
+  esperadas sem mutacao de estado
+- caso 1: bot tenta usar peca inexistente no rack e recebe erro
+  `does not belong to player rack`
+- caso 2: bot fora do turno tenta submeter jogada e recebe erro
+  `Not your turn`
+- em ambos os casos valida que match, board, bag, rack, turno, status, moves e
+  replay permanecem inalterados
+- `scripts/run-bot-simulation.sh all` executa seis cenarios: smoke,
+  pending_vote, exchange_tiles, empty_rack_end, all_passed_end e
+  invalid_move_expected_error
+
+Observacao tecnica:
+
+- `patxanga_players.bot_profile` aceita apenas `aggressive`, `balanced` e
+  `defensive`
+- politicas de simulacao como forcar pending_vote, aceitar ou rejeitar voto
+  ficam no SQL de cenario, nao no valor persistido de `bot_profile`
 
 ## 2. Matriz objetiva de avanco
 

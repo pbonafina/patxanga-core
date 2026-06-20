@@ -121,7 +121,11 @@ OUT="docs/18-room-baton-package-current.md"
   echo
   echo "### tail -n 60 ../project-log.md"
   echo '```'
-  tail -n 60 ../project-log.md
+  if [ -f ../project-log.md ]; then
+    tail -n 60 ../project-log.md
+  else
+    echo "../project-log.md nao encontrado neste clone local."
+  fi
   echo '```'
   echo
 
@@ -260,8 +264,19 @@ OUT="docs/18-room-baton-package-current.md"
     docs/frontend-contract-rpcs-v1.0.md \
     docs/frontend-rack-composition-ux-v1.0.md \
     docs/frontend-rack-composition-implementation-plan-v1.0.md \
+    docs/como-jogar-patxanga.md \
+    docs/implementation-roadmap.md \
+    docs/07-bot-engine.md \
     docs/current-development-continuity-spec-v1.0.md \
-    docs/18-room-baton-process-v1.0.md
+    docs/18-room-baton-process-v1.0.md \
+    scripts/run-bot-simulation.sh \
+    sql/simulations/bot_simulation_smoke.sql \
+    sql/simulations/bot_simulation_pending_vote.sql \
+    sql/simulations/bot_simulation_exchange_tiles.sql \
+    sql/simulations/bot_simulation_empty_rack_end.sql \
+    sql/simulations/bot_simulation_all_passed_end.sql \
+    sql/simulations/bot_simulation_invalid_move_expected_error.sql \
+    supabase/migrations/20260620210000_20_persist_successful_place_word_moves.sql
   do
     if [ -f "$file" ]; then
       echo "## FILE: $file"
