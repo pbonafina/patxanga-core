@@ -12,7 +12,6 @@ import {
 } from "../lib/backend/matchOperations";
 import { getSupabaseEnv } from "../lib/supabase/env";
 import type { MatchBootstrap, PendingInvite, ResumableMatch } from "../types/match";
-import { VotingSection } from "../components/VotingSection";
 import { BoardSection } from "../components/BoardSection";
 import { RackSection } from "../components/RackSection";
 import { PlayersSection } from "../components/PlayersSection";
