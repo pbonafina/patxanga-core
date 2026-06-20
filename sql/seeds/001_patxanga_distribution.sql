@@ -102,6 +102,22 @@ values
 ('pt-BR','SKIP',4,0,true,'skip_turn'),     -- Pular turno
 ('pt-BR','PR',1,0,true,'patxanga_real');   -- Patxanga Real
 
+-- =============================
+-- BASELINE PT-PT
+-- =============================
+
+insert into patxanga_letter_distribution
+(language, letter, quantity, points, is_special, special_type)
+select
+    'pt-PT',
+    letter,
+    quantity,
+    points,
+    is_special,
+    special_type
+from patxanga_letter_distribution
+where language = 'pt-BR';
+
 -- ============================================================
 -- END OF SEED
 -- ============================================================

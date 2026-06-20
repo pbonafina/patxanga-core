@@ -277,8 +277,10 @@ trap 'rm -f "$TMP_OUT"' EXIT
     sql/rpc/preview_move.sql \
     sql/rpc/submit_move.sql \
     sql/rpc/validate_word.sql \
+    sql/seeds/001_patxanga_distribution.sql \
     sql/seeds/002_dictionary_test_seed.sql \
     sql/seeds/003_dictionary_pt_br_core_seed.sql \
+    sql/seeds/004_dictionary_pt_pt_core_seed.sql \
     sql/tests/test_dictionary_contract.sql \
     sql/simulations/bot_simulation_smoke.sql \
     sql/simulations/bot_simulation_pending_vote.sql \
@@ -290,7 +292,8 @@ trap 'rm -f "$TMP_OUT"' EXIT
     supabase/migrations/20260620210000_20_persist_successful_place_word_moves.sql \
     supabase/migrations/20260620213000_21_dictionary_contract_language.sql \
     supabase/migrations/20260620213500_22_dictionary_pt_br_core_seed.sql \
-    supabase/migrations/20260620215000_23_match_language_dictionary_validation.sql
+    supabase/migrations/20260620215000_23_match_language_dictionary_validation.sql \
+    supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql
   do
     if [ -f "$file" ]; then
       echo "## FILE: $file"

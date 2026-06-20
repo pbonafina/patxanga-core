@@ -340,16 +340,24 @@ Estado atual:
 - seed minimo de teste preservado em `sql/seeds/002_dictionary_test_seed.sql`
 - seed pequeno de palavras reais PT-BR criado em
   `sql/seeds/003_dictionary_pt_br_core_seed.sql`
+- baseline minima `pt-PT` criada com distribuicao inicial copiada de `pt-BR`
+  em `sql/seeds/001_patxanga_distribution.sql`
+- seed pequeno de palavras reais PT-PT criado em
+  `sql/seeds/004_dictionary_pt_pt_core_seed.sql`
 - teste `sql/tests/test_dictionary_contract.sql` cobre normalizacao, acento,
   idioma, palavra inativa, seed real, `preview_move` e caminho completo de
   `submit_move`
+- o mesmo teste confirma que uma partida real `pt-PT` inicia e aceita `CASA`
+  como palavra reconhecida, sem cair em votacao
 
 Proximos passos:
 
 - escolher fonte licenciada para dicionario amplo
 - criar pipeline de importacao auditavel, sem editar manualmente dump gigante
 - decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
-- preparar seed/fonte para `pt-PT` antes de permitir partidas reais nesse idioma
+- substituir a baseline minima `pt-PT` por fonte ampla licenciada e auditada
+- auditar a distribuicao de pecas `pt-PT`; por enquanto ela e uma baseline
+  operacional derivada de `pt-BR`
 
 Validacao minima:
 
