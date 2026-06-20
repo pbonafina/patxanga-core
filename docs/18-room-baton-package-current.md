@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-20 23:23:14
+Generated at: 2026-06-20 23:23:49
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -94,7 +94,6 @@ Resposta obrigatoria da IA apos a frase de retomada:
 ### git status --short --branch
 ```
 ## upgrade/next16-audit
- M docs/18-room-baton-package-current.md
 ```
 
 ### git remote -v
@@ -105,7 +104,9 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-cab289b (HEAD -> upgrade/next16-audit) docs: consolidate gameplay and continuity plans
+d1ee0c2 (HEAD -> upgrade/next16-audit) fix(docs): generate baton package atomically
+4d8bff9 docs: refresh room baton package
+cab289b docs: consolidate gameplay and continuity plans
 ea03c80 test(bots): add deterministic simulation suite
 502fe8f fix(sql): persist accepted place word moves
 4436c28 chore(frontend): upgrade next and react baseline
@@ -118,8 +119,6 @@ b78659e Estabiliza especificacao de continuidade pos-push
 0722828 Add SQL regression test suites
 372d0e7 Add operational lobby invite baseline
 d584091 Add browser validation scenarios and Playwright coverage
-9e0feae Formalize same-room resume continuity protocol
-54da7e4 Implement rack UX and backend move preview
 ```
 
 ### tail -n 60 ../project-log.md
