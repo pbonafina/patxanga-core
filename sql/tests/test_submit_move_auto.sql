@@ -14,6 +14,7 @@ declare
     v_tile1_id uuid := gen_random_uuid();
     v_tile2_id uuid := gen_random_uuid();
     v_submit_result jsonb;
+    v_accepted_move_count integer;
 begin
 
     -- 1. Create match
@@ -135,6 +136,30 @@ begin
     );
 
     raise notice 'Submit result: %', v_submit_result;
+
+    if v_submit_result->>'status' <> 'success' then
+        raise exception 'Expected success status, got %', v_submit_result;
+    end if;
+
+    if v_submit_result->>'move_id' is null then
+        raise exception 'Expected accepted move_id in success result, got %', v_submit_result;
+    end if;
+
+    select count(*)
+    into v_accepted_move_count
+    from patxanga_moves
+    where match_id = v_match_id
+      and player_id = v_current_player_id
+      and move_type = 'place_word'
+      and status = 'accepted'
+      and main_word = 'DA'
+      and score_total = 6;
+
+    if v_accepted_move_count <> 1 then
+        raise exception 'Expected exactly 1 accepted place_word move, got %', v_accepted_move_count;
+    end if;
+
+    raise notice 'Accepted place_word move count: %', v_accepted_move_count;
 
     raise notice 'Board state: %',
     (
