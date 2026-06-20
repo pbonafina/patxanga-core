@@ -335,19 +335,21 @@ Estado atual:
 - chave primaria composta por `language + word_normalized`
 - `validate_word(p_word, p_language default 'pt-BR')` valida idioma,
   normalizacao e apenas palavras ativas
+- `submit_patxanga_move` e `preview_patxanga_move` validam palavras usando
+  explicitamente o `language` persistido na partida
 - seed minimo de teste preservado em `sql/seeds/002_dictionary_test_seed.sql`
 - seed pequeno de palavras reais PT-BR criado em
   `sql/seeds/003_dictionary_pt_br_core_seed.sql`
 - teste `sql/tests/test_dictionary_contract.sql` cobre normalizacao, acento,
-  idioma, palavra inativa, seed real e caminho completo de `submit_move`
+  idioma, palavra inativa, seed real, `preview_move` e caminho completo de
+  `submit_move`
 
 Proximos passos:
 
 - escolher fonte licenciada para dicionario amplo
 - criar pipeline de importacao auditavel, sem editar manualmente dump gigante
 - decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
-- fazer `submit_move` e `preview_move` consumirem explicitamente o idioma da
-  partida se forem abertos idiomas alem de `pt-BR`
+- preparar seed/fonte para `pt-PT` antes de permitir partidas reais nesse idioma
 
 Validacao minima:
 
