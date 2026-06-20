@@ -267,6 +267,7 @@ trap 'rm -f "$TMP_OUT"' EXIT
     docs/frontend-rack-composition-ux-v1.0.md \
     docs/frontend-rack-composition-implementation-plan-v1.0.md \
     docs/como-jogar-patxanga.md \
+    docs/dictionary-import-pipeline-v1.0.md \
     docs/implementation-roadmap.md \
     docs/07-bot-engine.md \
     docs/current-development-continuity-spec-v1.0.md \
@@ -274,6 +275,8 @@ trap 'rm -f "$TMP_OUT"' EXIT
     scripts/run-bot-simulation.sh \
     scripts/run-sql-test-suite.sh \
     sql/migrations/002_dictionary.sql \
+    sql/migrations/003_dictionary_import_pipeline.sql \
+    sql/rpc/import_dictionary_entries.sql \
     sql/rpc/preview_move.sql \
     sql/rpc/submit_move.sql \
     sql/rpc/validate_word.sql \
@@ -282,6 +285,7 @@ trap 'rm -f "$TMP_OUT"' EXIT
     sql/seeds/003_dictionary_pt_br_core_seed.sql \
     sql/seeds/004_dictionary_pt_pt_core_seed.sql \
     sql/tests/test_dictionary_contract.sql \
+    sql/tests/test_dictionary_import_pipeline.sql \
     sql/simulations/bot_simulation_smoke.sql \
     sql/simulations/bot_simulation_pending_vote.sql \
     sql/simulations/bot_simulation_exchange_tiles.sql \
@@ -293,7 +297,8 @@ trap 'rm -f "$TMP_OUT"' EXIT
     supabase/migrations/20260620213000_21_dictionary_contract_language.sql \
     supabase/migrations/20260620213500_22_dictionary_pt_br_core_seed.sql \
     supabase/migrations/20260620215000_23_match_language_dictionary_validation.sql \
-    supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql
+    supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql \
+    supabase/migrations/20260621090000_25_dictionary_import_pipeline.sql
   do
     if [ -f "$file" ]; then
       echo "## FILE: $file"

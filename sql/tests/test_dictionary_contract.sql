@@ -27,6 +27,7 @@ declare
     v_pt_pt_submit_result jsonb;
     v_submit_result jsonb;
     v_dictionary_row_count integer;
+    v_dictionary_import_column_count integer;
     v_real_seed_count integer;
     v_pt_pt_seed_count integer;
     v_accepted_move_count integer;
@@ -41,6 +42,25 @@ begin
 
     if v_dictionary_row_count <> 5 then
         raise exception 'Expected dictionary contract columns to exist, got %', v_dictionary_row_count;
+    end if;
+
+    select count(*)
+    into v_dictionary_import_column_count
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'patxanga_dictionary'
+      and column_name in (
+          'source_version',
+          'license_name',
+          'license_url',
+          'source_url',
+          'import_batch_id',
+          'imported_at'
+      );
+
+    if v_dictionary_import_column_count <> 6 then
+        raise exception 'Expected dictionary import metadata columns to exist, got %',
+            v_dictionary_import_column_count;
     end if;
 
     select count(*)

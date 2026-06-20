@@ -331,7 +331,7 @@ engine a um dicionario gigante ainda nao auditado.
 Estado atual:
 
 - `patxanga_dictionary` consolidado com `language`, `word_original`,
-  `word_normalized`, `source`, `is_active`, `created_at` e `updated_at`
+  `word_normalized`, `source`, `is_active`, metadados de importacao e timestamps
 - chave primaria composta por `language + word_normalized`
 - `validate_word(p_word, p_language default 'pt-BR')` valida idioma,
   normalizacao e apenas palavras ativas
@@ -349,11 +349,18 @@ Estado atual:
   `submit_move`
 - o mesmo teste confirma que uma partida real `pt-PT` inicia e aceita `CASA`
   como palavra reconhecida, sem cair em votacao
+- pipeline administrativa de importacao documentada em
+  `docs/dictionary-import-pipeline-v1.0.md`
+- `import_patxanga_dictionary_entries(...)` cria lote auditavel, deduplica
+  entradas normalizadas, registra fonte/licenca/versao e pode desativar
+  palavras ausentes em importacao de substituicao completa
+- `sql/tests/test_dictionary_import_pipeline.sql` cobre importacao idempotente,
+  metadados e desativacao opcional
 
 Proximos passos:
 
 - escolher fonte licenciada para dicionario amplo
-- criar pipeline de importacao auditavel, sem editar manualmente dump gigante
+- criar conversor operacional de CSV/arquivo fonte para o payload JSON da RPC
 - decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
 - substituir a baseline minima `pt-PT` por fonte ampla licenciada e auditada
 - auditar a distribuicao de pecas `pt-PT`; por enquanto ela e uma baseline
@@ -362,6 +369,7 @@ Proximos passos:
 Validacao minima:
 
 ```bash
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
 zsh scripts/run-sql-test-suite.sh all
 ```

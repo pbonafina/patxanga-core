@@ -20,9 +20,9 @@ trechos antigos deste documento quando houver divergencia operacional.
 
 Estado verificado nesta rodada:
 
-- ultima frente local registrada: `feature/pt-pt-language-baseline`
-- foco imediato: fechar baseline minima `pt-PT` para que partidas reais nesse
-  idioma possam iniciar e validar palavras seed sem cair em votacao
+- ultima frente local registrada: `feature/dictionary-import-pipeline`
+- foco imediato: fechar pipeline auditavel de importacao de dicionario amplo,
+  sem escolher ainda uma fonte real sem licenca verificada
 - frente de bots de teste e simulacao ja foi criada antes desta atualizacao e
   continua como regressao obrigatoria
 - roadmap consolidado criado em `docs/implementation-roadmap.md`
@@ -49,11 +49,16 @@ Estado verificado nesta rodada:
   `supabase/migrations/20260620215000_23_match_language_dictionary_validation.sql`
 - baseline minima `pt-PT` criada em
   `supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql`
+- pipeline auditavel de importacao de dicionario criada em
+  `supabase/migrations/20260621090000_25_dictionary_import_pipeline.sql`
+- contrato operacional documentado em `docs/dictionary-import-pipeline-v1.0.md`
 - seed fonte `pt-PT` espelhado em `sql/seeds/004_dictionary_pt_pt_core_seed.sql`
 - distribuicao fonte `pt-PT` espelhada em
   `sql/seeds/001_patxanga_distribution.sql`
 - teste de contrato de dicionario criado em
   `sql/tests/test_dictionary_contract.sql`
+- teste de importacao de dicionario criado em
+  `sql/tests/test_dictionary_import_pipeline.sql`
 - validacao inicial e regressiva confirmada: `supabase db reset`,
   `zsh scripts/run-sql-test-suite.sh all` e
   `zsh scripts/run-bot-simulation.sh all`
@@ -68,6 +73,8 @@ Leitura correta:
 - dicionario amplo deve vir depois de contrato, fonte e licenca claros
 - a baseline `pt-PT` atual e operacional e minima; nao substitui uma fonte
   ampla, licenciada e auditada
+- a pipeline aceita payload JSON auditado; conversor de CSV/arquivo fonte fica
+  como proximo passo operacional antes de importar dumps reais
 
 Comando atual da frente:
 
@@ -90,10 +97,9 @@ npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
 
 Observacao operacional:
 
-- esta rodada tambem inclui alteracoes locais anteriores da branch de upgrade
-  para Next 16 / React 19, ainda sem commit nesta leitura
-- antes de versionar, separar conscientemente o que pertence ao upgrade,
-  documentacao e bots de simulacao
+- esta rodada nao importa fonte real nem adiciona dump amplo ao repositorio
+- a pipeline nova recebe payload JSON auditado; conversor de arquivo fonte/CSV
+  fica como proximo passo operacional
 
 Validacao confirmada nesta rodada:
 
@@ -106,6 +112,7 @@ Validacao confirmada nesta rodada:
 - `zsh scripts/run-bot-simulation.sh long`
 - `zsh scripts/run-bot-simulation.sh all`
 - `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql`
 - `supabase db reset`
 - `zsh scripts/run-sql-test-suite.sh all` apos reset
 - `zsh scripts/run-bot-simulation.sh all` apos reset
@@ -234,7 +241,7 @@ Leitura executiva:
 
 ## 3. Estado local verificado
 
-- branch de implementacao desta atualizacao: `feature/pt-pt-language-baseline`
+- branch de implementacao desta atualizacao: `feature/dictionary-import-pipeline`
 - base esperada antes do merge: `develop`
 - o `git log` recente desta frente precisa refletir, no minimo:
   - baseline operacional de lobby/convites/retomada/desistencia
@@ -245,11 +252,14 @@ Leitura executiva:
   - seed real minimo `pt-BR`
   - validacao lexical usando o idioma persistido na partida
   - baseline minima `pt-PT` para distribuicao, seed e partida real
+  - pipeline auditavel de importacao de dicionario
 - working tree esperado antes do commit desta frente:
-  - alteracoes em `sql/seeds/001_patxanga_distribution.sql`
   - alteracoes em `sql/tests/test_dictionary_contract.sql`
-  - novo `sql/seeds/004_dictionary_pt_pt_core_seed.sql`
-  - novo `supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql`
+  - novo `sql/tests/test_dictionary_import_pipeline.sql`
+  - novo `sql/migrations/003_dictionary_import_pipeline.sql`
+  - novo `sql/rpc/import_dictionary_entries.sql`
+  - novo `supabase/migrations/20260621090000_25_dictionary_import_pipeline.sql`
+  - novo `docs/dictionary-import-pipeline-v1.0.md`
   - atualizacao dos documentos de continuidade e pacote de bastao
 
 Regra de interpretacao:
