@@ -106,7 +106,7 @@ begin
     for v_word in
         select value from jsonb_array_elements(v_words)
     loop
-        v_is_valid := public.validate_word(v_word->>'word');
+        v_is_valid := public.validate_word(v_word->>'word', v_match.language);
 
         if not v_is_valid then
             v_has_invalid_word := true;

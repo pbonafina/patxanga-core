@@ -44,6 +44,8 @@ Estado verificado nesta rodada:
   `supabase/migrations/20260620213000_21_dictionary_contract_language.sql`
 - seed pequeno de palavras reais PT-BR criado em
   `supabase/migrations/20260620213500_22_dictionary_pt_br_core_seed.sql`
+- validacao lexical por idioma da partida criada em
+  `supabase/migrations/20260620215000_23_match_language_dictionary_validation.sql`
 - teste de contrato de dicionario criado em
   `sql/tests/test_dictionary_contract.sql`
 - validacao inicial e regressiva confirmada: `zsh scripts/run-bot-simulation.sh all`
@@ -96,6 +98,8 @@ Validacao confirmada nesta rodada:
 - `supabase db reset`
 - `zsh scripts/run-sql-test-suite.sh all` apos reset
 - `zsh scripts/run-bot-simulation.sh all` apos reset
+- validacao especifica confirmada: `CASA` aceita em partida `pt-BR`, mas
+  exige votacao em partida marcada como `pt-PT` sem seed `pt-PT`
 - `cd frontend && npm run lint`
 - `cd frontend && npm run build`
 - `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
