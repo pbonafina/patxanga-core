@@ -17,6 +17,7 @@ typeset -a lobby_ops_tests=(
 
 typeset -a engine_regression_tests=(
   "sql/tests/test_dictionary_contract.sql"
+  "sql/tests/test_dictionary_import_pipeline.sql"
   "sql/tests/test_exchange_tiles.sql"
   "sql/tests/test_pass_turn.sql"
   "sql/tests/test_submit_move_auto.sql"

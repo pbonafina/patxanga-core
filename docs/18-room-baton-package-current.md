@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-21 00:00:23
+Generated at: 2026-06-21 00:44:10
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,14 +93,18 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## feature/pt-pt-language-baseline
+## feature/dictionary-import-pipeline
+ M docs/18-room-baton-package-current.md
  M docs/current-development-continuity-spec-v1.0.md
  M docs/implementation-roadmap.md
  M generate-room-baton-package.sh
- M sql/seeds/001_patxanga_distribution.sql
+ M scripts/run-sql-test-suite.sh
  M sql/tests/test_dictionary_contract.sql
-?? sql/seeds/004_dictionary_pt_pt_core_seed.sql
-?? supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql
+?? docs/dictionary-import-pipeline-v1.0.md
+?? sql/migrations/003_dictionary_import_pipeline.sql
+?? sql/rpc/import_dictionary_entries.sql
+?? sql/tests/test_dictionary_import_pipeline.sql
+?? supabase/migrations/20260621090000_25_dictionary_import_pipeline.sql
 ```
 
 ### git remote -v
@@ -111,7 +115,9 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-6c5d636 (HEAD -> feature/pt-pt-language-baseline, origin/develop, origin/HEAD, develop) Merge pull request #3 from pbonafina/feature/match-language-dictionary-validation
+44c1eb4 (HEAD -> feature/dictionary-import-pipeline, origin/develop, origin/HEAD, develop) Merge pull request #4 from pbonafina/feature/pt-pt-language-baseline
+a3cac88 fix: add pt-PT language baseline
+6c5d636 Merge pull request #3 from pbonafina/feature/match-language-dictionary-validation
 cbb3dd8 (origin/feature/match-language-dictionary-validation, feature/match-language-dictionary-validation) fix: validate words against match language
 51109b7 Merge pull request #2 from pbonafina/feature/bot-long-simulations
 26cc872 (origin/feature/bot-long-simulations, feature/bot-long-simulations) test: extend bot simulations and dictionary contract
@@ -124,8 +130,6 @@ ea03c80 test(bots): add deterministic simulation suite
 502fe8f fix(sql): persist accepted place word moves
 4436c28 chore(frontend): upgrade next and react baseline
 f2b9aa9 Formaliza matriz objetiva de avanco do projeto
-8eaf094 Promove composicao por slots a contrato oficial de jogada
-b78659e Estabiliza especificacao de continuidade pos-push
 ```
 
 ### tail -n 60 ../project-log.md
@@ -3389,6 +3393,115 @@ Arquivos SQL relevantes:
 - `sql/rpc/evaluate_match_end.sql`
 - `sql/rpc/forfeit_match.sql`
 
+## FILE: docs/dictionary-import-pipeline-v1.0.md
+
+# PATXANGA - Dictionary Import Pipeline
+Version: 1.0
+Status: ACTIVE CONTRACT
+
+## Objective
+
+Importar dicionarios amplos de forma auditavel, sem editar manualmente dumps
+gigantes e sem acoplar a engine a uma fonte lexical ainda nao verificada.
+
+O jogo continua consultando apenas `validate_word(p_word, p_language)`. A
+pipeline de importacao e uma camada administrativa para popular e atualizar
+`patxanga_dictionary` com metadados de fonte, versao, licenca e lote.
+
+## Fonte e licenca
+
+Antes de importar uma fonte real, registrar explicitamente:
+
+- `language`: `pt-BR` ou `pt-PT`
+- `source`: identificador interno estavel, por exemplo `pt_br_licensed_words`
+- `source_version`: versao, data ou hash do pacote de origem
+- `license_name`: nome da licenca ou contrato
+- `license_url`: URL publica da licenca, quando existir
+- `source_url`: URL publica da fonte, quando existir
+- `imported_by`: operador, script ou job que executou a importacao
+
+Nao importar fonte sem licenca clara. Na duvida, manter a palavra fora do seed
+amplo e deixar o fluxo de votacao cobrir o caso.
+
+## Entrada Canonica
+
+A RPC administrativa recebe um array JSON. Cada item deve ter:
+
+```json
+{
+  "word": "CASA",
+  "is_active": true
+}
+```
+
+Campos:
+
+- `word` ou `word_original`: palavra original como recebida da fonte
+- `is_active`: opcional, default `true`
+
+Regras:
+
+- palavras vazias sao ignoradas
+- duplicatas normalizadas no mesmo lote sao deduplicadas
+- acentos sao normalizados pela funcao `normalize_patxanga_word(...)`
+- a chave efetiva continua sendo `language + word_normalized`
+
+## Execucao
+
+Funcao administrativa. Ela deve ser executada pelo owner do banco, por
+manutencao local ou por `service_role`; a migration revoga execucao de
+`PUBLIC`, `anon` e `authenticated`.
+
+```sql
+select public.import_patxanga_dictionary_entries(
+    p_language := 'pt-BR',
+    p_source := 'pt_br_licensed_words',
+    p_license_name := 'LICENSE-NAME',
+    p_entries := '[{"word":"CASA"},{"word":"ARVORE"}]'::jsonb,
+    p_source_version := '2026-06-21',
+    p_license_url := 'https://example.test/license',
+    p_source_url := 'https://example.test/source',
+    p_imported_by := 'manual-maintenance',
+    p_metadata := '{"notes":"first audited import"}'::jsonb,
+    p_deactivate_missing := false
+);
+```
+
+`p_deactivate_missing := true` deve ser usado apenas quando o lote representar
+uma substituicao completa daquela mesma combinacao `language + source`. Nesse
+modo, palavras ativas da mesma fonte que nao aparecerem no novo lote sao
+desativadas.
+
+## Auditoria
+
+Cada execucao cria uma linha em `patxanga_dictionary_import_batches` com:
+
+- contagem total de linhas recebidas
+- contagem de linhas validas distintas
+- contagem de inseridas, atualizadas, ignoradas e desativadas
+- metadados de fonte, versao e licenca
+- `metadata` livre para hash, nome de arquivo ou observacoes operacionais
+
+Cada palavra importada recebe:
+
+- `source_version`
+- `license_name`
+- `license_url`
+- `source_url`
+- `import_batch_id`
+- `imported_at`
+
+## Validacao
+
+Validacao minima apos mudar a pipeline:
+
+```bash
+supabase db reset
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
+
 ## FILE: docs/implementation-roadmap.md
 
 # PATXANGA - ROADMAP CONSOLIDADO DE IMPLEMENTACAO
@@ -3724,7 +3837,7 @@ engine a um dicionario gigante ainda nao auditado.
 Estado atual:
 
 - `patxanga_dictionary` consolidado com `language`, `word_original`,
-  `word_normalized`, `source`, `is_active`, `created_at` e `updated_at`
+  `word_normalized`, `source`, `is_active`, metadados de importacao e timestamps
 - chave primaria composta por `language + word_normalized`
 - `validate_word(p_word, p_language default 'pt-BR')` valida idioma,
   normalizacao e apenas palavras ativas
@@ -3742,11 +3855,18 @@ Estado atual:
   `submit_move`
 - o mesmo teste confirma que uma partida real `pt-PT` inicia e aceita `CASA`
   como palavra reconhecida, sem cair em votacao
+- pipeline administrativa de importacao documentada em
+  `docs/dictionary-import-pipeline-v1.0.md`
+- `import_patxanga_dictionary_entries(...)` cria lote auditavel, deduplica
+  entradas normalizadas, registra fonte/licenca/versao e pode desativar
+  palavras ausentes em importacao de substituicao completa
+- `sql/tests/test_dictionary_import_pipeline.sql` cobre importacao idempotente,
+  metadados e desativacao opcional
 
 Proximos passos:
 
 - escolher fonte licenciada para dicionario amplo
-- criar pipeline de importacao auditavel, sem editar manualmente dump gigante
+- criar conversor operacional de CSV/arquivo fonte para o payload JSON da RPC
 - decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
 - substituir a baseline minima `pt-PT` por fonte ampla licenciada e auditada
 - auditar a distribuicao de pecas `pt-PT`; por enquanto ela e uma baseline
@@ -3755,6 +3875,7 @@ Proximos passos:
 Validacao minima:
 
 ```bash
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
 zsh scripts/run-sql-test-suite.sh all
 ```
@@ -4143,9 +4264,9 @@ trechos antigos deste documento quando houver divergencia operacional.
 
 Estado verificado nesta rodada:
 
-- ultima frente local registrada: `feature/pt-pt-language-baseline`
-- foco imediato: fechar baseline minima `pt-PT` para que partidas reais nesse
-  idioma possam iniciar e validar palavras seed sem cair em votacao
+- ultima frente local registrada: `feature/dictionary-import-pipeline`
+- foco imediato: fechar pipeline auditavel de importacao de dicionario amplo,
+  sem escolher ainda uma fonte real sem licenca verificada
 - frente de bots de teste e simulacao ja foi criada antes desta atualizacao e
   continua como regressao obrigatoria
 - roadmap consolidado criado em `docs/implementation-roadmap.md`
@@ -4172,11 +4293,16 @@ Estado verificado nesta rodada:
   `supabase/migrations/20260620215000_23_match_language_dictionary_validation.sql`
 - baseline minima `pt-PT` criada em
   `supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql`
+- pipeline auditavel de importacao de dicionario criada em
+  `supabase/migrations/20260621090000_25_dictionary_import_pipeline.sql`
+- contrato operacional documentado em `docs/dictionary-import-pipeline-v1.0.md`
 - seed fonte `pt-PT` espelhado em `sql/seeds/004_dictionary_pt_pt_core_seed.sql`
 - distribuicao fonte `pt-PT` espelhada em
   `sql/seeds/001_patxanga_distribution.sql`
 - teste de contrato de dicionario criado em
   `sql/tests/test_dictionary_contract.sql`
+- teste de importacao de dicionario criado em
+  `sql/tests/test_dictionary_import_pipeline.sql`
 - validacao inicial e regressiva confirmada: `supabase db reset`,
   `zsh scripts/run-sql-test-suite.sh all` e
   `zsh scripts/run-bot-simulation.sh all`
@@ -4191,6 +4317,8 @@ Leitura correta:
 - dicionario amplo deve vir depois de contrato, fonte e licenca claros
 - a baseline `pt-PT` atual e operacional e minima; nao substitui uma fonte
   ampla, licenciada e auditada
+- a pipeline aceita payload JSON auditado; conversor de CSV/arquivo fonte fica
+  como proximo passo operacional antes de importar dumps reais
 
 Comando atual da frente:
 
@@ -4213,10 +4341,9 @@ npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
 
 Observacao operacional:
 
-- esta rodada tambem inclui alteracoes locais anteriores da branch de upgrade
-  para Next 16 / React 19, ainda sem commit nesta leitura
-- antes de versionar, separar conscientemente o que pertence ao upgrade,
-  documentacao e bots de simulacao
+- esta rodada nao importa fonte real nem adiciona dump amplo ao repositorio
+- a pipeline nova recebe payload JSON auditado; conversor de arquivo fonte/CSV
+  fica como proximo passo operacional
 
 Validacao confirmada nesta rodada:
 
@@ -4229,6 +4356,7 @@ Validacao confirmada nesta rodada:
 - `zsh scripts/run-bot-simulation.sh long`
 - `zsh scripts/run-bot-simulation.sh all`
 - `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql`
 - `supabase db reset`
 - `zsh scripts/run-sql-test-suite.sh all` apos reset
 - `zsh scripts/run-bot-simulation.sh all` apos reset
@@ -4357,7 +4485,7 @@ Leitura executiva:
 
 ## 3. Estado local verificado
 
-- branch de implementacao desta atualizacao: `feature/pt-pt-language-baseline`
+- branch de implementacao desta atualizacao: `feature/dictionary-import-pipeline`
 - base esperada antes do merge: `develop`
 - o `git log` recente desta frente precisa refletir, no minimo:
   - baseline operacional de lobby/convites/retomada/desistencia
@@ -4368,11 +4496,14 @@ Leitura executiva:
   - seed real minimo `pt-BR`
   - validacao lexical usando o idioma persistido na partida
   - baseline minima `pt-PT` para distribuicao, seed e partida real
+  - pipeline auditavel de importacao de dicionario
 - working tree esperado antes do commit desta frente:
-  - alteracoes em `sql/seeds/001_patxanga_distribution.sql`
   - alteracoes em `sql/tests/test_dictionary_contract.sql`
-  - novo `sql/seeds/004_dictionary_pt_pt_core_seed.sql`
-  - novo `supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql`
+  - novo `sql/tests/test_dictionary_import_pipeline.sql`
+  - novo `sql/migrations/003_dictionary_import_pipeline.sql`
+  - novo `sql/rpc/import_dictionary_entries.sql`
+  - novo `supabase/migrations/20260621090000_25_dictionary_import_pipeline.sql`
+  - novo `docs/dictionary-import-pipeline-v1.0.md`
   - atualizacao dos documentos de continuidade e pacote de bastao
 
 Regra de interpretacao:
@@ -5042,6 +5173,7 @@ typeset -a lobby_ops_tests=(
 
 typeset -a engine_regression_tests=(
   "sql/tests/test_dictionary_contract.sql"
+  "sql/tests/test_dictionary_import_pipeline.sql"
   "sql/tests/test_exchange_tiles.sql"
   "sql/tests/test_pass_turn.sql"
   "sql/tests/test_submit_move_auto.sql"
@@ -5137,6 +5269,344 @@ where is_active = true;
 
 create index if not exists idx_patxanga_dictionary_source
 on patxanga_dictionary (source);
+
+## FILE: sql/migrations/003_dictionary_import_pipeline.sql
+
+-- ============================================================
+-- PATXANGA - Migration 003
+-- Dictionary Import Pipeline
+-- Version: 1.0
+-- ============================================================
+
+create table if not exists public.patxanga_dictionary_import_batches (
+    id uuid primary key default uuid_generate_v4(),
+    language text not null check (language in ('pt-BR', 'pt-PT')),
+    source text not null check (length(trim(source)) > 0),
+    source_version text null,
+    license_name text not null check (length(trim(license_name)) > 0),
+    license_url text null,
+    source_url text null,
+    imported_by text null,
+    import_status text not null default 'completed'
+        check (import_status in ('completed', 'failed')),
+    total_rows integer not null default 0 check (total_rows >= 0),
+    valid_rows integer not null default 0 check (valid_rows >= 0),
+    inserted_count integer not null default 0 check (inserted_count >= 0),
+    updated_count integer not null default 0 check (updated_count >= 0),
+    skipped_count integer not null default 0 check (skipped_count >= 0),
+    deactivated_count integer not null default 0 check (deactivated_count >= 0),
+    metadata jsonb not null default '{}'::jsonb,
+    notes text null,
+    created_at timestamptz not null default now(),
+    completed_at timestamptz not null default now()
+);
+
+alter table public.patxanga_dictionary
+add column if not exists source_version text,
+add column if not exists license_name text,
+add column if not exists license_url text,
+add column if not exists source_url text,
+add column if not exists import_batch_id uuid,
+add column if not exists imported_at timestamptz;
+
+do $$
+begin
+    if not exists (
+        select 1
+        from pg_constraint
+        where conname = 'patxanga_dictionary_import_batch_fk'
+          and conrelid = 'public.patxanga_dictionary'::regclass
+    ) then
+        alter table public.patxanga_dictionary
+        add constraint patxanga_dictionary_import_batch_fk
+        foreign key (import_batch_id)
+        references public.patxanga_dictionary_import_batches(id)
+        on delete set null;
+    end if;
+end $$;
+
+create index if not exists idx_patxanga_dictionary_import_batch
+on public.patxanga_dictionary (import_batch_id);
+
+create index if not exists idx_patxanga_dictionary_language_source_active
+on public.patxanga_dictionary (language, source, is_active);
+
+create index if not exists idx_patxanga_dictionary_import_batches_source
+on public.patxanga_dictionary_import_batches (language, source, source_version);
+
+## FILE: sql/rpc/import_dictionary_entries.sql
+
+-- ============================================================
+-- PATXANGA - RPC: import_patxanga_dictionary_entries()
+-- Version: 1.0
+-- Purpose: administrative, audited dictionary import from normalized payloads
+-- ============================================================
+
+drop function if exists public.import_patxanga_dictionary_entries(
+    text,
+    text,
+    text,
+    jsonb,
+    text,
+    text,
+    text,
+    text,
+    jsonb,
+    boolean
+);
+
+create or replace function public.import_patxanga_dictionary_entries(
+    p_language text,
+    p_source text,
+    p_license_name text,
+    p_entries jsonb,
+    p_source_version text default null,
+    p_license_url text default null,
+    p_source_url text default null,
+    p_imported_by text default null,
+    p_metadata jsonb default '{}'::jsonb,
+    p_deactivate_missing boolean default false
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as
+$$
+declare
+    v_language text := trim(coalesce(p_language, ''));
+    v_source text := nullif(trim(coalesce(p_source, '')), '');
+    v_license_name text := nullif(trim(coalesce(p_license_name, '')), '');
+    v_source_version text := nullif(trim(coalesce(p_source_version, '')), '');
+    v_license_url text := nullif(trim(coalesce(p_license_url, '')), '');
+    v_source_url text := nullif(trim(coalesce(p_source_url, '')), '');
+    v_imported_by text := nullif(trim(coalesce(p_imported_by, '')), '');
+    v_metadata jsonb := coalesce(p_metadata, '{}'::jsonb);
+    v_total_rows integer := 0;
+    v_valid_rows integer := 0;
+    v_inserted_count integer := 0;
+    v_updated_count integer := 0;
+    v_skipped_count integer := 0;
+    v_deactivated_count integer := 0;
+    v_batch_id uuid;
+begin
+    if v_language not in ('pt-BR', 'pt-PT') then
+        raise exception 'Unsupported dictionary language: %', p_language;
+    end if;
+
+    if v_source is null then
+        raise exception 'Dictionary import source is required';
+    end if;
+
+    if v_license_name is null then
+        raise exception 'Dictionary import license_name is required';
+    end if;
+
+    if p_entries is null or jsonb_typeof(p_entries) <> 'array' then
+        raise exception 'Dictionary import entries must be a JSON array';
+    end if;
+
+    if jsonb_typeof(v_metadata) <> 'object' then
+        raise exception 'Dictionary import metadata must be a JSON object';
+    end if;
+
+    v_total_rows := jsonb_array_length(p_entries);
+
+    if to_regclass('pg_temp.patxanga_dictionary_import_stage') is null then
+        create temporary table patxanga_dictionary_import_stage (
+            word_original text not null,
+            word_normalized text not null,
+            is_active boolean not null
+        ) on commit drop;
+    else
+        truncate table patxanga_dictionary_import_stage;
+    end if;
+
+    insert into patxanga_dictionary_import_stage (
+        word_original,
+        word_normalized,
+        is_active
+    )
+    with raw_entries as (
+        select
+            entry.value,
+            entry.ordinality
+        from jsonb_array_elements(p_entries) with ordinality as entry(value, ordinality)
+    ),
+    prepared_entries as (
+        select
+            nullif(trim(coalesce(value->>'word_original', value->>'word', '')), '') as word_original,
+            public.normalize_patxanga_word(
+                nullif(trim(coalesce(value->>'word_original', value->>'word', '')), '')
+            ) as word_normalized,
+            coalesce(nullif(trim(value->>'is_active'), ''), 'true')::boolean as is_active,
+            ordinality
+        from raw_entries
+    )
+    select distinct on (word_normalized)
+        word_original,
+        word_normalized,
+        is_active
+    from prepared_entries
+    where word_original is not null
+      and word_normalized is not null
+      and word_normalized <> ''
+    order by word_normalized, ordinality;
+
+    select count(*)
+    into v_valid_rows
+    from patxanga_dictionary_import_stage;
+
+    select count(*)
+    into v_inserted_count
+    from patxanga_dictionary_import_stage stage
+    where not exists (
+        select 1
+        from public.patxanga_dictionary dictionary
+        where dictionary.language = v_language
+          and dictionary.word_normalized = stage.word_normalized
+    );
+
+    v_updated_count := v_valid_rows - v_inserted_count;
+    v_skipped_count := v_total_rows - v_valid_rows;
+
+    insert into public.patxanga_dictionary_import_batches (
+        language,
+        source,
+        source_version,
+        license_name,
+        license_url,
+        source_url,
+        imported_by,
+        total_rows,
+        valid_rows,
+        inserted_count,
+        updated_count,
+        skipped_count,
+        metadata
+    )
+    values (
+        v_language,
+        v_source,
+        v_source_version,
+        v_license_name,
+        v_license_url,
+        v_source_url,
+        v_imported_by,
+        v_total_rows,
+        v_valid_rows,
+        v_inserted_count,
+        v_updated_count,
+        v_skipped_count,
+        v_metadata
+    )
+    returning id into v_batch_id;
+
+    insert into public.patxanga_dictionary (
+        language,
+        word_original,
+        word_normalized,
+        source,
+        is_active,
+        source_version,
+        license_name,
+        license_url,
+        source_url,
+        import_batch_id,
+        imported_at,
+        updated_at
+    )
+    select
+        v_language,
+        stage.word_original,
+        stage.word_normalized,
+        v_source,
+        stage.is_active,
+        v_source_version,
+        v_license_name,
+        v_license_url,
+        v_source_url,
+        v_batch_id,
+        now(),
+        now()
+    from patxanga_dictionary_import_stage stage
+    on conflict (language, word_normalized) do update
+    set word_original = excluded.word_original,
+        source = excluded.source,
+        is_active = excluded.is_active,
+        source_version = excluded.source_version,
+        license_name = excluded.license_name,
+        license_url = excluded.license_url,
+        source_url = excluded.source_url,
+        import_batch_id = excluded.import_batch_id,
+        imported_at = excluded.imported_at,
+        updated_at = excluded.updated_at;
+
+    if p_deactivate_missing then
+        update public.patxanga_dictionary dictionary
+        set is_active = false,
+            import_batch_id = v_batch_id,
+            imported_at = now(),
+            updated_at = now()
+        where dictionary.language = v_language
+          and dictionary.source = v_source
+          and dictionary.is_active = true
+          and not exists (
+              select 1
+              from patxanga_dictionary_import_stage stage
+              where stage.word_normalized = dictionary.word_normalized
+          );
+
+        get diagnostics v_deactivated_count = row_count;
+
+        update public.patxanga_dictionary_import_batches
+        set deactivated_count = v_deactivated_count
+        where id = v_batch_id;
+    end if;
+
+    return jsonb_build_object(
+        'status', 'success',
+        'batch_id', v_batch_id,
+        'language', v_language,
+        'source', v_source,
+        'source_version', v_source_version,
+        'license_name', v_license_name,
+        'total_rows', v_total_rows,
+        'valid_rows', v_valid_rows,
+        'inserted_count', v_inserted_count,
+        'updated_count', v_updated_count,
+        'skipped_count', v_skipped_count,
+        'deactivated_count', v_deactivated_count,
+        'deactivate_missing', p_deactivate_missing
+    );
+end;
+$$;
+
+revoke all on function public.import_patxanga_dictionary_entries(
+    text,
+    text,
+    text,
+    jsonb,
+    text,
+    text,
+    text,
+    text,
+    jsonb,
+    boolean
+) from public, anon, authenticated;
+
+grant execute on function public.import_patxanga_dictionary_entries(
+    text,
+    text,
+    text,
+    jsonb,
+    text,
+    text,
+    text,
+    text,
+    jsonb,
+    boolean
+) to service_role;
 
 ## FILE: sql/rpc/preview_move.sql
 
@@ -6003,6 +6473,7 @@ declare
     v_pt_pt_submit_result jsonb;
     v_submit_result jsonb;
     v_dictionary_row_count integer;
+    v_dictionary_import_column_count integer;
     v_real_seed_count integer;
     v_pt_pt_seed_count integer;
     v_accepted_move_count integer;
@@ -6017,6 +6488,25 @@ begin
 
     if v_dictionary_row_count <> 5 then
         raise exception 'Expected dictionary contract columns to exist, got %', v_dictionary_row_count;
+    end if;
+
+    select count(*)
+    into v_dictionary_import_column_count
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'patxanga_dictionary'
+      and column_name in (
+          'source_version',
+          'license_name',
+          'license_url',
+          'source_url',
+          'import_batch_id',
+          'imported_at'
+      );
+
+    if v_dictionary_import_column_count <> 6 then
+        raise exception 'Expected dictionary import metadata columns to exist, got %',
+            v_dictionary_import_column_count;
     end if;
 
     select count(*)
@@ -6251,6 +6741,208 @@ begin
     raise notice 'pt_pt_submit_result=%', v_pt_pt_submit_result;
     raise notice 'real_seed_count=%', v_real_seed_count;
     raise notice 'pt_pt_seed_count=%', v_pt_pt_seed_count;
+end $$;
+
+## FILE: sql/tests/test_dictionary_import_pipeline.sql
+
+-- ============================================================
+-- PATXANGA - TEST: dictionary import pipeline
+-- Purpose: validate audited, idempotent dictionary imports
+-- ============================================================
+
+do $$
+declare
+    v_result jsonb;
+    v_second_result jsonb;
+    v_error_caught boolean := false;
+    v_batch_count integer;
+    v_dictionary_count integer;
+    v_active_count integer;
+    v_inactive_count integer;
+    v_metadata jsonb;
+begin
+    if has_function_privilege(
+        'anon',
+        'public.import_patxanga_dictionary_entries(text,text,text,jsonb,text,text,text,text,jsonb,boolean)',
+        'execute'
+    ) then
+        raise exception 'Expected anon not to execute dictionary import RPC';
+    end if;
+
+    if has_function_privilege(
+        'authenticated',
+        'public.import_patxanga_dictionary_entries(text,text,text,jsonb,text,text,text,text,jsonb,boolean)',
+        'execute'
+    ) then
+        raise exception 'Expected authenticated not to execute dictionary import RPC';
+    end if;
+
+    if has_function_privilege(
+        'service_role',
+        'public.import_patxanga_dictionary_entries(text,text,text,jsonb,text,text,text,text,jsonb,boolean)',
+        'execute'
+    ) is not true then
+        raise exception 'Expected service_role to execute dictionary import RPC';
+    end if;
+
+    delete from public.patxanga_dictionary
+    where source = 'import_pipeline_test';
+
+    delete from public.patxanga_dictionary_import_batches
+    where source = 'import_pipeline_test';
+
+    select public.import_patxanga_dictionary_entries(
+        p_language := 'pt-BR',
+        p_source := 'import_pipeline_test',
+        p_license_name := 'Test License',
+        p_entries := jsonb_build_array(
+            jsonb_build_object('word', 'RATO'),
+            jsonb_build_object('word', 'árvore'),
+            jsonb_build_object('word', 'rato'),
+            jsonb_build_object('word', ''),
+            jsonb_build_object('word', 'PEIXE', 'is_active', false)
+        ),
+        p_source_version := 'fixture-v1',
+        p_license_url := 'https://example.test/license',
+        p_source_url := 'https://example.test/source',
+        p_imported_by := 'sql-test',
+        p_metadata := jsonb_build_object('fixture', true),
+        p_deactivate_missing := false
+    )
+    into v_result;
+
+    if v_result->>'status' <> 'success' then
+        raise exception 'Expected import success, got %', v_result;
+    end if;
+
+    if (v_result->>'total_rows')::integer <> 5 then
+        raise exception 'Expected 5 total rows, got %', v_result;
+    end if;
+
+    if (v_result->>'valid_rows')::integer <> 3 then
+        raise exception 'Expected 3 distinct valid rows, got %', v_result;
+    end if;
+
+    if (v_result->>'inserted_count')::integer <> 3 then
+        raise exception 'Expected 3 inserted rows, got %', v_result;
+    end if;
+
+    if (v_result->>'skipped_count')::integer <> 2 then
+        raise exception 'Expected 2 skipped rows, got %', v_result;
+    end if;
+
+    if public.validate_word('arvore', 'pt-BR') is not true then
+        raise exception 'Expected imported ARVORE to validate';
+    end if;
+
+    if public.validate_word('PEIXE', 'pt-BR') is not false then
+        raise exception 'Expected imported inactive PEIXE not to validate';
+    end if;
+
+    select count(*)
+    into v_dictionary_count
+    from public.patxanga_dictionary
+    where language = 'pt-BR'
+      and source = 'import_pipeline_test'
+      and source_version = 'fixture-v1'
+      and license_name = 'Test License'
+      and import_batch_id = (v_result->>'batch_id')::uuid
+      and word_normalized in ('RATO', 'ARVORE', 'PEIXE');
+
+    if v_dictionary_count <> 3 then
+        raise exception 'Expected 3 dictionary rows linked to first import batch, got %', v_dictionary_count;
+    end if;
+
+    select count(*), metadata
+    into v_batch_count, v_metadata
+    from public.patxanga_dictionary_import_batches
+    where id = (v_result->>'batch_id')::uuid
+    group by metadata;
+
+    if v_batch_count <> 1 then
+        raise exception 'Expected first import batch row, got %', v_batch_count;
+    end if;
+
+    if v_metadata->>'fixture' <> 'true' then
+        raise exception 'Expected metadata fixture=true, got %', v_metadata;
+    end if;
+
+    select public.import_patxanga_dictionary_entries(
+        p_language := 'pt-BR',
+        p_source := 'import_pipeline_test',
+        p_license_name := 'Test License',
+        p_entries := jsonb_build_array(
+            jsonb_build_object('word', 'RATO')
+        ),
+        p_source_version := 'fixture-v2',
+        p_license_url := 'https://example.test/license',
+        p_source_url := 'https://example.test/source',
+        p_imported_by := 'sql-test',
+        p_metadata := jsonb_build_object('fixture', true, 'replacement', true),
+        p_deactivate_missing := true
+    )
+    into v_second_result;
+
+    if (v_second_result->>'inserted_count')::integer <> 0 then
+        raise exception 'Expected second import to insert 0 rows, got %', v_second_result;
+    end if;
+
+    if (v_second_result->>'updated_count')::integer <> 1 then
+        raise exception 'Expected second import to update RATO, got %', v_second_result;
+    end if;
+
+    if (v_second_result->>'deactivated_count')::integer <> 1 then
+        raise exception 'Expected second import to deactivate ARVORE only, got %', v_second_result;
+    end if;
+
+    select count(*)
+    into v_active_count
+    from public.patxanga_dictionary
+    where language = 'pt-BR'
+      and source = 'import_pipeline_test'
+      and is_active = true;
+
+    if v_active_count <> 1 then
+        raise exception 'Expected one active row after replacement import, got %', v_active_count;
+    end if;
+
+    select count(*)
+    into v_inactive_count
+    from public.patxanga_dictionary
+    where language = 'pt-BR'
+      and source = 'import_pipeline_test'
+      and is_active = false
+      and word_normalized in ('ARVORE', 'PEIXE');
+
+    if v_inactive_count <> 2 then
+        raise exception 'Expected ARVORE and PEIXE inactive after replacement, got %', v_inactive_count;
+    end if;
+
+    begin
+        perform public.import_patxanga_dictionary_entries(
+            p_language := 'es-ES',
+            p_source := 'import_pipeline_test',
+            p_license_name := 'Test License',
+            p_entries := '[]'::jsonb
+        );
+    exception
+        when others then
+            v_error_caught := true;
+    end;
+
+    if v_error_caught is not true then
+        raise exception 'Expected unsupported language import to fail';
+    end if;
+
+    raise notice 'Dictionary import pipeline test passed';
+    raise notice 'first_result=%', v_result;
+    raise notice 'second_result=%', v_second_result;
+
+    delete from public.patxanga_dictionary
+    where source = 'import_pipeline_test';
+
+    delete from public.patxanga_dictionary_import_batches
+    where source = 'import_pipeline_test';
 end $$;
 
 ## FILE: sql/simulations/bot_simulation_smoke.sql
@@ -9683,6 +10375,335 @@ set word_original = excluded.word_original,
     source = excluded.source,
     is_active = excluded.is_active,
     updated_at = now();
+
+## FILE: supabase/migrations/20260621090000_25_dictionary_import_pipeline.sql
+
+-- ============================================================
+-- PATXANGA - DICTIONARY IMPORT PIPELINE
+-- Purpose: audited administrative imports for licensed dictionary sources
+-- ============================================================
+
+create table if not exists public.patxanga_dictionary_import_batches (
+    id uuid primary key default uuid_generate_v4(),
+    language text not null check (language in ('pt-BR', 'pt-PT')),
+    source text not null check (length(trim(source)) > 0),
+    source_version text null,
+    license_name text not null check (length(trim(license_name)) > 0),
+    license_url text null,
+    source_url text null,
+    imported_by text null,
+    import_status text not null default 'completed'
+        check (import_status in ('completed', 'failed')),
+    total_rows integer not null default 0 check (total_rows >= 0),
+    valid_rows integer not null default 0 check (valid_rows >= 0),
+    inserted_count integer not null default 0 check (inserted_count >= 0),
+    updated_count integer not null default 0 check (updated_count >= 0),
+    skipped_count integer not null default 0 check (skipped_count >= 0),
+    deactivated_count integer not null default 0 check (deactivated_count >= 0),
+    metadata jsonb not null default '{}'::jsonb,
+    notes text null,
+    created_at timestamptz not null default now(),
+    completed_at timestamptz not null default now()
+);
+
+alter table public.patxanga_dictionary
+add column if not exists source_version text,
+add column if not exists license_name text,
+add column if not exists license_url text,
+add column if not exists source_url text,
+add column if not exists import_batch_id uuid,
+add column if not exists imported_at timestamptz;
+
+do $$
+begin
+    if not exists (
+        select 1
+        from pg_constraint
+        where conname = 'patxanga_dictionary_import_batch_fk'
+          and conrelid = 'public.patxanga_dictionary'::regclass
+    ) then
+        alter table public.patxanga_dictionary
+        add constraint patxanga_dictionary_import_batch_fk
+        foreign key (import_batch_id)
+        references public.patxanga_dictionary_import_batches(id)
+        on delete set null;
+    end if;
+end $$;
+
+create index if not exists idx_patxanga_dictionary_import_batch
+on public.patxanga_dictionary (import_batch_id);
+
+create index if not exists idx_patxanga_dictionary_language_source_active
+on public.patxanga_dictionary (language, source, is_active);
+
+create index if not exists idx_patxanga_dictionary_import_batches_source
+on public.patxanga_dictionary_import_batches (language, source, source_version);
+
+drop function if exists public.import_patxanga_dictionary_entries(
+    text,
+    text,
+    text,
+    jsonb,
+    text,
+    text,
+    text,
+    text,
+    jsonb,
+    boolean
+);
+
+create or replace function public.import_patxanga_dictionary_entries(
+    p_language text,
+    p_source text,
+    p_license_name text,
+    p_entries jsonb,
+    p_source_version text default null,
+    p_license_url text default null,
+    p_source_url text default null,
+    p_imported_by text default null,
+    p_metadata jsonb default '{}'::jsonb,
+    p_deactivate_missing boolean default false
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as
+$$
+declare
+    v_language text := trim(coalesce(p_language, ''));
+    v_source text := nullif(trim(coalesce(p_source, '')), '');
+    v_license_name text := nullif(trim(coalesce(p_license_name, '')), '');
+    v_source_version text := nullif(trim(coalesce(p_source_version, '')), '');
+    v_license_url text := nullif(trim(coalesce(p_license_url, '')), '');
+    v_source_url text := nullif(trim(coalesce(p_source_url, '')), '');
+    v_imported_by text := nullif(trim(coalesce(p_imported_by, '')), '');
+    v_metadata jsonb := coalesce(p_metadata, '{}'::jsonb);
+    v_total_rows integer := 0;
+    v_valid_rows integer := 0;
+    v_inserted_count integer := 0;
+    v_updated_count integer := 0;
+    v_skipped_count integer := 0;
+    v_deactivated_count integer := 0;
+    v_batch_id uuid;
+begin
+    if v_language not in ('pt-BR', 'pt-PT') then
+        raise exception 'Unsupported dictionary language: %', p_language;
+    end if;
+
+    if v_source is null then
+        raise exception 'Dictionary import source is required';
+    end if;
+
+    if v_license_name is null then
+        raise exception 'Dictionary import license_name is required';
+    end if;
+
+    if p_entries is null or jsonb_typeof(p_entries) <> 'array' then
+        raise exception 'Dictionary import entries must be a JSON array';
+    end if;
+
+    if jsonb_typeof(v_metadata) <> 'object' then
+        raise exception 'Dictionary import metadata must be a JSON object';
+    end if;
+
+    v_total_rows := jsonb_array_length(p_entries);
+
+    if to_regclass('pg_temp.patxanga_dictionary_import_stage') is null then
+        create temporary table patxanga_dictionary_import_stage (
+            word_original text not null,
+            word_normalized text not null,
+            is_active boolean not null
+        ) on commit drop;
+    else
+        truncate table patxanga_dictionary_import_stage;
+    end if;
+
+    insert into patxanga_dictionary_import_stage (
+        word_original,
+        word_normalized,
+        is_active
+    )
+    with raw_entries as (
+        select
+            entry.value,
+            entry.ordinality
+        from jsonb_array_elements(p_entries) with ordinality as entry(value, ordinality)
+    ),
+    prepared_entries as (
+        select
+            nullif(trim(coalesce(value->>'word_original', value->>'word', '')), '') as word_original,
+            public.normalize_patxanga_word(
+                nullif(trim(coalesce(value->>'word_original', value->>'word', '')), '')
+            ) as word_normalized,
+            coalesce(nullif(trim(value->>'is_active'), ''), 'true')::boolean as is_active,
+            ordinality
+        from raw_entries
+    )
+    select distinct on (word_normalized)
+        word_original,
+        word_normalized,
+        is_active
+    from prepared_entries
+    where word_original is not null
+      and word_normalized is not null
+      and word_normalized <> ''
+    order by word_normalized, ordinality;
+
+    select count(*)
+    into v_valid_rows
+    from patxanga_dictionary_import_stage;
+
+    select count(*)
+    into v_inserted_count
+    from patxanga_dictionary_import_stage stage
+    where not exists (
+        select 1
+        from public.patxanga_dictionary dictionary
+        where dictionary.language = v_language
+          and dictionary.word_normalized = stage.word_normalized
+    );
+
+    v_updated_count := v_valid_rows - v_inserted_count;
+    v_skipped_count := v_total_rows - v_valid_rows;
+
+    insert into public.patxanga_dictionary_import_batches (
+        language,
+        source,
+        source_version,
+        license_name,
+        license_url,
+        source_url,
+        imported_by,
+        total_rows,
+        valid_rows,
+        inserted_count,
+        updated_count,
+        skipped_count,
+        metadata
+    )
+    values (
+        v_language,
+        v_source,
+        v_source_version,
+        v_license_name,
+        v_license_url,
+        v_source_url,
+        v_imported_by,
+        v_total_rows,
+        v_valid_rows,
+        v_inserted_count,
+        v_updated_count,
+        v_skipped_count,
+        v_metadata
+    )
+    returning id into v_batch_id;
+
+    insert into public.patxanga_dictionary (
+        language,
+        word_original,
+        word_normalized,
+        source,
+        is_active,
+        source_version,
+        license_name,
+        license_url,
+        source_url,
+        import_batch_id,
+        imported_at,
+        updated_at
+    )
+    select
+        v_language,
+        stage.word_original,
+        stage.word_normalized,
+        v_source,
+        stage.is_active,
+        v_source_version,
+        v_license_name,
+        v_license_url,
+        v_source_url,
+        v_batch_id,
+        now(),
+        now()
+    from patxanga_dictionary_import_stage stage
+    on conflict (language, word_normalized) do update
+    set word_original = excluded.word_original,
+        source = excluded.source,
+        is_active = excluded.is_active,
+        source_version = excluded.source_version,
+        license_name = excluded.license_name,
+        license_url = excluded.license_url,
+        source_url = excluded.source_url,
+        import_batch_id = excluded.import_batch_id,
+        imported_at = excluded.imported_at,
+        updated_at = excluded.updated_at;
+
+    if p_deactivate_missing then
+        update public.patxanga_dictionary dictionary
+        set is_active = false,
+            import_batch_id = v_batch_id,
+            imported_at = now(),
+            updated_at = now()
+        where dictionary.language = v_language
+          and dictionary.source = v_source
+          and dictionary.is_active = true
+          and not exists (
+              select 1
+              from patxanga_dictionary_import_stage stage
+              where stage.word_normalized = dictionary.word_normalized
+          );
+
+        get diagnostics v_deactivated_count = row_count;
+
+        update public.patxanga_dictionary_import_batches
+        set deactivated_count = v_deactivated_count
+        where id = v_batch_id;
+    end if;
+
+    return jsonb_build_object(
+        'status', 'success',
+        'batch_id', v_batch_id,
+        'language', v_language,
+        'source', v_source,
+        'source_version', v_source_version,
+        'license_name', v_license_name,
+        'total_rows', v_total_rows,
+        'valid_rows', v_valid_rows,
+        'inserted_count', v_inserted_count,
+        'updated_count', v_updated_count,
+        'skipped_count', v_skipped_count,
+        'deactivated_count', v_deactivated_count,
+        'deactivate_missing', p_deactivate_missing
+    );
+end;
+$$;
+
+revoke all on function public.import_patxanga_dictionary_entries(
+    text,
+    text,
+    text,
+    jsonb,
+    text,
+    text,
+    text,
+    text,
+    jsonb,
+    boolean
+) from public, anon, authenticated;
+
+grant execute on function public.import_patxanga_dictionary_entries(
+    text,
+    text,
+    text,
+    jsonb,
+    text,
+    text,
+    text,
+    text,
+    jsonb,
+    boolean
+) to service_role;
 
 ## FRASE PADRAO DE PASSAGEM DE BASTAO
 
