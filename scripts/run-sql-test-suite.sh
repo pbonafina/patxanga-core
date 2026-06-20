@@ -18,6 +18,7 @@ typeset -a lobby_ops_tests=(
 typeset -a engine_regression_tests=(
   "sql/tests/test_exchange_tiles.sql"
   "sql/tests/test_pass_turn.sql"
+  "sql/tests/test_submit_move_auto.sql"
   "sql/tests/test_match_end_all_passed.sql"
   "sql/tests/test_match_end_empty_rack.sql"
   "sql/tests/test_match_end_final_penalty.sql"
