@@ -286,24 +286,31 @@ Eventos previstos:
 
 ---
 
-### 3.7 patxanga_dictionary_entries
+### 3.7 patxanga_dictionary
 
 Base lexical local utilizada na validação.
 
-Campos previstos:
+Campos atuais:
 
-- `id` BIGSERIAL PK
 - `language` TEXT
-- `word` TEXT
-- `normalized_word` TEXT
+- `word_original` TEXT
+- `word_normalized` TEXT
 - `source` TEXT
 - `is_active` BOOLEAN
-- `created_at` TIMESTAMP
+- `created_at` TIMESTAMPTZ
+- `updated_at` TIMESTAMPTZ
+
+Chave:
+
+- PK composta por `language + word_normalized`
 
 Observações:
 - não aceitar hífen
 - armazenar versão normalizada em maiúsculas
-- indexar por `language + normalized_word`
+- remover acentos na normalização
+- validar apenas entradas `is_active = true`
+- manter a fonte em `source` para separar seed de teste, seed PT-BR e futura
+  importação licenciada
 
 ---
 

@@ -8,6 +8,10 @@ typeset -a smoke_simulations=(
   "sql/simulations/bot_simulation_smoke.sql"
 )
 
+typeset -a long_simulations=(
+  "sql/simulations/bot_simulation_long_multi_turn.sql"
+)
+
 typeset -a all_simulations=(
   "${smoke_simulations[@]}"
   "sql/simulations/bot_simulation_pending_vote.sql"
@@ -15,17 +19,20 @@ typeset -a all_simulations=(
   "sql/simulations/bot_simulation_empty_rack_end.sql"
   "sql/simulations/bot_simulation_all_passed_end.sql"
   "sql/simulations/bot_simulation_invalid_move_expected_error.sql"
+  "${long_simulations[@]}"
 )
 
 usage() {
   cat <<'EOF'
 Usage:
   zsh scripts/run-bot-simulation.sh smoke
+  zsh scripts/run-bot-simulation.sh long
   zsh scripts/run-bot-simulation.sh all
   zsh scripts/run-bot-simulation.sh path/to/simulation.sql [path/to/other.sql ...]
 
 Profiles:
   smoke  Minimal deterministic bot-vs-bot QA simulation
+  long   Multi-turn deterministic bot-vs-bot QA simulation
   all    All predefined bot simulations
 EOF
 }
@@ -39,6 +46,9 @@ resolve_simulations() {
   case "$1" in
     smoke)
       printf '%s\n' "${smoke_simulations[@]}"
+      ;;
+    long)
+      printf '%s\n' "${long_simulations[@]}"
       ;;
     all)
       printf '%s\n' "${all_simulations[@]}"

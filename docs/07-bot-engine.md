@@ -77,6 +77,8 @@ Ja existe:
 - simulacao de fim por rack vazio
 - simulacao de fim por todos passarem
 - simulacao de erros esperados sem mutacao de estado
+- simulacao multi-turno combinando jogada aceita, troca, passes,
+  `pending_vote` em ponte com peca existente e rejeicao por voto
 
 Ainda nao existe:
 
@@ -103,6 +105,7 @@ O primeiro MVP deve entregar:
 | Fim por rack vazio | Bot esvazia rack com bag vazia e encerra a partida |
 | Fim por todos passarem | Dois bots passam com bag vazia e encerram a partida |
 | Erros esperados | Bot tenta jogadas ilegais e a engine rejeita sem mutar estado |
+| Multi-turno | Uma partida encadeia jogada aceita, troca, passe, voto e passe final |
 
 Implementacao inicial:
 
@@ -112,12 +115,14 @@ Implementacao inicial:
 - `sql/simulations/bot_simulation_empty_rack_end.sql`
 - `sql/simulations/bot_simulation_all_passed_end.sql`
 - `sql/simulations/bot_simulation_invalid_move_expected_error.sql`
+- `sql/simulations/bot_simulation_long_multi_turn.sql`
 - `scripts/run-bot-simulation.sh`
 - `supabase/migrations/20260620210000_20_persist_successful_place_word_moves.sql`
 
 Comando:
 
 ```bash
+zsh scripts/run-bot-simulation.sh long
 zsh scripts/run-bot-simulation.sh all
 ```
 

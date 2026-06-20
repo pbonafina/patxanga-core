@@ -1,0 +1,149 @@
+-- ============================================================
+-- PATXANGA - TEST: dictionary contract and real-word validation
+-- Purpose: validate language, normalization, inactive entries and engine path
+-- ============================================================
+
+do $$
+declare
+    v_user1 uuid := gen_random_uuid();
+    v_user2 uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_current_player_id uuid;
+    v_tile_c_id uuid := gen_random_uuid();
+    v_tile_a_id uuid := gen_random_uuid();
+    v_tile_s_id uuid := gen_random_uuid();
+    v_tile_a2_id uuid := gen_random_uuid();
+    v_forced_rack jsonb;
+    v_submit_result jsonb;
+    v_dictionary_row_count integer;
+    v_real_seed_count integer;
+    v_accepted_move_count integer;
+begin
+    select count(*)
+    into v_dictionary_row_count
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'patxanga_dictionary'
+      and column_name in ('language', 'source', 'is_active', 'created_at', 'updated_at');
+
+    if v_dictionary_row_count <> 5 then
+        raise exception 'Expected dictionary contract columns to exist, got %', v_dictionary_row_count;
+    end if;
+
+    select count(*)
+    into v_real_seed_count
+    from patxanga_dictionary
+    where language = 'pt-BR'
+      and source = 'pt_br_core_seed'
+      and is_active = true
+      and word_normalized in ('AMOR', 'ACAO', 'CASA', 'MESA', 'PAO');
+
+    if v_real_seed_count <> 5 then
+        raise exception 'Expected 5 active real seed words, got %', v_real_seed_count;
+    end if;
+
+    if public.validate_word('ação', 'pt-BR') is not true then
+        raise exception 'Expected lowercase accented ação to validate in pt-BR';
+    end if;
+
+    if public.validate_word('ACAO', 'pt-BR') is not true then
+        raise exception 'Expected unaccented ACAO to validate in pt-BR';
+    end if;
+
+    if public.validate_word('ação', 'es-ES') is not false then
+        raise exception 'Expected ação not to validate in es-ES';
+    end if;
+
+    if public.validate_word('AÇÃO', '') is not false then
+        raise exception 'Expected empty language not to validate';
+    end if;
+
+    update patxanga_dictionary
+    set is_active = false,
+        updated_at = now()
+    where language = 'pt-BR'
+      and word_normalized = public.normalize_patxanga_word('AÇÃO');
+
+    if public.validate_word('AÇÃO', 'pt-BR') is not false then
+        raise exception 'Expected inactive AÇÃO not to validate';
+    end if;
+
+    update patxanga_dictionary
+    set is_active = true,
+        updated_at = now()
+    where language = 'pt-BR'
+      and word_normalized = public.normalize_patxanga_word('AÇÃO');
+
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_user1,
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    perform public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_user2
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    select current_turn_player_id
+    into v_current_player_id
+    from patxanga_matches
+    where id = v_match_id;
+
+    v_forced_rack := jsonb_build_array(
+        jsonb_build_object('id', v_tile_c_id::text, 'letter', 'C', 'points', 3, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_tile_a_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_tile_s_id::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_tile_a2_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'M', 'points', 2, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null)
+    );
+
+    update patxanga_players
+    set rack_state = v_forced_rack,
+        updated_at = now()
+    where id = v_current_player_id;
+
+    v_submit_result := public.submit_patxanga_move(
+        v_match_id,
+        v_current_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_tile_c_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_tile_a_id::text, 'row', 8, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_tile_s_id::text, 'row', 8, 'col', 10, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_tile_a2_id::text, 'row', 8, 'col', 11, 'declared_letter', null)
+        )
+    );
+
+    if v_submit_result->>'status' <> 'success' then
+        raise exception 'Expected CASA move success through real dictionary seed, got %', v_submit_result;
+    end if;
+
+    if v_submit_result->>'move_id' is null then
+        raise exception 'Expected CASA move_id, got %', v_submit_result;
+    end if;
+
+    select count(*)
+    into v_accepted_move_count
+    from patxanga_moves
+    where id = (v_submit_result->>'move_id')::uuid
+      and match_id = v_match_id
+      and player_id = v_current_player_id
+      and move_type = 'place_word'
+      and status = 'accepted'
+      and main_word = 'CASA'
+      and is_dictionary_recognized = true;
+
+    if v_accepted_move_count <> 1 then
+        raise exception 'Expected exactly 1 accepted CASA move, got %', v_accepted_move_count;
+    end if;
+
+    raise notice 'Dictionary contract test passed';
+    raise notice 'match_id=%', v_match_id;
+    raise notice 'submit_result=%', v_submit_result;
+    raise notice 'real_seed_count=%', v_real_seed_count;
+end $$;

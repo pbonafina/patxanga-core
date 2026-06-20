@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-20 23:23:49
+Generated at: 2026-06-20 23:44:55
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,7 +93,23 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## upgrade/next16-audit
+## feature/bot-long-simulations
+ M docs/04-database-model.md
+ M docs/07-bot-engine.md
+ M docs/18-room-baton-package-current.md
+ M docs/current-development-continuity-spec-v1.0.md
+ M docs/implementation-roadmap.md
+ M generate-room-baton-package.sh
+ M scripts/run-bot-simulation.sh
+ M scripts/run-sql-test-suite.sh
+ M sql/migrations/002_dictionary.sql
+ M sql/rpc/validate_word.sql
+ M sql/seeds/002_dictionary_test_seed.sql
+?? sql/seeds/003_dictionary_pt_br_core_seed.sql
+?? sql/simulations/bot_simulation_long_multi_turn.sql
+?? sql/tests/test_dictionary_contract.sql
+?? supabase/migrations/20260620213000_21_dictionary_contract_language.sql
+?? supabase/migrations/20260620213500_22_dictionary_pt_br_core_seed.sql
 ```
 
 ### git remote -v
@@ -104,21 +120,21 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-d1ee0c2 (HEAD -> upgrade/next16-audit) fix(docs): generate baton package atomically
+0d3997c (HEAD -> feature/bot-long-simulations, origin/develop, origin/HEAD, develop) Merge pull request #1 from pbonafina/upgrade/next16-audit
+a263bb7 (origin/upgrade/next16-audit, upgrade/next16-audit) docs: refresh baton package after checkpoint
+d1ee0c2 fix(docs): generate baton package atomically
 4d8bff9 docs: refresh room baton package
 cab289b docs: consolidate gameplay and continuity plans
 ea03c80 test(bots): add deterministic simulation suite
 502fe8f fix(sql): persist accepted place word moves
 4436c28 chore(frontend): upgrade next and react baseline
-f2b9aa9 (origin/develop, origin/HEAD, develop) Formaliza matriz objetiva de avanco do projeto
+f2b9aa9 Formaliza matriz objetiva de avanco do projeto
 8eaf094 Promove composicao por slots a contrato oficial de jogada
 b78659e Estabiliza especificacao de continuidade pos-push
 978c27c Atualiza kit de continuidade com especificacao do estado atual
 13fa822 Tighten local ignore rules
 9fa27ce Implement local rack slot associations
 0722828 Add SQL regression test suites
-372d0e7 Add operational lobby invite baseline
-d584091 Add browser validation scenarios and Playwright coverage
 ```
 
 ### tail -n 60 ../project-log.md
@@ -175,7 +191,12 @@ Depois fazer hard refresh com Cmd + Shift + R.
 ### Registro de rodada
 ```bash
 cd ~/patxanga-bootstrap/patxanga-core
-printf "\n### rodada browser %s\nmatch_id=COLE_AQUI\nuser_id=COLE_AQUI\nobjetivo=COLE_AQUI\n" "$(date "+%Y-%m-%d %H:%M:%S")" >> tmp/browser-validation-notes.txt
+printf "
+### rodada browser %s
+match_id=COLE_AQUI
+user_id=COLE_AQUI
+objetivo=COLE_AQUI
+" "$(date "+%Y-%m-%d %H:%M:%S")" >> tmp/browser-validation-notes.txt
 tail -n 20 tmp/browser-validation-notes.txt
 ```
 
@@ -3416,6 +3437,7 @@ Leitura atual do projeto:
 | Primeira tela jogavel | Existe, mas ainda precisa evoluir de sandbox operacional para produto |
 | Rack e composicao por slots | Implementado como superficie oficial de preparo no frontend |
 | Votacao | Funcional, mas ainda precisa UX de produto |
+| Dicionario | Contrato por idioma/fonte/ativo consolidado; seed PT-BR pequeno para QA |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
 | Bots de teste e simulacao | Prioridade alta; frente iniciada com contrato, runner e smoke deterministico |
 | Bot | Apenas modelado no banco; ainda nao existe modo jogavel humano contra bot |
@@ -3442,6 +3464,7 @@ Diretriz principal:
 9. Documentacao deve acompanhar marcos relevantes, nao microajustes.
 10. Todo marco funcional deve ter validacao automatizada ou justificativa clara.
 11. Bot de teste/simulacao deve ser tratado primeiro como ferramenta de QA, nao como modo final de produto.
+12. Dicionario grande so deve entrar depois de contrato, fonte e licenca claros.
 
 ---
 
@@ -3629,6 +3652,12 @@ Estado atual:
 - erro esperado valida peca inexistente no rack e jogada fora do turno,
   confirmando excecao esperada e ausencia de mutacao em match, rack, moves e
   replay
+- multi-turno deterministico criado em
+  `sql/simulations/bot_simulation_long_multi_turn.sql`
+- multi-turno valida `place_word` aceito, `exchange_tiles`, dois passes,
+  `pending_vote` em ponte usando peca ja existente no board, rejeicao por voto,
+  preservacao do board para jogada rejeitada, contadores de moves/replay e
+  partida ainda ativa com bag nao vazia
 - `submit_patxanga_move(...)` agora persiste jogadas `place_word` aceitas em
   `patxanga_moves`
 
@@ -3667,6 +3696,7 @@ Cenarios prioritarios de simulacao:
 7. partida que chega ao fim por rack vazio - coberta
 8. partida que chega ao fim por todos passarem - coberta
 9. tentativa de jogada invalida com erro esperado - coberta
+10. partida multi-turno combinando acoes diferentes - coberta
 
 Arquitetura recomendada:
 
@@ -3689,6 +3719,43 @@ Validacao desejada:
 ```bash
 cd frontend
 npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+```
+
+---
+
+## 9.1 Frente transversal - Dicionario e palavras reais
+
+Objetivo:
+
+Preparar a validacao lexical para palavras reais em portugues sem acoplar a
+engine a um dicionario gigante ainda nao auditado.
+
+Estado atual:
+
+- `patxanga_dictionary` consolidado com `language`, `word_original`,
+  `word_normalized`, `source`, `is_active`, `created_at` e `updated_at`
+- chave primaria composta por `language + word_normalized`
+- `validate_word(p_word, p_language default 'pt-BR')` valida idioma,
+  normalizacao e apenas palavras ativas
+- seed minimo de teste preservado em `sql/seeds/002_dictionary_test_seed.sql`
+- seed pequeno de palavras reais PT-BR criado em
+  `sql/seeds/003_dictionary_pt_br_core_seed.sql`
+- teste `sql/tests/test_dictionary_contract.sql` cobre normalizacao, acento,
+  idioma, palavra inativa, seed real e caminho completo de `submit_move`
+
+Proximos passos:
+
+- escolher fonte licenciada para dicionario amplo
+- criar pipeline de importacao auditavel, sem editar manualmente dump gigante
+- decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
+- fazer `submit_move` e `preview_move` consumirem explicitamente o idioma da
+  partida se forem abertos idiomas alem de `pt-BR`
+
+Validacao minima:
+
+```bash
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
+zsh scripts/run-sql-test-suite.sh all
 ```
 
 ---
@@ -3900,6 +3967,8 @@ Ja existe:
 - simulacao de fim por rack vazio
 - simulacao de fim por todos passarem
 - simulacao de erros esperados sem mutacao de estado
+- simulacao multi-turno combinando jogada aceita, troca, passes,
+  `pending_vote` em ponte com peca existente e rejeicao por voto
 
 Ainda nao existe:
 
@@ -3926,6 +3995,7 @@ O primeiro MVP deve entregar:
 | Fim por rack vazio | Bot esvazia rack com bag vazia e encerra a partida |
 | Fim por todos passarem | Dois bots passam com bag vazia e encerram a partida |
 | Erros esperados | Bot tenta jogadas ilegais e a engine rejeita sem mutar estado |
+| Multi-turno | Uma partida encadeia jogada aceita, troca, passe, voto e passe final |
 
 Implementacao inicial:
 
@@ -3935,12 +4005,14 @@ Implementacao inicial:
 - `sql/simulations/bot_simulation_empty_rack_end.sql`
 - `sql/simulations/bot_simulation_all_passed_end.sql`
 - `sql/simulations/bot_simulation_invalid_move_expected_error.sql`
+- `sql/simulations/bot_simulation_long_multi_turn.sql`
 - `scripts/run-bot-simulation.sh`
 - `supabase/migrations/20260620210000_20_persist_successful_place_word_moves.sql`
 
 Comando:
 
 ```bash
+zsh scripts/run-bot-simulation.sh long
 zsh scripts/run-bot-simulation.sh all
 ```
 
@@ -4070,7 +4142,7 @@ trechos antigos deste documento quando houver divergencia operacional.
 
 Estado verificado nesta rodada:
 
-- branch atual local: `upgrade/next16-audit`
+- branch atual local: `feature/bot-long-simulations`
 - foco imediato: iniciar a frente de bots de teste e simulacao
 - objetivo da frente: criar bots utilitarios para QA, simulacoes e regressao,
   antes de implementar humano contra bot como produto
@@ -4085,9 +4157,17 @@ Estado verificado nesta rodada:
 - cenario all_passed_end criado em `sql/simulations/bot_simulation_all_passed_end.sql`
 - cenario invalid_move_expected_error criado em
   `sql/simulations/bot_simulation_invalid_move_expected_error.sql`
+- cenario long_multi_turn criado em
+  `sql/simulations/bot_simulation_long_multi_turn.sql`
 - persistencia de jogada `place_word` aceita corrigida em `submit_patxanga_move(...)`
 - migration de correcao criada em
   `supabase/migrations/20260620210000_20_persist_successful_place_word_moves.sql`
+- contrato de dicionario por idioma/fonte/ativo criado em
+  `supabase/migrations/20260620213000_21_dictionary_contract_language.sql`
+- seed pequeno de palavras reais PT-BR criado em
+  `supabase/migrations/20260620213500_22_dictionary_pt_br_core_seed.sql`
+- teste de contrato de dicionario criado em
+  `sql/tests/test_dictionary_contract.sql`
 - validacao inicial e regressiva confirmada: `zsh scripts/run-bot-simulation.sh all`
 
 Leitura correta:
@@ -4097,11 +4177,13 @@ Leitura correta:
 - os bots devem reutilizar RPCs oficiais e nao criar estado paralelo
 - humano contra bot continua posterior, depois da experiencia humano contra humano
   e depois de uma base minima de simulacao
+- dicionario amplo deve vir depois de contrato, fonte e licenca claros
 
 Comando atual da frente:
 
 ```bash
 zsh scripts/run-bot-simulation.sh all
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
 ```
 
 Validacao recomendada apos mudancas nesta frente:
@@ -4130,8 +4212,12 @@ Validacao confirmada nesta rodada:
 - `zsh scripts/run-bot-simulation.sh sql/simulations/bot_simulation_empty_rack_end.sql`
 - `zsh scripts/run-bot-simulation.sh sql/simulations/bot_simulation_all_passed_end.sql`
 - `zsh scripts/run-bot-simulation.sh sql/simulations/bot_simulation_invalid_move_expected_error.sql`
+- `zsh scripts/run-bot-simulation.sh long`
 - `zsh scripts/run-bot-simulation.sh all`
 - `zsh scripts/run-sql-test-suite.sh all`
+- `supabase db reset`
+- `zsh scripts/run-sql-test-suite.sh all` apos reset
+- `zsh scripts/run-bot-simulation.sh all` apos reset
 - `cd frontend && npm run lint`
 - `cd frontend && npm run build`
 - `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
@@ -4207,9 +4293,21 @@ Sexto cenario de bot confirmado:
   `Not your turn`
 - em ambos os casos valida que match, board, bag, rack, turno, status, moves e
   replay permanecem inalterados
-- `scripts/run-bot-simulation.sh all` executa seis cenarios: smoke,
-  pending_vote, exchange_tiles, empty_rack_end, all_passed_end e
-  invalid_move_expected_error
+
+Setimo cenario de bot confirmado:
+
+- `sql/simulations/bot_simulation_long_multi_turn.sql` cobre uma partida unica
+  com sequencia longa
+- fluxo validado: abertura `DA` aceita, troca de duas pecas, primeiro passe,
+  jogada em ponte `XAZ` usando o `A` ja existente no board, entrada em
+  `pending_vote`, rejeicao por voto e segundo passe
+- valida persistencia de 5 moves, score 6 contra 0, turno final no primeiro
+  bot, partida ainda `active` por `bag_not_empty`, dois bots marcados como
+  passados, board sem as pecas rejeitadas e replays esperados
+- `scripts/run-bot-simulation.sh long` executa apenas este cenario
+- `scripts/run-bot-simulation.sh all` executa sete cenarios: smoke,
+  pending_vote, exchange_tiles, empty_rack_end, all_passed_end,
+  invalid_move_expected_error e long_multi_turn
 
 Observacao tecnica:
 
@@ -4830,6 +4928,10 @@ typeset -a smoke_simulations=(
   "sql/simulations/bot_simulation_smoke.sql"
 )
 
+typeset -a long_simulations=(
+  "sql/simulations/bot_simulation_long_multi_turn.sql"
+)
+
 typeset -a all_simulations=(
   "${smoke_simulations[@]}"
   "sql/simulations/bot_simulation_pending_vote.sql"
@@ -4837,17 +4939,20 @@ typeset -a all_simulations=(
   "sql/simulations/bot_simulation_empty_rack_end.sql"
   "sql/simulations/bot_simulation_all_passed_end.sql"
   "sql/simulations/bot_simulation_invalid_move_expected_error.sql"
+  "${long_simulations[@]}"
 )
 
 usage() {
   cat <<'EOF'
 Usage:
   zsh scripts/run-bot-simulation.sh smoke
+  zsh scripts/run-bot-simulation.sh long
   zsh scripts/run-bot-simulation.sh all
   zsh scripts/run-bot-simulation.sh path/to/simulation.sql [path/to/other.sql ...]
 
 Profiles:
   smoke  Minimal deterministic bot-vs-bot QA simulation
+  long   Multi-turn deterministic bot-vs-bot QA simulation
   all    All predefined bot simulations
 EOF
 }
@@ -4861,6 +4966,9 @@ resolve_simulations() {
   case "$1" in
     smoke)
       printf '%s\n' "${smoke_simulations[@]}"
+      ;;
+    long)
+      printf '%s\n' "${long_simulations[@]}"
       ;;
     all)
       printf '%s\n' "${all_simulations[@]}"
@@ -4892,6 +5000,397 @@ for simulation_file in "${simulations_to_run[@]}"; do
   echo "==> $simulation_file"
   docker exec -i "$container_name" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$simulation_file"
 done
+
+## FILE: scripts/run-sql-test-suite.sh
+
+#!/bin/zsh
+set -euo pipefail
+
+repo_dir=~/patxanga-bootstrap/patxanga-core
+container_name="${PATXANGA_DB_CONTAINER:-supabase_db_patxanga-core}"
+
+typeset -a lobby_ops_tests=(
+  "sql/tests/test_resume_match.sql"
+  "sql/tests/test_start_match_from_lobby.sql"
+  "sql/tests/test_direct_invite_flow.sql"
+  "sql/tests/test_direct_invite_decline.sql"
+  "sql/tests/test_forfeit_single_player.sql"
+  "sql/tests/test_forfeit_all_players.sql"
+  "sql/tests/test_list_pending_invites.sql"
+  "sql/tests/test_list_resumable_matches.sql"
+)
+
+typeset -a engine_regression_tests=(
+  "sql/tests/test_dictionary_contract.sql"
+  "sql/tests/test_exchange_tiles.sql"
+  "sql/tests/test_pass_turn.sql"
+  "sql/tests/test_submit_move_auto.sql"
+  "sql/tests/test_match_end_all_passed.sql"
+  "sql/tests/test_match_end_empty_rack.sql"
+  "sql/tests/test_match_end_final_penalty.sql"
+  "sql/tests/test_submit_move_pending_vote.sql"
+  "sql/tests/test_submit_move_pending_vote_accept.sql"
+  "sql/tests/test_submit_move_pending_vote_reject.sql"
+)
+
+usage() {
+  cat <<'EOF'
+Usage:
+  zsh scripts/run-sql-test-suite.sh lobby_ops
+  zsh scripts/run-sql-test-suite.sh engine_regression
+  zsh scripts/run-sql-test-suite.sh all
+  zsh scripts/run-sql-test-suite.sh path/to/test.sql [path/to/other.sql ...]
+
+Profiles:
+  lobby_ops          Lobby, invite, resume and forfeit operational coverage
+  engine_regression  Dictionary, exchange, pass turn, match end and pending vote coverage
+  all                Both predefined profiles above
+EOF
+}
+
+resolve_tests() {
+  if [[ $# -eq 0 ]]; then
+    usage
+    exit 1
+  fi
+
+  case "$1" in
+    lobby_ops)
+      printf '%s\n' "${lobby_ops_tests[@]}"
+      ;;
+    engine_regression)
+      printf '%s\n' "${engine_regression_tests[@]}"
+      ;;
+    all)
+      printf '%s\n' "${lobby_ops_tests[@]}" "${engine_regression_tests[@]}"
+      ;;
+    *)
+      printf '%s\n' "$@"
+      ;;
+  esac
+}
+
+cd "$repo_dir"
+
+typeset -a tests_to_run
+while IFS= read -r test_file; do
+  tests_to_run+=("$test_file")
+done < <(resolve_tests "$@")
+
+if [[ ${#tests_to_run[@]} -eq 0 ]]; then
+  echo "No SQL tests selected."
+  exit 1
+fi
+
+for test_file in "${tests_to_run[@]}"; do
+  if [[ ! -f "$test_file" ]]; then
+    echo "SQL test file not found: $test_file" >&2
+    exit 1
+  fi
+
+  echo "==> $test_file"
+  docker exec -i "$container_name" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$test_file"
+done
+
+## FILE: sql/migrations/002_dictionary.sql
+
+-- ============================================================
+-- PATXANGA - Migration 002
+-- Dictionary Structure
+-- Version: 1.0
+-- ============================================================
+
+create table if not exists patxanga_dictionary (
+    language text not null default 'pt-BR',
+    word_original text not null,
+    word_normalized text not null,
+    source text not null default 'test_seed',
+    is_active boolean not null default true,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    primary key (language, word_normalized)
+);
+
+create index if not exists idx_patxanga_dictionary_active_lookup
+on patxanga_dictionary (language, word_normalized)
+where is_active = true;
+
+create index if not exists idx_patxanga_dictionary_source
+on patxanga_dictionary (source);
+
+## FILE: sql/rpc/validate_word.sql
+
+-- ============================================================
+-- PATXANGA - RPC: validate_word()
+-- Version: 1.0
+-- ============================================================
+
+drop function if exists public.validate_word(text);
+drop function if exists public.validate_word(text, text);
+
+create or replace function public.validate_word(
+    p_word text,
+    p_language text default 'pt-BR'
+)
+returns boolean
+language plpgsql
+stable
+as
+$$
+declare
+    v_normalized text;
+    v_exists integer;
+begin
+    if p_word is null then
+        return false;
+    end if;
+
+    if coalesce(nullif(trim(p_language), ''), '') = '' then
+        return false;
+    end if;
+
+    v_normalized := public.normalize_patxanga_word(p_word);
+
+    select 1
+    into v_exists
+    from patxanga_dictionary
+    where word_normalized = v_normalized
+      and language = p_language
+      and is_active = true
+    limit 1;
+
+    return v_exists is not null;
+end;
+$$;
+
+grant execute on function public.validate_word(text, text)
+to authenticated, anon;
+
+## FILE: sql/seeds/002_dictionary_test_seed.sql
+
+-- ============================================================
+-- PATXANGA - DICTIONARY TEST SEED
+-- Version: 1.0
+-- Purpose: Minimal lexical seed for engine validation
+-- ============================================================
+
+insert into patxanga_dictionary (
+    language,
+    word_original,
+    word_normalized,
+    source,
+    is_active
+)
+values
+('pt-BR', 'SE', 'SE', 'test_seed', true),
+('pt-BR', 'DE', 'DE', 'test_seed', true),
+('pt-BR', 'EM', 'EM', 'test_seed', true),
+('pt-BR', 'ME', 'ME', 'test_seed', true),
+('pt-BR', 'TE', 'TE', 'test_seed', true),
+('pt-BR', 'DA', 'DA', 'test_seed', true),
+('pt-BR', 'DO', 'DO', 'test_seed', true),
+('pt-BR', 'EU', 'EU', 'test_seed', true),
+('pt-BR', 'TU', 'TU', 'test_seed', true),
+('pt-BR', 'NO', 'NO', 'test_seed', true),
+('pt-BR', 'NA', 'NA', 'test_seed', true),
+('pt-BR', 'RE', 'RE', 'test_seed', true)
+on conflict (language, word_normalized) do update
+set word_original = excluded.word_original,
+    source = excluded.source,
+    is_active = excluded.is_active,
+    updated_at = now();
+
+## FILE: sql/seeds/003_dictionary_pt_br_core_seed.sql
+
+-- ============================================================
+-- PATXANGA - PT-BR CORE DICTIONARY SEED
+-- Version: 1.0
+-- Purpose: Small real-word seed for deterministic QA
+-- ============================================================
+
+insert into patxanga_dictionary (
+    language,
+    word_original,
+    word_normalized,
+    source,
+    is_active
+)
+values
+('pt-BR', 'AMOR', public.normalize_patxanga_word('AMOR'), 'pt_br_core_seed', true),
+('pt-BR', 'AÇÃO', public.normalize_patxanga_word('AÇÃO'), 'pt_br_core_seed', true),
+('pt-BR', 'BOLA', public.normalize_patxanga_word('BOLA'), 'pt_br_core_seed', true),
+('pt-BR', 'CASA', public.normalize_patxanga_word('CASA'), 'pt_br_core_seed', true),
+('pt-BR', 'GATO', public.normalize_patxanga_word('GATO'), 'pt_br_core_seed', true),
+('pt-BR', 'JOGO', public.normalize_patxanga_word('JOGO'), 'pt_br_core_seed', true),
+('pt-BR', 'LIVRO', public.normalize_patxanga_word('LIVRO'), 'pt_br_core_seed', true),
+('pt-BR', 'LUA', public.normalize_patxanga_word('LUA'), 'pt_br_core_seed', true),
+('pt-BR', 'MÃO', public.normalize_patxanga_word('MÃO'), 'pt_br_core_seed', true),
+('pt-BR', 'MAR', public.normalize_patxanga_word('MAR'), 'pt_br_core_seed', true),
+('pt-BR', 'MESA', public.normalize_patxanga_word('MESA'), 'pt_br_core_seed', true),
+('pt-BR', 'PÃO', public.normalize_patxanga_word('PÃO'), 'pt_br_core_seed', true),
+('pt-BR', 'PATO', public.normalize_patxanga_word('PATO'), 'pt_br_core_seed', true),
+('pt-BR', 'PORTA', public.normalize_patxanga_word('PORTA'), 'pt_br_core_seed', true),
+('pt-BR', 'RUA', public.normalize_patxanga_word('RUA'), 'pt_br_core_seed', true),
+('pt-BR', 'SOL', public.normalize_patxanga_word('SOL'), 'pt_br_core_seed', true),
+('pt-BR', 'TEMPO', public.normalize_patxanga_word('TEMPO'), 'pt_br_core_seed', true),
+('pt-BR', 'VIDA', public.normalize_patxanga_word('VIDA'), 'pt_br_core_seed', true)
+on conflict (language, word_normalized) do update
+set word_original = excluded.word_original,
+    source = excluded.source,
+    is_active = excluded.is_active,
+    updated_at = now();
+
+## FILE: sql/tests/test_dictionary_contract.sql
+
+-- ============================================================
+-- PATXANGA - TEST: dictionary contract and real-word validation
+-- Purpose: validate language, normalization, inactive entries and engine path
+-- ============================================================
+
+do $$
+declare
+    v_user1 uuid := gen_random_uuid();
+    v_user2 uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_current_player_id uuid;
+    v_tile_c_id uuid := gen_random_uuid();
+    v_tile_a_id uuid := gen_random_uuid();
+    v_tile_s_id uuid := gen_random_uuid();
+    v_tile_a2_id uuid := gen_random_uuid();
+    v_forced_rack jsonb;
+    v_submit_result jsonb;
+    v_dictionary_row_count integer;
+    v_real_seed_count integer;
+    v_accepted_move_count integer;
+begin
+    select count(*)
+    into v_dictionary_row_count
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'patxanga_dictionary'
+      and column_name in ('language', 'source', 'is_active', 'created_at', 'updated_at');
+
+    if v_dictionary_row_count <> 5 then
+        raise exception 'Expected dictionary contract columns to exist, got %', v_dictionary_row_count;
+    end if;
+
+    select count(*)
+    into v_real_seed_count
+    from patxanga_dictionary
+    where language = 'pt-BR'
+      and source = 'pt_br_core_seed'
+      and is_active = true
+      and word_normalized in ('AMOR', 'ACAO', 'CASA', 'MESA', 'PAO');
+
+    if v_real_seed_count <> 5 then
+        raise exception 'Expected 5 active real seed words, got %', v_real_seed_count;
+    end if;
+
+    if public.validate_word('ação', 'pt-BR') is not true then
+        raise exception 'Expected lowercase accented ação to validate in pt-BR';
+    end if;
+
+    if public.validate_word('ACAO', 'pt-BR') is not true then
+        raise exception 'Expected unaccented ACAO to validate in pt-BR';
+    end if;
+
+    if public.validate_word('ação', 'es-ES') is not false then
+        raise exception 'Expected ação not to validate in es-ES';
+    end if;
+
+    if public.validate_word('AÇÃO', '') is not false then
+        raise exception 'Expected empty language not to validate';
+    end if;
+
+    update patxanga_dictionary
+    set is_active = false,
+        updated_at = now()
+    where language = 'pt-BR'
+      and word_normalized = public.normalize_patxanga_word('AÇÃO');
+
+    if public.validate_word('AÇÃO', 'pt-BR') is not false then
+        raise exception 'Expected inactive AÇÃO not to validate';
+    end if;
+
+    update patxanga_dictionary
+    set is_active = true,
+        updated_at = now()
+    where language = 'pt-BR'
+      and word_normalized = public.normalize_patxanga_word('AÇÃO');
+
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_user1,
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    perform public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_user2
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    select current_turn_player_id
+    into v_current_player_id
+    from patxanga_matches
+    where id = v_match_id;
+
+    v_forced_rack := jsonb_build_array(
+        jsonb_build_object('id', v_tile_c_id::text, 'letter', 'C', 'points', 3, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_tile_a_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_tile_s_id::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_tile_a2_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'M', 'points', 2, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null)
+    );
+
+    update patxanga_players
+    set rack_state = v_forced_rack,
+        updated_at = now()
+    where id = v_current_player_id;
+
+    v_submit_result := public.submit_patxanga_move(
+        v_match_id,
+        v_current_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_tile_c_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_tile_a_id::text, 'row', 8, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_tile_s_id::text, 'row', 8, 'col', 10, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_tile_a2_id::text, 'row', 8, 'col', 11, 'declared_letter', null)
+        )
+    );
+
+    if v_submit_result->>'status' <> 'success' then
+        raise exception 'Expected CASA move success through real dictionary seed, got %', v_submit_result;
+    end if;
+
+    if v_submit_result->>'move_id' is null then
+        raise exception 'Expected CASA move_id, got %', v_submit_result;
+    end if;
+
+    select count(*)
+    into v_accepted_move_count
+    from patxanga_moves
+    where id = (v_submit_result->>'move_id')::uuid
+      and match_id = v_match_id
+      and player_id = v_current_player_id
+      and move_type = 'place_word'
+      and status = 'accepted'
+      and main_word = 'CASA'
+      and is_dictionary_recognized = true;
+
+    if v_accepted_move_count <> 1 then
+        raise exception 'Expected exactly 1 accepted CASA move, got %', v_accepted_move_count;
+    end if;
+
+    raise notice 'Dictionary contract test passed';
+    raise notice 'match_id=%', v_match_id;
+    raise notice 'submit_result=%', v_submit_result;
+    raise notice 'real_seed_count=%', v_real_seed_count;
+end $$;
 
 ## FILE: sql/simulations/bot_simulation_smoke.sql
 
@@ -6629,6 +7128,557 @@ begin
     raise notice 'expected_error=%', v_error_message;
 end $$;
 
+## FILE: sql/simulations/bot_simulation_long_multi_turn.sql
+
+-- ============================================================
+-- PATXANGA - BOT SIMULATION LONG MULTI TURN
+-- Purpose: deterministic multi-action bot-vs-bot integration scenario
+-- ============================================================
+
+do $$
+declare
+    v_host_user_id uuid := gen_random_uuid();
+    v_bot_user_id uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_host_player_id uuid;
+    v_first_player_id uuid;
+    v_second_player_id uuid;
+    v_bot_count integer;
+
+    v_opening_tile_d_id uuid := gen_random_uuid();
+    v_opening_tile_a_id uuid := gen_random_uuid();
+    v_exchange_tile_s_id uuid := gen_random_uuid();
+    v_exchange_tile_e_id uuid := gen_random_uuid();
+    v_bridge_tile_x_id uuid := gen_random_uuid();
+    v_bridge_tile_z_id uuid := gen_random_uuid();
+
+    v_first_rack jsonb;
+    v_second_exchange_rack jsonb;
+    v_second_bridge_rack jsonb;
+
+    v_opening_result jsonb;
+    v_exchange_result jsonb;
+    v_first_pass_result jsonb;
+    v_bridge_result jsonb;
+    v_vote_result jsonb;
+    v_second_pass_result jsonb;
+    v_pending_move_id uuid;
+
+    v_bag_after_start integer;
+    v_bag_after_opening integer;
+    v_bag_after_exchange integer;
+    v_first_score integer;
+    v_second_score integer;
+    v_first_player_passed boolean;
+    v_second_player_passed boolean;
+    v_match_status text;
+    v_current_turn_player_id uuid;
+    v_turn_number integer;
+
+    v_total_move_count integer;
+    v_accepted_place_word_count integer;
+    v_rejected_place_word_count integer;
+    v_exchange_move_count integer;
+    v_pass_move_count integer;
+    v_vote_count integer;
+    v_move_submitted_replay_count integer;
+    v_tiles_exchanged_replay_count integer;
+    v_turn_passed_replay_count integer;
+    v_vote_cast_replay_count integer;
+    v_word_rejected_replay_count integer;
+    v_turn_changed_replay_count integer;
+begin
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_host_user_id,
+        p_host_guest_name := 'Bot Long Alpha',
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    select id
+    into v_host_player_id
+    from patxanga_players
+    where match_id = v_match_id
+      and user_id = v_host_user_id;
+
+    update patxanga_players
+    set is_bot = true,
+        bot_level = 'easy',
+        bot_profile = 'balanced',
+        display_name = 'Bot Long Alpha',
+        updated_at = now()
+    where id = v_host_player_id;
+
+    perform public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_bot_user_id,
+        p_guest_name := 'Bot Long Beta',
+        p_is_bot := true,
+        p_bot_level := 'easy',
+        p_bot_profile := 'defensive'
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    select count(*)
+    into v_bot_count
+    from patxanga_players
+    where match_id = v_match_id
+      and is_bot = true;
+
+    if v_bot_count <> 2 then
+        raise exception 'Expected 2 bot players, got %', v_bot_count;
+    end if;
+
+    select current_turn_player_id, (bag_state->>'remaining')::integer
+    into v_first_player_id, v_bag_after_start
+    from patxanga_matches
+    where id = v_match_id;
+
+    select id
+    into v_second_player_id
+    from patxanga_players
+    where match_id = v_match_id
+      and id <> v_first_player_id
+    limit 1;
+
+    if v_bag_after_start < 4 then
+        raise exception 'Expected at least 4 tiles in bag after start, got %', v_bag_after_start;
+    end if;
+
+    v_first_rack := jsonb_build_array(
+        jsonb_build_object('id', v_opening_tile_d_id::text, 'letter', 'D', 'points', 2, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_opening_tile_a_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'M', 'points', 2, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null)
+    );
+
+    update patxanga_players
+    set rack_state = v_first_rack,
+        updated_at = now()
+    where id = v_first_player_id;
+
+    v_opening_result := public.submit_patxanga_move(
+        v_match_id,
+        v_first_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_opening_tile_d_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_opening_tile_a_id::text, 'row', 8, 'col', 9, 'declared_letter', null)
+        )
+    );
+
+    if v_opening_result->>'status' <> 'success' then
+        raise exception 'Expected opening move success, got %', v_opening_result;
+    end if;
+
+    if v_opening_result->>'move_id' is null then
+        raise exception 'Expected opening move_id, got %', v_opening_result;
+    end if;
+
+    if (v_opening_result->'score'->>'total_score')::integer <> 6 then
+        raise exception 'Expected opening DA score 6, got %', v_opening_result;
+    end if;
+
+    if (v_opening_result->>'next_player')::uuid <> v_second_player_id then
+        raise exception 'Expected opening next player %, got %', v_second_player_id, v_opening_result->>'next_player';
+    end if;
+
+    if (v_opening_result->>'turn_number')::integer <> 2 then
+        raise exception 'Expected opening turn_number 2, got %', v_opening_result;
+    end if;
+
+    select (bag_state->>'remaining')::integer
+    into v_bag_after_opening
+    from patxanga_matches
+    where id = v_match_id;
+
+    if v_bag_after_opening <> v_bag_after_start - 2 then
+        raise exception 'Expected bag remaining % after opening, got %', v_bag_after_start - 2, v_bag_after_opening;
+    end if;
+
+    if (select board_state #>> '{7,7,tile,letter}' from patxanga_matches where id = v_match_id) <> 'D' then
+        raise exception 'Expected D at board center after opening';
+    end if;
+
+    if (select board_state #>> '{7,8,tile,letter}' from patxanga_matches where id = v_match_id) <> 'A' then
+        raise exception 'Expected A next to board center after opening';
+    end if;
+
+    v_second_exchange_rack := jsonb_build_array(
+        jsonb_build_object('id', v_exchange_tile_s_id::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_exchange_tile_e_id::text, 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'M', 'points', 2, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'T', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'L', 'points', 1, 'is_special', false, 'special_type', null)
+    );
+
+    update patxanga_players
+    set rack_state = v_second_exchange_rack,
+        updated_at = now()
+    where id = v_second_player_id;
+
+    v_exchange_result := public.submit_patxanga_exchange_tiles(
+        v_match_id,
+        v_second_player_id,
+        jsonb_build_array(v_exchange_tile_s_id::text, v_exchange_tile_e_id::text)
+    );
+
+    if v_exchange_result->>'status' <> 'success' then
+        raise exception 'Expected exchange success, got %', v_exchange_result;
+    end if;
+
+    if (v_exchange_result->>'exchanged_count')::integer <> 2 then
+        raise exception 'Expected exchanged_count 2, got %', v_exchange_result;
+    end if;
+
+    if (v_exchange_result->>'next_player')::uuid <> v_first_player_id then
+        raise exception 'Expected exchange next player %, got %', v_first_player_id, v_exchange_result->>'next_player';
+    end if;
+
+    if (v_exchange_result->>'turn_number')::integer <> 3 then
+        raise exception 'Expected exchange turn_number 3, got %', v_exchange_result;
+    end if;
+
+    select (bag_state->>'remaining')::integer
+    into v_bag_after_exchange
+    from patxanga_matches
+    where id = v_match_id;
+
+    if v_bag_after_exchange <> v_bag_after_opening then
+        raise exception 'Expected exchange to preserve bag remaining %, got %', v_bag_after_opening, v_bag_after_exchange;
+    end if;
+
+    v_first_pass_result := public.submit_patxanga_pass_turn(
+        v_match_id,
+        v_first_player_id
+    );
+
+    if v_first_pass_result->>'status' <> 'success' then
+        raise exception 'Expected first pass success, got %', v_first_pass_result;
+    end if;
+
+    if (v_first_pass_result->>'next_player')::uuid <> v_second_player_id then
+        raise exception 'Expected first pass next player %, got %', v_second_player_id, v_first_pass_result->>'next_player';
+    end if;
+
+    if (v_first_pass_result->>'turn_number')::integer <> 4 then
+        raise exception 'Expected first pass turn_number 4, got %', v_first_pass_result;
+    end if;
+
+    if coalesce((v_first_pass_result->'end_state'->>'finished')::boolean, true) is not false then
+        raise exception 'Expected first pass not to finish match, got %', v_first_pass_result;
+    end if;
+
+    if v_first_pass_result->'end_state'->>'reason' <> 'bag_not_empty' then
+        raise exception 'Expected first pass end_state bag_not_empty, got %', v_first_pass_result;
+    end if;
+
+    v_second_bridge_rack := jsonb_build_array(
+        jsonb_build_object('id', v_bridge_tile_x_id::text, 'letter', 'X', 'points', 8, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_bridge_tile_z_id::text, 'letter', 'Z', 'points', 10, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'M', 'points', 2, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'T', 'points', 1, 'is_special', false, 'special_type', null)
+    );
+
+    update patxanga_players
+    set rack_state = v_second_bridge_rack,
+        updated_at = now()
+    where id = v_second_player_id;
+
+    v_bridge_result := public.submit_patxanga_move(
+        v_match_id,
+        v_second_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_bridge_tile_x_id::text, 'row', 7, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_bridge_tile_z_id::text, 'row', 9, 'col', 9, 'declared_letter', null)
+        )
+    );
+
+    if v_bridge_result->>'status' <> 'pending_vote' then
+        raise exception 'Expected bridge move pending_vote, got %', v_bridge_result;
+    end if;
+
+    if v_bridge_result->>'main_word' <> 'XAZ' then
+        raise exception 'Expected bridge main_word XAZ, got %', v_bridge_result;
+    end if;
+
+    if v_bridge_result->>'match_status' <> 'voting' then
+        raise exception 'Expected bridge match_status voting, got %', v_bridge_result;
+    end if;
+
+    v_pending_move_id := (v_bridge_result->>'move_id')::uuid;
+
+    if v_pending_move_id is null then
+        raise exception 'Expected bridge pending move_id, got %', v_bridge_result;
+    end if;
+
+    if (select status from patxanga_matches where id = v_match_id) <> 'voting' then
+        raise exception 'Expected match status voting after bridge pending_vote';
+    end if;
+
+    if (select board_state #>> '{6,8,tile,id}' from patxanga_matches where id = v_match_id) is not null then
+        raise exception 'Expected upper bridge tile not to be applied while pending_vote';
+    end if;
+
+    if (select board_state #>> '{8,8,tile,id}' from patxanga_matches where id = v_match_id) is not null then
+        raise exception 'Expected lower bridge tile not to be applied while pending_vote';
+    end if;
+
+    v_vote_result := public.submit_patxanga_vote(
+        v_pending_move_id,
+        v_first_player_id,
+        true
+    );
+
+    if v_vote_result->>'status' <> 'rejected' then
+        raise exception 'Expected bridge vote rejection, got %', v_vote_result;
+    end if;
+
+    if (v_vote_result->>'current_turn_player_id')::uuid <> v_second_player_id then
+        raise exception 'Expected turn to return to bridge author %, got %', v_second_player_id, v_vote_result;
+    end if;
+
+    if (select status from patxanga_matches where id = v_match_id) <> 'active' then
+        raise exception 'Expected match active after bridge rejection';
+    end if;
+
+    if (select current_turn_player_id from patxanga_matches where id = v_match_id) <> v_second_player_id then
+        raise exception 'Expected current turn to be bridge author after rejection';
+    end if;
+
+    if (select board_state #>> '{6,8,tile,id}' from patxanga_matches where id = v_match_id) is not null then
+        raise exception 'Expected upper bridge tile not to be applied after rejection';
+    end if;
+
+    if (select board_state #>> '{8,8,tile,id}' from patxanga_matches where id = v_match_id) is not null then
+        raise exception 'Expected lower bridge tile not to be applied after rejection';
+    end if;
+
+    v_second_pass_result := public.submit_patxanga_pass_turn(
+        v_match_id,
+        v_second_player_id
+    );
+
+    if v_second_pass_result->>'status' <> 'success' then
+        raise exception 'Expected second pass success, got %', v_second_pass_result;
+    end if;
+
+    if (v_second_pass_result->>'next_player')::uuid <> v_first_player_id then
+        raise exception 'Expected second pass next player %, got %', v_first_player_id, v_second_pass_result->>'next_player';
+    end if;
+
+    if (v_second_pass_result->>'turn_number')::integer <> 5 then
+        raise exception 'Expected second pass turn_number 5, got %', v_second_pass_result;
+    end if;
+
+    if coalesce((v_second_pass_result->'end_state'->>'finished')::boolean, true) is not false then
+        raise exception 'Expected second pass not to finish match with bag not empty, got %', v_second_pass_result;
+    end if;
+
+    if v_second_pass_result->'end_state'->>'reason' <> 'bag_not_empty' then
+        raise exception 'Expected second pass end_state bag_not_empty, got %', v_second_pass_result;
+    end if;
+
+    select status, current_turn_player_id, turn_number
+    into v_match_status, v_current_turn_player_id, v_turn_number
+    from patxanga_matches
+    where id = v_match_id;
+
+    if v_match_status <> 'active' then
+        raise exception 'Expected final match status active, got %', v_match_status;
+    end if;
+
+    if v_current_turn_player_id <> v_first_player_id then
+        raise exception 'Expected final current turn player %, got %', v_first_player_id, v_current_turn_player_id;
+    end if;
+
+    if v_turn_number <> 5 then
+        raise exception 'Expected final turn_number 5, got %', v_turn_number;
+    end if;
+
+    select score, has_passed_last_cycle
+    into v_first_score, v_first_player_passed
+    from patxanga_players
+    where id = v_first_player_id;
+
+    select score, has_passed_last_cycle
+    into v_second_score, v_second_player_passed
+    from patxanga_players
+    where id = v_second_player_id;
+
+    if v_first_score <> 6 then
+        raise exception 'Expected first bot score 6, got %', v_first_score;
+    end if;
+
+    if v_second_score <> 0 then
+        raise exception 'Expected second bot score 0, got %', v_second_score;
+    end if;
+
+    if v_first_player_passed is not true or v_second_player_passed is not true then
+        raise exception 'Expected both bots marked passed, got first=% second=%', v_first_player_passed, v_second_player_passed;
+    end if;
+
+    select count(*)
+    into v_total_move_count
+    from patxanga_moves
+    where match_id = v_match_id;
+
+    if v_total_move_count <> 5 then
+        raise exception 'Expected exactly 5 persisted moves, got %', v_total_move_count;
+    end if;
+
+    select count(*)
+    into v_accepted_place_word_count
+    from patxanga_moves
+    where match_id = v_match_id
+      and move_type = 'place_word'
+      and status = 'accepted'
+      and main_word = 'DA'
+      and score_total = 6;
+
+    if v_accepted_place_word_count <> 1 then
+        raise exception 'Expected exactly 1 accepted DA move, got %', v_accepted_place_word_count;
+    end if;
+
+    select count(*)
+    into v_rejected_place_word_count
+    from patxanga_moves
+    where id = v_pending_move_id
+      and match_id = v_match_id
+      and player_id = v_second_player_id
+      and move_type = 'place_word'
+      and status = 'rejected'
+      and main_word = 'XAZ'
+      and score_total = 0
+      and is_dictionary_recognized = false
+      and requires_vote = true;
+
+    if v_rejected_place_word_count <> 1 then
+        raise exception 'Expected exactly 1 rejected XAZ move, got %', v_rejected_place_word_count;
+    end if;
+
+    select count(*)
+    into v_exchange_move_count
+    from patxanga_moves
+    where match_id = v_match_id
+      and player_id = v_second_player_id
+      and move_type = 'exchange_tiles'
+      and status = 'accepted'
+      and used_tiles_from_rack = jsonb_build_array(v_exchange_tile_s_id::text, v_exchange_tile_e_id::text);
+
+    if v_exchange_move_count <> 1 then
+        raise exception 'Expected exactly 1 accepted exchange move, got %', v_exchange_move_count;
+    end if;
+
+    select count(*)
+    into v_pass_move_count
+    from patxanga_moves
+    where match_id = v_match_id
+      and move_type = 'pass'
+      and status = 'accepted';
+
+    if v_pass_move_count <> 2 then
+        raise exception 'Expected exactly 2 accepted pass moves, got %', v_pass_move_count;
+    end if;
+
+    select count(*)
+    into v_vote_count
+    from patxanga_votes
+    where move_id = v_pending_move_id
+      and match_id = v_match_id
+      and voter_player_id = v_first_player_id
+      and vote_reject = true;
+
+    if v_vote_count <> 1 then
+        raise exception 'Expected exactly 1 rejecting vote, got %', v_vote_count;
+    end if;
+
+    select count(*)
+    into v_move_submitted_replay_count
+    from patxanga_replay_events
+    where match_id = v_match_id
+      and event_type = 'move_submitted';
+
+    if v_move_submitted_replay_count <> 1 then
+        raise exception 'Expected exactly 1 move_submitted replay event, got %', v_move_submitted_replay_count;
+    end if;
+
+    select count(*)
+    into v_tiles_exchanged_replay_count
+    from patxanga_replay_events
+    where match_id = v_match_id
+      and event_type = 'tiles_exchanged';
+
+    if v_tiles_exchanged_replay_count <> 1 then
+        raise exception 'Expected exactly 1 tiles_exchanged replay event, got %', v_tiles_exchanged_replay_count;
+    end if;
+
+    select count(*)
+    into v_turn_passed_replay_count
+    from patxanga_replay_events
+    where match_id = v_match_id
+      and event_type = 'turn_passed';
+
+    if v_turn_passed_replay_count <> 2 then
+        raise exception 'Expected exactly 2 turn_passed replay events, got %', v_turn_passed_replay_count;
+    end if;
+
+    select count(*)
+    into v_vote_cast_replay_count
+    from patxanga_replay_events
+    where match_id = v_match_id
+      and event_type = 'vote_cast';
+
+    if v_vote_cast_replay_count <> 1 then
+        raise exception 'Expected exactly 1 vote_cast replay event, got %', v_vote_cast_replay_count;
+    end if;
+
+    select count(*)
+    into v_word_rejected_replay_count
+    from patxanga_replay_events
+    where match_id = v_match_id
+      and event_type = 'word_rejected';
+
+    if v_word_rejected_replay_count <> 2 then
+        raise exception 'Expected exactly 2 word_rejected replay events, got %', v_word_rejected_replay_count;
+    end if;
+
+    select count(*)
+    into v_turn_changed_replay_count
+    from patxanga_replay_events
+    where match_id = v_match_id
+      and event_type = 'turn_changed';
+
+    if v_turn_changed_replay_count < 3 then
+        raise exception 'Expected at least 3 turn_changed replay events, got %', v_turn_changed_replay_count;
+    end if;
+
+    raise notice 'Bot long multi-turn simulation passed';
+    raise notice 'match_id=%', v_match_id;
+    raise notice 'first_bot_player_id=%', v_first_player_id;
+    raise notice 'second_bot_player_id=%', v_second_player_id;
+    raise notice 'opening_result=%', v_opening_result;
+    raise notice 'exchange_result=%', v_exchange_result;
+    raise notice 'first_pass_result=%', v_first_pass_result;
+    raise notice 'bridge_result=%', v_bridge_result;
+    raise notice 'vote_result=%', v_vote_result;
+    raise notice 'second_pass_result=%', v_second_pass_result;
+    raise notice 'bag_after_start=%', v_bag_after_start;
+    raise notice 'bag_after_opening=%', v_bag_after_opening;
+    raise notice 'bag_after_exchange=%', v_bag_after_exchange;
+    raise notice 'total_move_count=%', v_total_move_count;
+    raise notice 'word_rejected_replay_count=%', v_word_rejected_replay_count;
+end $$;
+
 ## FILE: supabase/migrations/20260620210000_20_persist_successful_place_word_moves.sql
 
 -- ============================================================
@@ -7034,6 +8084,146 @@ $$;
 
 grant execute on function public.submit_patxanga_move(uuid, uuid, jsonb)
 to authenticated, anon;
+
+## FILE: supabase/migrations/20260620213000_21_dictionary_contract_language.sql
+
+-- ============================================================
+-- PATXANGA - DICTIONARY CONTRACT WITH LANGUAGE
+-- Purpose: prepare dictionary validation for real lexical sources
+-- ============================================================
+
+alter table public.patxanga_dictionary
+add column if not exists language text;
+
+alter table public.patxanga_dictionary
+add column if not exists source text;
+
+alter table public.patxanga_dictionary
+add column if not exists is_active boolean;
+
+alter table public.patxanga_dictionary
+add column if not exists created_at timestamptz;
+
+alter table public.patxanga_dictionary
+add column if not exists updated_at timestamptz;
+
+update public.patxanga_dictionary
+set language = coalesce(nullif(language, ''), 'pt-BR'),
+    source = coalesce(nullif(source, ''), 'test_seed'),
+    is_active = coalesce(is_active, true),
+    created_at = coalesce(created_at, now()),
+    updated_at = coalesce(updated_at, now());
+
+alter table public.patxanga_dictionary
+alter column language set default 'pt-BR',
+alter column language set not null,
+alter column source set default 'test_seed',
+alter column source set not null,
+alter column is_active set default true,
+alter column is_active set not null,
+alter column created_at set default now(),
+alter column created_at set not null,
+alter column updated_at set default now(),
+alter column updated_at set not null;
+
+alter table public.patxanga_dictionary
+drop constraint if exists patxanga_dictionary_pkey;
+
+alter table public.patxanga_dictionary
+drop constraint if exists patxanga_dictionary_word_normalized_key;
+
+alter table public.patxanga_dictionary
+add constraint patxanga_dictionary_pkey
+primary key (language, word_normalized);
+
+drop index if exists public.idx_patxanga_dictionary_normalized;
+
+create index if not exists idx_patxanga_dictionary_active_lookup
+on public.patxanga_dictionary (language, word_normalized)
+where is_active = true;
+
+create index if not exists idx_patxanga_dictionary_source
+on public.patxanga_dictionary (source);
+
+drop function if exists public.validate_word(text);
+drop function if exists public.validate_word(text, text);
+
+create or replace function public.validate_word(
+    p_word text,
+    p_language text default 'pt-BR'
+)
+returns boolean
+language plpgsql
+stable
+as
+$$
+declare
+    v_normalized text;
+    v_exists integer;
+begin
+    if p_word is null then
+        return false;
+    end if;
+
+    if coalesce(nullif(trim(p_language), ''), '') = '' then
+        return false;
+    end if;
+
+    v_normalized := public.normalize_patxanga_word(p_word);
+
+    select 1
+    into v_exists
+    from patxanga_dictionary
+    where word_normalized = v_normalized
+      and language = p_language
+      and is_active = true
+    limit 1;
+
+    return v_exists is not null;
+end;
+$$;
+
+grant execute on function public.validate_word(text, text)
+to authenticated, anon;
+
+## FILE: supabase/migrations/20260620213500_22_dictionary_pt_br_core_seed.sql
+
+-- ============================================================
+-- PATXANGA - PT-BR CORE DICTIONARY SEED
+-- Purpose: small real-word seed for deterministic QA
+-- ============================================================
+
+insert into public.patxanga_dictionary (
+    language,
+    word_original,
+    word_normalized,
+    source,
+    is_active
+)
+values
+('pt-BR', 'AMOR', public.normalize_patxanga_word('AMOR'), 'pt_br_core_seed', true),
+('pt-BR', 'AÇÃO', public.normalize_patxanga_word('AÇÃO'), 'pt_br_core_seed', true),
+('pt-BR', 'BOLA', public.normalize_patxanga_word('BOLA'), 'pt_br_core_seed', true),
+('pt-BR', 'CASA', public.normalize_patxanga_word('CASA'), 'pt_br_core_seed', true),
+('pt-BR', 'GATO', public.normalize_patxanga_word('GATO'), 'pt_br_core_seed', true),
+('pt-BR', 'JOGO', public.normalize_patxanga_word('JOGO'), 'pt_br_core_seed', true),
+('pt-BR', 'LIVRO', public.normalize_patxanga_word('LIVRO'), 'pt_br_core_seed', true),
+('pt-BR', 'LUA', public.normalize_patxanga_word('LUA'), 'pt_br_core_seed', true),
+('pt-BR', 'MÃO', public.normalize_patxanga_word('MÃO'), 'pt_br_core_seed', true),
+('pt-BR', 'MAR', public.normalize_patxanga_word('MAR'), 'pt_br_core_seed', true),
+('pt-BR', 'MESA', public.normalize_patxanga_word('MESA'), 'pt_br_core_seed', true),
+('pt-BR', 'PÃO', public.normalize_patxanga_word('PÃO'), 'pt_br_core_seed', true),
+('pt-BR', 'PATO', public.normalize_patxanga_word('PATO'), 'pt_br_core_seed', true),
+('pt-BR', 'PORTA', public.normalize_patxanga_word('PORTA'), 'pt_br_core_seed', true),
+('pt-BR', 'RUA', public.normalize_patxanga_word('RUA'), 'pt_br_core_seed', true),
+('pt-BR', 'SOL', public.normalize_patxanga_word('SOL'), 'pt_br_core_seed', true),
+('pt-BR', 'TEMPO', public.normalize_patxanga_word('TEMPO'), 'pt_br_core_seed', true),
+('pt-BR', 'VIDA', public.normalize_patxanga_word('VIDA'), 'pt_br_core_seed', true)
+on conflict (language, word_normalized) do update
+set word_original = excluded.word_original,
+    source = excluded.source,
+    is_active = excluded.is_active,
+    updated_at = now();
 
 ## FRASE PADRAO DE PASSAGEM DE BASTAO
 
