@@ -16,6 +16,7 @@ typeset -a lobby_ops_tests=(
 )
 
 typeset -a engine_regression_tests=(
+  "sql/tests/test_dictionary_contract.sql"
   "sql/tests/test_exchange_tiles.sql"
   "sql/tests/test_pass_turn.sql"
   "sql/tests/test_submit_move_auto.sql"
@@ -37,7 +38,7 @@ Usage:
 
 Profiles:
   lobby_ops          Lobby, invite, resume and forfeit operational coverage
-  engine_regression  Exchange, pass turn, match end and pending vote coverage
+  engine_regression  Dictionary, exchange, pass turn, match end and pending vote coverage
   all                Both predefined profiles above
 EOF
 }
@@ -83,5 +84,5 @@ for test_file in "${tests_to_run[@]}"; do
   fi
 
   echo "==> $test_file"
-  docker exec -i "$container_name" psql -U postgres -d postgres < "$test_file"
+  docker exec -i "$container_name" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$test_file"
 done

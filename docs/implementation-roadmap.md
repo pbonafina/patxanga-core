@@ -35,6 +35,7 @@ Leitura atual do projeto:
 | Primeira tela jogavel | Existe, mas ainda precisa evoluir de sandbox operacional para produto |
 | Rack e composicao por slots | Implementado como superficie oficial de preparo no frontend |
 | Votacao | Funcional, mas ainda precisa UX de produto |
+| Dicionario | Contrato por idioma/fonte/ativo consolidado; seed PT-BR pequeno para QA |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
 | Bots de teste e simulacao | Prioridade alta; frente iniciada com contrato, runner e smoke deterministico |
 | Bot | Apenas modelado no banco; ainda nao existe modo jogavel humano contra bot |
@@ -61,6 +62,7 @@ Diretriz principal:
 9. Documentacao deve acompanhar marcos relevantes, nao microajustes.
 10. Todo marco funcional deve ter validacao automatizada ou justificativa clara.
 11. Bot de teste/simulacao deve ser tratado primeiro como ferramenta de QA, nao como modo final de produto.
+12. Dicionario grande so deve entrar depois de contrato, fonte e licenca claros.
 
 ---
 
@@ -248,6 +250,12 @@ Estado atual:
 - erro esperado valida peca inexistente no rack e jogada fora do turno,
   confirmando excecao esperada e ausencia de mutacao em match, rack, moves e
   replay
+- multi-turno deterministico criado em
+  `sql/simulations/bot_simulation_long_multi_turn.sql`
+- multi-turno valida `place_word` aceito, `exchange_tiles`, dois passes,
+  `pending_vote` em ponte usando peca ja existente no board, rejeicao por voto,
+  preservacao do board para jogada rejeitada, contadores de moves/replay e
+  partida ainda ativa com bag nao vazia
 - `submit_patxanga_move(...)` agora persiste jogadas `place_word` aceitas em
   `patxanga_moves`
 
@@ -286,6 +294,7 @@ Cenarios prioritarios de simulacao:
 7. partida que chega ao fim por rack vazio - coberta
 8. partida que chega ao fim por todos passarem - coberta
 9. tentativa de jogada invalida com erro esperado - coberta
+10. partida multi-turno combinando acoes diferentes - coberta
 
 Arquitetura recomendada:
 
@@ -308,6 +317,43 @@ Validacao desejada:
 ```bash
 cd frontend
 npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+```
+
+---
+
+## 9.1 Frente transversal - Dicionario e palavras reais
+
+Objetivo:
+
+Preparar a validacao lexical para palavras reais em portugues sem acoplar a
+engine a um dicionario gigante ainda nao auditado.
+
+Estado atual:
+
+- `patxanga_dictionary` consolidado com `language`, `word_original`,
+  `word_normalized`, `source`, `is_active`, `created_at` e `updated_at`
+- chave primaria composta por `language + word_normalized`
+- `validate_word(p_word, p_language default 'pt-BR')` valida idioma,
+  normalizacao e apenas palavras ativas
+- seed minimo de teste preservado em `sql/seeds/002_dictionary_test_seed.sql`
+- seed pequeno de palavras reais PT-BR criado em
+  `sql/seeds/003_dictionary_pt_br_core_seed.sql`
+- teste `sql/tests/test_dictionary_contract.sql` cobre normalizacao, acento,
+  idioma, palavra inativa, seed real e caminho completo de `submit_move`
+
+Proximos passos:
+
+- escolher fonte licenciada para dicionario amplo
+- criar pipeline de importacao auditavel, sem editar manualmente dump gigante
+- decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
+- fazer `submit_move` e `preview_move` consumirem explicitamente o idioma da
+  partida se forem abertos idiomas alem de `pt-BR`
+
+Validacao minima:
+
+```bash
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
+zsh scripts/run-sql-test-suite.sh all
 ```
 
 ---

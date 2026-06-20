@@ -20,7 +20,7 @@ trechos antigos deste documento quando houver divergencia operacional.
 
 Estado verificado nesta rodada:
 
-- branch atual local: `upgrade/next16-audit`
+- branch atual local: `feature/bot-long-simulations`
 - foco imediato: iniciar a frente de bots de teste e simulacao
 - objetivo da frente: criar bots utilitarios para QA, simulacoes e regressao,
   antes de implementar humano contra bot como produto
@@ -35,9 +35,17 @@ Estado verificado nesta rodada:
 - cenario all_passed_end criado em `sql/simulations/bot_simulation_all_passed_end.sql`
 - cenario invalid_move_expected_error criado em
   `sql/simulations/bot_simulation_invalid_move_expected_error.sql`
+- cenario long_multi_turn criado em
+  `sql/simulations/bot_simulation_long_multi_turn.sql`
 - persistencia de jogada `place_word` aceita corrigida em `submit_patxanga_move(...)`
 - migration de correcao criada em
   `supabase/migrations/20260620210000_20_persist_successful_place_word_moves.sql`
+- contrato de dicionario por idioma/fonte/ativo criado em
+  `supabase/migrations/20260620213000_21_dictionary_contract_language.sql`
+- seed pequeno de palavras reais PT-BR criado em
+  `supabase/migrations/20260620213500_22_dictionary_pt_br_core_seed.sql`
+- teste de contrato de dicionario criado em
+  `sql/tests/test_dictionary_contract.sql`
 - validacao inicial e regressiva confirmada: `zsh scripts/run-bot-simulation.sh all`
 
 Leitura correta:
@@ -47,11 +55,13 @@ Leitura correta:
 - os bots devem reutilizar RPCs oficiais e nao criar estado paralelo
 - humano contra bot continua posterior, depois da experiencia humano contra humano
   e depois de uma base minima de simulacao
+- dicionario amplo deve vir depois de contrato, fonte e licenca claros
 
 Comando atual da frente:
 
 ```bash
 zsh scripts/run-bot-simulation.sh all
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
 ```
 
 Validacao recomendada apos mudancas nesta frente:
@@ -80,8 +90,12 @@ Validacao confirmada nesta rodada:
 - `zsh scripts/run-bot-simulation.sh sql/simulations/bot_simulation_empty_rack_end.sql`
 - `zsh scripts/run-bot-simulation.sh sql/simulations/bot_simulation_all_passed_end.sql`
 - `zsh scripts/run-bot-simulation.sh sql/simulations/bot_simulation_invalid_move_expected_error.sql`
+- `zsh scripts/run-bot-simulation.sh long`
 - `zsh scripts/run-bot-simulation.sh all`
 - `zsh scripts/run-sql-test-suite.sh all`
+- `supabase db reset`
+- `zsh scripts/run-sql-test-suite.sh all` apos reset
+- `zsh scripts/run-bot-simulation.sh all` apos reset
 - `cd frontend && npm run lint`
 - `cd frontend && npm run build`
 - `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
@@ -157,9 +171,21 @@ Sexto cenario de bot confirmado:
   `Not your turn`
 - em ambos os casos valida que match, board, bag, rack, turno, status, moves e
   replay permanecem inalterados
-- `scripts/run-bot-simulation.sh all` executa seis cenarios: smoke,
-  pending_vote, exchange_tiles, empty_rack_end, all_passed_end e
-  invalid_move_expected_error
+
+Setimo cenario de bot confirmado:
+
+- `sql/simulations/bot_simulation_long_multi_turn.sql` cobre uma partida unica
+  com sequencia longa
+- fluxo validado: abertura `DA` aceita, troca de duas pecas, primeiro passe,
+  jogada em ponte `XAZ` usando o `A` ja existente no board, entrada em
+  `pending_vote`, rejeicao por voto e segundo passe
+- valida persistencia de 5 moves, score 6 contra 0, turno final no primeiro
+  bot, partida ainda `active` por `bag_not_empty`, dois bots marcados como
+  passados, board sem as pecas rejeitadas e replays esperados
+- `scripts/run-bot-simulation.sh long` executa apenas este cenario
+- `scripts/run-bot-simulation.sh all` executa sete cenarios: smoke,
+  pending_vote, exchange_tiles, empty_rack_end, all_passed_end,
+  invalid_move_expected_error e long_multi_turn
 
 Observacao tecnica:
 

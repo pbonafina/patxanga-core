@@ -272,13 +272,22 @@ trap 'rm -f "$TMP_OUT"' EXIT
     docs/current-development-continuity-spec-v1.0.md \
     docs/18-room-baton-process-v1.0.md \
     scripts/run-bot-simulation.sh \
+    scripts/run-sql-test-suite.sh \
+    sql/migrations/002_dictionary.sql \
+    sql/rpc/validate_word.sql \
+    sql/seeds/002_dictionary_test_seed.sql \
+    sql/seeds/003_dictionary_pt_br_core_seed.sql \
+    sql/tests/test_dictionary_contract.sql \
     sql/simulations/bot_simulation_smoke.sql \
     sql/simulations/bot_simulation_pending_vote.sql \
     sql/simulations/bot_simulation_exchange_tiles.sql \
     sql/simulations/bot_simulation_empty_rack_end.sql \
     sql/simulations/bot_simulation_all_passed_end.sql \
     sql/simulations/bot_simulation_invalid_move_expected_error.sql \
-    supabase/migrations/20260620210000_20_persist_successful_place_word_moves.sql
+    sql/simulations/bot_simulation_long_multi_turn.sql \
+    supabase/migrations/20260620210000_20_persist_successful_place_word_moves.sql \
+    supabase/migrations/20260620213000_21_dictionary_contract_language.sql \
+    supabase/migrations/20260620213500_22_dictionary_pt_br_core_seed.sql
   do
     if [ -f "$file" ]; then
       echo "## FILE: $file"
