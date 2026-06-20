@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-20 23:51:06
+Generated at: 2026-06-21 00:00:23
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,14 +93,14 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## feature/match-language-dictionary-validation
+## feature/pt-pt-language-baseline
  M docs/current-development-continuity-spec-v1.0.md
  M docs/implementation-roadmap.md
  M generate-room-baton-package.sh
- M sql/rpc/preview_move.sql
- M sql/rpc/submit_move.sql
+ M sql/seeds/001_patxanga_distribution.sql
  M sql/tests/test_dictionary_contract.sql
-?? supabase/migrations/20260620215000_23_match_language_dictionary_validation.sql
+?? sql/seeds/004_dictionary_pt_pt_core_seed.sql
+?? supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql
 ```
 
 ### git remote -v
@@ -111,7 +111,9 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-51109b7 (HEAD -> feature/match-language-dictionary-validation, origin/develop, origin/HEAD, develop) Merge pull request #2 from pbonafina/feature/bot-long-simulations
+6c5d636 (HEAD -> feature/pt-pt-language-baseline, origin/develop, origin/HEAD, develop) Merge pull request #3 from pbonafina/feature/match-language-dictionary-validation
+cbb3dd8 (origin/feature/match-language-dictionary-validation, feature/match-language-dictionary-validation) fix: validate words against match language
+51109b7 Merge pull request #2 from pbonafina/feature/bot-long-simulations
 26cc872 (origin/feature/bot-long-simulations, feature/bot-long-simulations) test: extend bot simulations and dictionary contract
 0d3997c Merge pull request #1 from pbonafina/upgrade/next16-audit
 a263bb7 (origin/upgrade/next16-audit, upgrade/next16-audit) docs: refresh baton package after checkpoint
@@ -124,8 +126,6 @@ ea03c80 test(bots): add deterministic simulation suite
 f2b9aa9 Formaliza matriz objetiva de avanco do projeto
 8eaf094 Promove composicao por slots a contrato oficial de jogada
 b78659e Estabiliza especificacao de continuidade pos-push
-978c27c Atualiza kit de continuidade com especificacao do estado atual
-13fa822 Tighten local ignore rules
 ```
 
 ### tail -n 60 ../project-log.md
@@ -3733,16 +3733,24 @@ Estado atual:
 - seed minimo de teste preservado em `sql/seeds/002_dictionary_test_seed.sql`
 - seed pequeno de palavras reais PT-BR criado em
   `sql/seeds/003_dictionary_pt_br_core_seed.sql`
+- baseline minima `pt-PT` criada com distribuicao inicial copiada de `pt-BR`
+  em `sql/seeds/001_patxanga_distribution.sql`
+- seed pequeno de palavras reais PT-PT criado em
+  `sql/seeds/004_dictionary_pt_pt_core_seed.sql`
 - teste `sql/tests/test_dictionary_contract.sql` cobre normalizacao, acento,
   idioma, palavra inativa, seed real, `preview_move` e caminho completo de
   `submit_move`
+- o mesmo teste confirma que uma partida real `pt-PT` inicia e aceita `CASA`
+  como palavra reconhecida, sem cair em votacao
 
 Proximos passos:
 
 - escolher fonte licenciada para dicionario amplo
 - criar pipeline de importacao auditavel, sem editar manualmente dump gigante
 - decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
-- preparar seed/fonte para `pt-PT` antes de permitir partidas reais nesse idioma
+- substituir a baseline minima `pt-PT` por fonte ampla licenciada e auditada
+- auditar a distribuicao de pecas `pt-PT`; por enquanto ela e uma baseline
+  operacional derivada de `pt-BR`
 
 Validacao minima:
 
@@ -4135,10 +4143,11 @@ trechos antigos deste documento quando houver divergencia operacional.
 
 Estado verificado nesta rodada:
 
-- branch atual local: `feature/bot-long-simulations`
-- foco imediato: iniciar a frente de bots de teste e simulacao
-- objetivo da frente: criar bots utilitarios para QA, simulacoes e regressao,
-  antes de implementar humano contra bot como produto
+- ultima frente local registrada: `feature/pt-pt-language-baseline`
+- foco imediato: fechar baseline minima `pt-PT` para que partidas reais nesse
+  idioma possam iniciar e validar palavras seed sem cair em votacao
+- frente de bots de teste e simulacao ja foi criada antes desta atualizacao e
+  continua como regressao obrigatoria
 - roadmap consolidado criado em `docs/implementation-roadmap.md`
 - manual inicial de jogador criado em `docs/como-jogar-patxanga.md`
 - contrato inicial de bot criado em `docs/07-bot-engine.md`
@@ -4161,9 +4170,16 @@ Estado verificado nesta rodada:
   `supabase/migrations/20260620213500_22_dictionary_pt_br_core_seed.sql`
 - validacao lexical por idioma da partida criada em
   `supabase/migrations/20260620215000_23_match_language_dictionary_validation.sql`
+- baseline minima `pt-PT` criada em
+  `supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql`
+- seed fonte `pt-PT` espelhado em `sql/seeds/004_dictionary_pt_pt_core_seed.sql`
+- distribuicao fonte `pt-PT` espelhada em
+  `sql/seeds/001_patxanga_distribution.sql`
 - teste de contrato de dicionario criado em
   `sql/tests/test_dictionary_contract.sql`
-- validacao inicial e regressiva confirmada: `zsh scripts/run-bot-simulation.sh all`
+- validacao inicial e regressiva confirmada: `supabase db reset`,
+  `zsh scripts/run-sql-test-suite.sh all` e
+  `zsh scripts/run-bot-simulation.sh all`
 
 Leitura correta:
 
@@ -4173,12 +4189,15 @@ Leitura correta:
 - humano contra bot continua posterior, depois da experiencia humano contra humano
   e depois de uma base minima de simulacao
 - dicionario amplo deve vir depois de contrato, fonte e licenca claros
+- a baseline `pt-PT` atual e operacional e minima; nao substitui uma fonte
+  ampla, licenciada e auditada
 
 Comando atual da frente:
 
 ```bash
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
 zsh scripts/run-bot-simulation.sh all
-zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
 ```
 
 Validacao recomendada apos mudancas nesta frente:
@@ -4213,8 +4232,8 @@ Validacao confirmada nesta rodada:
 - `supabase db reset`
 - `zsh scripts/run-sql-test-suite.sh all` apos reset
 - `zsh scripts/run-bot-simulation.sh all` apos reset
-- validacao especifica confirmada: `CASA` aceita em partida `pt-BR`, mas
-  exige votacao em partida marcada como `pt-PT` sem seed `pt-PT`
+- validacao especifica confirmada: `CASA` aceita em partida `pt-BR` e tambem
+  em partida real `pt-PT` apos seed minimo `pt-PT`, sem exigir votacao
 - `cd frontend && npm run lint`
 - `cd frontend && npm run build`
 - `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
@@ -4338,22 +4357,26 @@ Leitura executiva:
 
 ## 3. Estado local verificado
 
-- branch atual: `develop`
-- upstream: `origin/develop`
+- branch de implementacao desta atualizacao: `feature/pt-pt-language-baseline`
+- base esperada antes do merge: `develop`
 - o `git log` recente desta frente precisa refletir, no minimo:
   - baseline operacional de lobby/convites/retomada/desistencia
   - cobertura Playwright da pagina de teste
   - suite SQL de regressao
-  - slots locais permanentes no rack
-  - promocao da composicao por slots a contrato oficial de preview/submit
-- working tree verificado nesta leitura:
-  - `M docs/18-room-baton-package-current.md`
-  - `?? docs/15-pacote-final-colagem-v1.2-ultra-blindado.md`
-  - `?? generate-continuity-package.sh`
+  - sistema de bots utilitarios para simulacao e QA
+  - contrato de dicionario por idioma
+  - seed real minimo `pt-BR`
+  - validacao lexical usando o idioma persistido na partida
+  - baseline minima `pt-PT` para distribuicao, seed e partida real
+- working tree esperado antes do commit desta frente:
+  - alteracoes em `sql/seeds/001_patxanga_distribution.sql`
+  - alteracoes em `sql/tests/test_dictionary_contract.sql`
+  - novo `sql/seeds/004_dictionary_pt_pt_core_seed.sql`
+  - novo `supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql`
+  - atualizacao dos documentos de continuidade e pacote de bastao
 
 Regra de interpretacao:
 - o estado local acima prevalece sobre memoria, conversa e pacote antigo
-- os dois arquivos untracked acima nao devem ser assumidos como parte da frente ativa sem triagem explicita
 - `docs/18-room-baton-package-current.md` pode aparecer modificado localmente apos refresh,
   porque ele incorpora `git status`, `git log` e trechos do log operacional
 
@@ -5709,6 +5732,132 @@ $$;
 grant execute on function public.validate_word(text, text)
 to authenticated, anon;
 
+## FILE: sql/seeds/001_patxanga_distribution.sql
+
+-- ============================================================
+-- PATXANGA - LETTER DISTRIBUTION SEED
+-- Version: 1.0
+-- ============================================================
+
+-- ============================================================
+-- TABLE: patxanga_letter_distribution
+-- ============================================================
+
+create table if not exists patxanga_letter_distribution (
+    id bigserial primary key,
+
+    language text not null check (language in ('pt-BR','pt-PT')),
+    letter text not null,
+    quantity integer not null,
+    points integer not null,
+
+    is_special boolean not null default false,
+    special_type text null check (
+        special_type in ('wildcard','skip_turn','patxanga_real')
+    ),
+
+    created_at timestamp not null default now(),
+
+    unique(language, letter, special_type)
+);
+
+-- ============================================================
+-- CLEAR EXISTING DATA (SAFE FOR DEV)
+-- ============================================================
+
+delete from patxanga_letter_distribution
+where language in ('pt-BR','pt-PT');
+
+-- ============================================================
+-- INSERT DISTRIBUTION - PATXANGA v1.0
+-- ============================================================
+
+-- =============================
+-- VOGAIS
+-- =============================
+
+insert into patxanga_letter_distribution (language, letter, quantity, points)
+values
+('pt-BR','A',14,1),
+('pt-BR','E',11,1),
+('pt-BR','O',9,1),
+('pt-BR','I',7,1),
+('pt-BR','U',5,2);
+
+-- =============================
+-- CONSOANTES FREQUENTES
+-- =============================
+
+insert into patxanga_letter_distribution (language, letter, quantity, points)
+values
+('pt-BR','S',7,1),
+('pt-BR','R',6,1),
+('pt-BR','N',5,1),
+('pt-BR','D',4,2),
+('pt-BR','M',4,2),
+('pt-BR','T',4,2),
+('pt-BR','C',4,2);
+
+-- =============================
+-- CONSOANTES INTERMEDIÁRIAS
+-- =============================
+
+insert into patxanga_letter_distribution (language, letter, quantity, points)
+values
+('pt-BR','L',3,2),
+('pt-BR','P',2,3),
+('pt-BR','B',2,3),
+('pt-BR','G',2,3),
+('pt-BR','V',2,3),
+('pt-BR','F',1,4),
+('pt-BR','H',1,4),
+('pt-BR','J',1,5);
+
+-- =============================
+-- LETRAS ESTRATÉGICAS
+-- =============================
+
+insert into patxanga_letter_distribution (language, letter, quantity, points)
+values
+('pt-BR','Q',2,6),
+('pt-BR','X',2,6),
+('pt-BR','Z',2,7),
+('pt-BR','K',1,7),
+('pt-BR','Y',1,7),
+('pt-BR','W',1,7);
+
+-- =============================
+-- PEÇAS ESPECIAIS
+-- Todas são wildcard
+-- =============================
+
+insert into patxanga_letter_distribution
+(language, letter, quantity, points, is_special, special_type)
+values
+('pt-BR','*',2,0,true,'wildcard'),          -- Coringas
+('pt-BR','SKIP',4,0,true,'skip_turn'),     -- Pular turno
+('pt-BR','PR',1,0,true,'patxanga_real');   -- Patxanga Real
+
+-- =============================
+-- BASELINE PT-PT
+-- =============================
+
+insert into patxanga_letter_distribution
+(language, letter, quantity, points, is_special, special_type)
+select
+    'pt-PT',
+    letter,
+    quantity,
+    points,
+    is_special,
+    special_type
+from patxanga_letter_distribution
+where language = 'pt-BR';
+
+-- ============================================================
+-- END OF SEED
+-- ============================================================
+
 ## FILE: sql/seeds/002_dictionary_test_seed.sql
 
 -- ============================================================
@@ -5783,6 +5932,46 @@ set word_original = excluded.word_original,
     is_active = excluded.is_active,
     updated_at = now();
 
+## FILE: sql/seeds/004_dictionary_pt_pt_core_seed.sql
+
+-- ============================================================
+-- PATXANGA - PT-PT CORE DICTIONARY SEED
+-- Version: 1.0
+-- Purpose: Small real-word seed for deterministic QA
+-- ============================================================
+
+insert into patxanga_dictionary (
+    language,
+    word_original,
+    word_normalized,
+    source,
+    is_active
+)
+values
+('pt-PT', 'AMOR', public.normalize_patxanga_word('AMOR'), 'pt_pt_core_seed', true),
+('pt-PT', 'AÇÃO', public.normalize_patxanga_word('AÇÃO'), 'pt_pt_core_seed', true),
+('pt-PT', 'BOLA', public.normalize_patxanga_word('BOLA'), 'pt_pt_core_seed', true),
+('pt-PT', 'CASA', public.normalize_patxanga_word('CASA'), 'pt_pt_core_seed', true),
+('pt-PT', 'GATO', public.normalize_patxanga_word('GATO'), 'pt_pt_core_seed', true),
+('pt-PT', 'JOGO', public.normalize_patxanga_word('JOGO'), 'pt_pt_core_seed', true),
+('pt-PT', 'LIVRO', public.normalize_patxanga_word('LIVRO'), 'pt_pt_core_seed', true),
+('pt-PT', 'LUA', public.normalize_patxanga_word('LUA'), 'pt_pt_core_seed', true),
+('pt-PT', 'MÃO', public.normalize_patxanga_word('MÃO'), 'pt_pt_core_seed', true),
+('pt-PT', 'MAR', public.normalize_patxanga_word('MAR'), 'pt_pt_core_seed', true),
+('pt-PT', 'MESA', public.normalize_patxanga_word('MESA'), 'pt_pt_core_seed', true),
+('pt-PT', 'PÃO', public.normalize_patxanga_word('PÃO'), 'pt_pt_core_seed', true),
+('pt-PT', 'PATO', public.normalize_patxanga_word('PATO'), 'pt_pt_core_seed', true),
+('pt-PT', 'PORTA', public.normalize_patxanga_word('PORTA'), 'pt_pt_core_seed', true),
+('pt-PT', 'RUA', public.normalize_patxanga_word('RUA'), 'pt_pt_core_seed', true),
+('pt-PT', 'SOL', public.normalize_patxanga_word('SOL'), 'pt_pt_core_seed', true),
+('pt-PT', 'TEMPO', public.normalize_patxanga_word('TEMPO'), 'pt_pt_core_seed', true),
+('pt-PT', 'VIDA', public.normalize_patxanga_word('VIDA'), 'pt_pt_core_seed', true)
+on conflict (language, word_normalized) do update
+set word_original = excluded.word_original,
+    source = excluded.source,
+    is_active = excluded.is_active,
+    updated_at = now();
+
 ## FILE: sql/tests/test_dictionary_contract.sql
 
 -- ============================================================
@@ -5815,8 +6004,9 @@ declare
     v_submit_result jsonb;
     v_dictionary_row_count integer;
     v_real_seed_count integer;
+    v_pt_pt_seed_count integer;
     v_accepted_move_count integer;
-    v_pending_move_count integer;
+    v_pt_pt_accepted_move_count integer;
 begin
     select count(*)
     into v_dictionary_row_count
@@ -5841,6 +6031,18 @@ begin
         raise exception 'Expected 5 active real seed words, got %', v_real_seed_count;
     end if;
 
+    select count(*)
+    into v_pt_pt_seed_count
+    from patxanga_dictionary
+    where language = 'pt-PT'
+      and source = 'pt_pt_core_seed'
+      and is_active = true
+      and word_normalized in ('AMOR', 'ACAO', 'CASA', 'MESA', 'PAO');
+
+    if v_pt_pt_seed_count <> 5 then
+        raise exception 'Expected 5 active pt-PT seed words, got %', v_pt_pt_seed_count;
+    end if;
+
     if public.validate_word('ação', 'pt-BR') is not true then
         raise exception 'Expected lowercase accented ação to validate in pt-BR';
     end if;
@@ -5857,8 +6059,8 @@ begin
         raise exception 'Expected empty language not to validate';
     end if;
 
-    if public.validate_word('CASA', 'pt-PT') is not false then
-        raise exception 'Expected CASA not to validate in pt-PT without pt-PT seed';
+    if public.validate_word('CASA', 'pt-PT') is not true then
+        raise exception 'Expected CASA to validate in pt-PT through pt-PT seed';
     end if;
 
     update patxanga_dictionary
@@ -5947,7 +6149,7 @@ begin
 
     v_pt_pt_match_id := public.create_patxanga_match(
         p_host_user_id := v_pt_pt_user1,
-        p_language := 'pt-BR',
+        p_language := 'pt-PT',
         p_match_mode := 'synchronous',
         p_max_players := 2
     );
@@ -5958,11 +6160,6 @@ begin
     );
 
     perform public.start_patxanga_match(v_pt_pt_match_id);
-
-    update patxanga_matches
-    set language = 'pt-PT',
-        updated_at = now()
-    where id = v_pt_pt_match_id;
 
     select current_turn_player_id
     into v_pt_pt_player_id
@@ -6003,12 +6200,12 @@ begin
         raise exception 'Expected pt-PT preview main_word CASA, got %', v_pt_pt_preview_result;
     end if;
 
-    if coalesce((v_pt_pt_preview_result->>'requires_vote')::boolean, false) is not true then
-        raise exception 'Expected pt-PT CASA preview to require vote, got %', v_pt_pt_preview_result;
+    if coalesce((v_pt_pt_preview_result->>'requires_vote')::boolean, true) is not false then
+        raise exception 'Expected pt-PT CASA preview not to require vote, got %', v_pt_pt_preview_result;
     end if;
 
-    if coalesce((v_pt_pt_preview_result->>'is_dictionary_recognized')::boolean, true) is not false then
-        raise exception 'Expected pt-PT CASA preview not to be dictionary-recognized, got %', v_pt_pt_preview_result;
+    if coalesce((v_pt_pt_preview_result->>'is_dictionary_recognized')::boolean, false) is not true then
+        raise exception 'Expected pt-PT CASA preview to be dictionary-recognized, got %', v_pt_pt_preview_result;
     end if;
 
     v_pt_pt_submit_result := public.submit_patxanga_move(
@@ -6022,28 +6219,28 @@ begin
         )
     );
 
-    if v_pt_pt_submit_result->>'status' <> 'pending_vote' then
-        raise exception 'Expected pt-PT CASA submit to enter pending_vote, got %', v_pt_pt_submit_result;
+    if v_pt_pt_submit_result->>'status' <> 'success' then
+        raise exception 'Expected pt-PT CASA submit success, got %', v_pt_pt_submit_result;
     end if;
 
-    if v_pt_pt_submit_result->>'main_word' <> 'CASA' then
-        raise exception 'Expected pt-PT submit main_word CASA, got %', v_pt_pt_submit_result;
+    if v_pt_pt_submit_result->>'move_id' is null then
+        raise exception 'Expected pt-PT CASA move_id, got %', v_pt_pt_submit_result;
     end if;
 
     select count(*)
-    into v_pending_move_count
+    into v_pt_pt_accepted_move_count
     from patxanga_moves
     where id = (v_pt_pt_submit_result->>'move_id')::uuid
       and match_id = v_pt_pt_match_id
       and player_id = v_pt_pt_player_id
       and move_type = 'place_word'
-      and status = 'pending_vote'
+      and status = 'accepted'
       and main_word = 'CASA'
-      and is_dictionary_recognized = false
-      and requires_vote = true;
+      and is_dictionary_recognized = true
+      and requires_vote = false;
 
-    if v_pending_move_count <> 1 then
-        raise exception 'Expected exactly 1 pt-PT pending CASA move, got %', v_pending_move_count;
+    if v_pt_pt_accepted_move_count <> 1 then
+        raise exception 'Expected exactly 1 pt-PT accepted CASA move, got %', v_pt_pt_accepted_move_count;
     end if;
 
     raise notice 'Dictionary contract test passed';
@@ -6053,6 +6250,7 @@ begin
     raise notice 'pt_pt_preview_result=%', v_pt_pt_preview_result;
     raise notice 'pt_pt_submit_result=%', v_pt_pt_submit_result;
     raise notice 'real_seed_count=%', v_real_seed_count;
+    raise notice 'pt_pt_seed_count=%', v_pt_pt_seed_count;
 end $$;
 
 ## FILE: sql/simulations/bot_simulation_smoke.sql
@@ -9425,6 +9623,66 @@ $$;
 
 grant execute on function public.submit_patxanga_move(uuid, uuid, jsonb)
 to authenticated, anon;
+
+## FILE: supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql
+
+-- ============================================================
+-- PATXANGA - PT-PT LANGUAGE BASELINE
+-- Purpose: make pt-PT startable and lexically testable
+-- ============================================================
+
+delete from public.patxanga_letter_distribution
+where language = 'pt-PT';
+
+insert into public.patxanga_letter_distribution (
+    language,
+    letter,
+    quantity,
+    points,
+    is_special,
+    special_type
+)
+select
+    'pt-PT',
+    letter,
+    quantity,
+    points,
+    is_special,
+    special_type
+from public.patxanga_letter_distribution
+where language = 'pt-BR';
+
+insert into public.patxanga_dictionary (
+    language,
+    word_original,
+    word_normalized,
+    source,
+    is_active
+)
+values
+('pt-PT', 'AMOR', public.normalize_patxanga_word('AMOR'), 'pt_pt_core_seed', true),
+('pt-PT', 'AÇÃO', public.normalize_patxanga_word('AÇÃO'), 'pt_pt_core_seed', true),
+('pt-PT', 'BOLA', public.normalize_patxanga_word('BOLA'), 'pt_pt_core_seed', true),
+('pt-PT', 'CASA', public.normalize_patxanga_word('CASA'), 'pt_pt_core_seed', true),
+('pt-PT', 'GATO', public.normalize_patxanga_word('GATO'), 'pt_pt_core_seed', true),
+('pt-PT', 'JOGO', public.normalize_patxanga_word('JOGO'), 'pt_pt_core_seed', true),
+('pt-PT', 'LIVRO', public.normalize_patxanga_word('LIVRO'), 'pt_pt_core_seed', true),
+('pt-PT', 'LUA', public.normalize_patxanga_word('LUA'), 'pt_pt_core_seed', true),
+('pt-PT', 'MÃO', public.normalize_patxanga_word('MÃO'), 'pt_pt_core_seed', true),
+('pt-PT', 'MAR', public.normalize_patxanga_word('MAR'), 'pt_pt_core_seed', true),
+('pt-PT', 'MESA', public.normalize_patxanga_word('MESA'), 'pt_pt_core_seed', true),
+('pt-PT', 'PÃO', public.normalize_patxanga_word('PÃO'), 'pt_pt_core_seed', true),
+('pt-PT', 'PATO', public.normalize_patxanga_word('PATO'), 'pt_pt_core_seed', true),
+('pt-PT', 'PORTA', public.normalize_patxanga_word('PORTA'), 'pt_pt_core_seed', true),
+('pt-PT', 'RUA', public.normalize_patxanga_word('RUA'), 'pt_pt_core_seed', true),
+('pt-PT', 'SOL', public.normalize_patxanga_word('SOL'), 'pt_pt_core_seed', true),
+('pt-PT', 'TEMPO', public.normalize_patxanga_word('TEMPO'), 'pt_pt_core_seed', true),
+('pt-PT', 'VIDA', public.normalize_patxanga_word('VIDA'), 'pt_pt_core_seed', true)
+on conflict (language, word_normalized) do update
+set word_original = excluded.word_original,
+    source = excluded.source,
+    is_active = excluded.is_active,
+    updated_at = now();
 
 ## FRASE PADRAO DE PASSAGEM DE BASTAO
 

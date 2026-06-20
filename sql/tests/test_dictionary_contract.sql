@@ -28,8 +28,9 @@ declare
     v_submit_result jsonb;
     v_dictionary_row_count integer;
     v_real_seed_count integer;
+    v_pt_pt_seed_count integer;
     v_accepted_move_count integer;
-    v_pending_move_count integer;
+    v_pt_pt_accepted_move_count integer;
 begin
     select count(*)
     into v_dictionary_row_count
@@ -54,6 +55,18 @@ begin
         raise exception 'Expected 5 active real seed words, got %', v_real_seed_count;
     end if;
 
+    select count(*)
+    into v_pt_pt_seed_count
+    from patxanga_dictionary
+    where language = 'pt-PT'
+      and source = 'pt_pt_core_seed'
+      and is_active = true
+      and word_normalized in ('AMOR', 'ACAO', 'CASA', 'MESA', 'PAO');
+
+    if v_pt_pt_seed_count <> 5 then
+        raise exception 'Expected 5 active pt-PT seed words, got %', v_pt_pt_seed_count;
+    end if;
+
     if public.validate_word('ação', 'pt-BR') is not true then
         raise exception 'Expected lowercase accented ação to validate in pt-BR';
     end if;
@@ -70,8 +83,8 @@ begin
         raise exception 'Expected empty language not to validate';
     end if;
 
-    if public.validate_word('CASA', 'pt-PT') is not false then
-        raise exception 'Expected CASA not to validate in pt-PT without pt-PT seed';
+    if public.validate_word('CASA', 'pt-PT') is not true then
+        raise exception 'Expected CASA to validate in pt-PT through pt-PT seed';
     end if;
 
     update patxanga_dictionary
@@ -160,7 +173,7 @@ begin
 
     v_pt_pt_match_id := public.create_patxanga_match(
         p_host_user_id := v_pt_pt_user1,
-        p_language := 'pt-BR',
+        p_language := 'pt-PT',
         p_match_mode := 'synchronous',
         p_max_players := 2
     );
@@ -171,11 +184,6 @@ begin
     );
 
     perform public.start_patxanga_match(v_pt_pt_match_id);
-
-    update patxanga_matches
-    set language = 'pt-PT',
-        updated_at = now()
-    where id = v_pt_pt_match_id;
 
     select current_turn_player_id
     into v_pt_pt_player_id
@@ -216,12 +224,12 @@ begin
         raise exception 'Expected pt-PT preview main_word CASA, got %', v_pt_pt_preview_result;
     end if;
 
-    if coalesce((v_pt_pt_preview_result->>'requires_vote')::boolean, false) is not true then
-        raise exception 'Expected pt-PT CASA preview to require vote, got %', v_pt_pt_preview_result;
+    if coalesce((v_pt_pt_preview_result->>'requires_vote')::boolean, true) is not false then
+        raise exception 'Expected pt-PT CASA preview not to require vote, got %', v_pt_pt_preview_result;
     end if;
 
-    if coalesce((v_pt_pt_preview_result->>'is_dictionary_recognized')::boolean, true) is not false then
-        raise exception 'Expected pt-PT CASA preview not to be dictionary-recognized, got %', v_pt_pt_preview_result;
+    if coalesce((v_pt_pt_preview_result->>'is_dictionary_recognized')::boolean, false) is not true then
+        raise exception 'Expected pt-PT CASA preview to be dictionary-recognized, got %', v_pt_pt_preview_result;
     end if;
 
     v_pt_pt_submit_result := public.submit_patxanga_move(
@@ -235,28 +243,28 @@ begin
         )
     );
 
-    if v_pt_pt_submit_result->>'status' <> 'pending_vote' then
-        raise exception 'Expected pt-PT CASA submit to enter pending_vote, got %', v_pt_pt_submit_result;
+    if v_pt_pt_submit_result->>'status' <> 'success' then
+        raise exception 'Expected pt-PT CASA submit success, got %', v_pt_pt_submit_result;
     end if;
 
-    if v_pt_pt_submit_result->>'main_word' <> 'CASA' then
-        raise exception 'Expected pt-PT submit main_word CASA, got %', v_pt_pt_submit_result;
+    if v_pt_pt_submit_result->>'move_id' is null then
+        raise exception 'Expected pt-PT CASA move_id, got %', v_pt_pt_submit_result;
     end if;
 
     select count(*)
-    into v_pending_move_count
+    into v_pt_pt_accepted_move_count
     from patxanga_moves
     where id = (v_pt_pt_submit_result->>'move_id')::uuid
       and match_id = v_pt_pt_match_id
       and player_id = v_pt_pt_player_id
       and move_type = 'place_word'
-      and status = 'pending_vote'
+      and status = 'accepted'
       and main_word = 'CASA'
-      and is_dictionary_recognized = false
-      and requires_vote = true;
+      and is_dictionary_recognized = true
+      and requires_vote = false;
 
-    if v_pending_move_count <> 1 then
-        raise exception 'Expected exactly 1 pt-PT pending CASA move, got %', v_pending_move_count;
+    if v_pt_pt_accepted_move_count <> 1 then
+        raise exception 'Expected exactly 1 pt-PT accepted CASA move, got %', v_pt_pt_accepted_move_count;
     end if;
 
     raise notice 'Dictionary contract test passed';
@@ -266,4 +274,5 @@ begin
     raise notice 'pt_pt_preview_result=%', v_pt_pt_preview_result;
     raise notice 'pt_pt_submit_result=%', v_pt_pt_submit_result;
     raise notice 'real_seed_count=%', v_real_seed_count;
+    raise notice 'pt_pt_seed_count=%', v_pt_pt_seed_count;
 end $$;

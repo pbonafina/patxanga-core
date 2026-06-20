@@ -20,10 +20,11 @@ trechos antigos deste documento quando houver divergencia operacional.
 
 Estado verificado nesta rodada:
 
-- branch atual local: `feature/bot-long-simulations`
-- foco imediato: iniciar a frente de bots de teste e simulacao
-- objetivo da frente: criar bots utilitarios para QA, simulacoes e regressao,
-  antes de implementar humano contra bot como produto
+- ultima frente local registrada: `feature/pt-pt-language-baseline`
+- foco imediato: fechar baseline minima `pt-PT` para que partidas reais nesse
+  idioma possam iniciar e validar palavras seed sem cair em votacao
+- frente de bots de teste e simulacao ja foi criada antes desta atualizacao e
+  continua como regressao obrigatoria
 - roadmap consolidado criado em `docs/implementation-roadmap.md`
 - manual inicial de jogador criado em `docs/como-jogar-patxanga.md`
 - contrato inicial de bot criado em `docs/07-bot-engine.md`
@@ -46,9 +47,16 @@ Estado verificado nesta rodada:
   `supabase/migrations/20260620213500_22_dictionary_pt_br_core_seed.sql`
 - validacao lexical por idioma da partida criada em
   `supabase/migrations/20260620215000_23_match_language_dictionary_validation.sql`
+- baseline minima `pt-PT` criada em
+  `supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql`
+- seed fonte `pt-PT` espelhado em `sql/seeds/004_dictionary_pt_pt_core_seed.sql`
+- distribuicao fonte `pt-PT` espelhada em
+  `sql/seeds/001_patxanga_distribution.sql`
 - teste de contrato de dicionario criado em
   `sql/tests/test_dictionary_contract.sql`
-- validacao inicial e regressiva confirmada: `zsh scripts/run-bot-simulation.sh all`
+- validacao inicial e regressiva confirmada: `supabase db reset`,
+  `zsh scripts/run-sql-test-suite.sh all` e
+  `zsh scripts/run-bot-simulation.sh all`
 
 Leitura correta:
 
@@ -58,12 +66,15 @@ Leitura correta:
 - humano contra bot continua posterior, depois da experiencia humano contra humano
   e depois de uma base minima de simulacao
 - dicionario amplo deve vir depois de contrato, fonte e licenca claros
+- a baseline `pt-PT` atual e operacional e minima; nao substitui uma fonte
+  ampla, licenciada e auditada
 
 Comando atual da frente:
 
 ```bash
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
 zsh scripts/run-bot-simulation.sh all
-zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
 ```
 
 Validacao recomendada apos mudancas nesta frente:
@@ -98,8 +109,8 @@ Validacao confirmada nesta rodada:
 - `supabase db reset`
 - `zsh scripts/run-sql-test-suite.sh all` apos reset
 - `zsh scripts/run-bot-simulation.sh all` apos reset
-- validacao especifica confirmada: `CASA` aceita em partida `pt-BR`, mas
-  exige votacao em partida marcada como `pt-PT` sem seed `pt-PT`
+- validacao especifica confirmada: `CASA` aceita em partida `pt-BR` e tambem
+  em partida real `pt-PT` apos seed minimo `pt-PT`, sem exigir votacao
 - `cd frontend && npm run lint`
 - `cd frontend && npm run build`
 - `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
@@ -223,22 +234,26 @@ Leitura executiva:
 
 ## 3. Estado local verificado
 
-- branch atual: `develop`
-- upstream: `origin/develop`
+- branch de implementacao desta atualizacao: `feature/pt-pt-language-baseline`
+- base esperada antes do merge: `develop`
 - o `git log` recente desta frente precisa refletir, no minimo:
   - baseline operacional de lobby/convites/retomada/desistencia
   - cobertura Playwright da pagina de teste
   - suite SQL de regressao
-  - slots locais permanentes no rack
-  - promocao da composicao por slots a contrato oficial de preview/submit
-- working tree verificado nesta leitura:
-  - `M docs/18-room-baton-package-current.md`
-  - `?? docs/15-pacote-final-colagem-v1.2-ultra-blindado.md`
-  - `?? generate-continuity-package.sh`
+  - sistema de bots utilitarios para simulacao e QA
+  - contrato de dicionario por idioma
+  - seed real minimo `pt-BR`
+  - validacao lexical usando o idioma persistido na partida
+  - baseline minima `pt-PT` para distribuicao, seed e partida real
+- working tree esperado antes do commit desta frente:
+  - alteracoes em `sql/seeds/001_patxanga_distribution.sql`
+  - alteracoes em `sql/tests/test_dictionary_contract.sql`
+  - novo `sql/seeds/004_dictionary_pt_pt_core_seed.sql`
+  - novo `supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql`
+  - atualizacao dos documentos de continuidade e pacote de bastao
 
 Regra de interpretacao:
 - o estado local acima prevalece sobre memoria, conversa e pacote antigo
-- os dois arquivos untracked acima nao devem ser assumidos como parte da frente ativa sem triagem explicita
 - `docs/18-room-baton-package-current.md` pode aparecer modificado localmente apos refresh,
   porque ele incorpora `git status`, `git log` e trechos do log operacional
 
