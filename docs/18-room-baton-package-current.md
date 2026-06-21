@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-21 08:25:04
+Generated at: 2026-06-21 08:40:22
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,14 +93,14 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## feature/dictionary-csv-import-tooling
- M docs/18-room-baton-package-current.md
+## feature/licensed-dictionary-source-sample
  M docs/current-development-continuity-spec-v1.0.md
  M docs/dictionary-import-pipeline-v1.0.md
  M docs/implementation-roadmap.md
  M generate-room-baton-package.sh
-?? scripts/prepare-dictionary-import.py
-?? scripts/test-dictionary-import-tooling.sh
+?? scripts/import-libreoffice-pt-br-sample.sh
+?? scripts/prepare-libreoffice-dictionary-sample.py
+?? scripts/test-libreoffice-dictionary-sample.sh
 ```
 
 ### git remote -v
@@ -111,7 +111,9 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-3cc1c70 (HEAD -> feature/dictionary-csv-import-tooling, origin/develop, origin/HEAD, develop) Merge pull request #5 from pbonafina/feature/dictionary-import-pipeline
+7b4ea65 (HEAD -> feature/licensed-dictionary-source-sample, origin/develop, origin/HEAD, develop) Merge pull request #6 from pbonafina/feature/dictionary-csv-import-tooling
+86358e3 feat: add dictionary CSV import tooling
+3cc1c70 Merge pull request #5 from pbonafina/feature/dictionary-import-pipeline
 0e38fa8 feat: add audited dictionary import pipeline
 44c1eb4 Merge pull request #4 from pbonafina/feature/pt-pt-language-baseline
 a3cac88 fix: add pt-PT language baseline
@@ -124,8 +126,6 @@ a263bb7 (origin/upgrade/next16-audit, upgrade/next16-audit) docs: refresh baton 
 d1ee0c2 fix(docs): generate baton package atomically
 4d8bff9 docs: refresh room baton package
 cab289b docs: consolidate gameplay and continuity plans
-ea03c80 test(bots): add deterministic simulation suite
-502fe8f fix(sql): persist accepted place word moves
 ```
 
 ### tail -n 60 ../project-log.md
@@ -3419,6 +3419,64 @@ Antes de importar uma fonte real, registrar explicitamente:
 Nao importar fonte sem licenca clara. Na duvida, manter a palavra fora do seed
 amplo e deixar o fluxo de votacao cobrir o caso.
 
+## Fonte candidata validada tecnicamente: LibreOffice Hunspell pt-BR
+
+Fonte candidata para a primeira importacao controlada:
+
+- familia: LibreOffice dictionaries, Hunspell `pt_BR`
+- arquivo bruto: `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_BR/pt_BR.dic`
+- README/licenca: `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_BR/README_pt_BR.txt`
+- pasta upstream: `https://github.com/LibreOffice/dictionaries/tree/master/pt_BR`
+- licenca declarada no README: `LGPLv3/MPL`
+- commit upstream verificado: `93d537dc6afb0130de3da75d42c070ac267db957`
+- SHA-256 de `pt_BR.dic`: `a38bfb26b68ece2834e79fe83e48d5792652970ace12db89d1b9674bf9933183`
+- SHA-256 de `README_pt_BR.txt`: `9974ce691fdc1fe731717d7a2dc668244405fdc2bf9bf3367eb9b29e85177c88`
+- contagem declarada no `.dic`: `312368`
+
+Status: candidata para validacao tecnica local. Esta anotacao nao substitui
+aprovacao humana/legal para uso em produto distribuido.
+
+O extrator local gera uma amostra pequena e reprodutivel a partir do `.dic`,
+sem versionar o dump completo. A primeira politica e conservadora:
+
+- tamanho entre 3 e 15 caracteres
+- somente letras portuguesas suportadas pela normalizacao atual
+- sem hifen, ponto, digito, sigla ou abreviacao
+- somente entradas originalmente em minusculas
+- deduplicacao pelo mesmo criterio aproximado de normalizacao do banco
+
+Preparar a amostra e o SQL sem executar:
+
+```bash
+zsh scripts/import-libreoffice-pt-br-sample.sh --limit 100
+```
+
+Preparar e executar contra o Supabase local:
+
+```bash
+zsh scripts/import-libreoffice-pt-br-sample.sh --limit 100 --execute
+```
+
+Se os arquivos ja estiverem baixados em
+`/private/tmp/patxanga-dictionary-sources/libreoffice-pt-br`, a execucao pode
+reaproveita-los:
+
+```bash
+zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --limit 100
+```
+
+O `source` usado pela amostra e `libreoffice_hunspell_pt_br_sample`. Nao usar
+`p_deactivate_missing := true` nessa amostra, porque ela nao representa uma
+substituicao completa da fonte.
+
+Resultado da primeira validacao local:
+
+- `--limit 25` gerou 25 entradas validas a partir do `.dic`
+- primeira execucao inseriu 25 linhas no dicionario local
+- segunda execucao com os mesmos metadados inseriu 0 e atualizou 25, confirmando
+  idempotencia da pipeline para essa fonte/amostra
+- o banco local foi resetado depois da validacao para voltar a baseline limpa
+
 ## Entrada Canonica
 
 A RPC administrativa recebe um array JSON. Cada item deve ter:
@@ -3533,6 +3591,8 @@ Validacao minima apos mudar a pipeline:
 
 ```bash
 zsh scripts/test-dictionary-import-tooling.sh
+zsh scripts/test-libreoffice-dictionary-sample.sh
+zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --limit 25 --execute
 supabase db reset
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
 zsh scripts/run-sql-test-suite.sh all
@@ -3578,7 +3638,7 @@ Leitura atual do projeto:
 | Primeira tela jogavel | Existe, mas ainda precisa evoluir de sandbox operacional para produto |
 | Rack e composicao por slots | Implementado como superficie oficial de preparo no frontend |
 | Votacao | Funcional, mas ainda precisa UX de produto |
-| Dicionario | Contrato por idioma/fonte/ativo consolidado; seed PT-BR pequeno para QA |
+| Dicionario | Contrato por idioma/fonte/ativo consolidado; seed PT-BR pequeno para QA; fonte LibreOffice Hunspell pt-BR validada como candidata tecnica de amostra |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
 | Bots de teste e simulacao | Prioridade alta; frente iniciada com contrato, runner e smoke deterministico |
 | Bot | Apenas modelado no banco; ainda nao existe modo jogavel humano contra bot |
@@ -3903,11 +3963,23 @@ Estado atual:
   ou SQL completo para a RPC administrativa
 - `scripts/test-dictionary-import-tooling.sh` cobre o conversor sem depender de
   fonte lexical real
+- fonte candidata LibreOffice Hunspell `pt_BR` verificada tecnicamente com
+  README licenciando `LGPLv3/MPL`, commit upstream, hashes SHA-256 do `.dic` e
+  do README registrados em `docs/dictionary-import-pipeline-v1.0.md`
+- `scripts/prepare-libreoffice-dictionary-sample.py` extrai uma amostra CSV
+  pequena e conservadora do `.dic`
+- `scripts/import-libreoffice-pt-br-sample.sh` baixa a fonte para
+  `/private/tmp`, registra metadados, gera SQL auditado e opcionalmente executa
+  a primeira importacao controlada local
+- `scripts/test-libreoffice-dictionary-sample.sh` cobre o extrator com fixture
+  local, sem rede
 
 Proximos passos:
 
-- escolher fonte licenciada para dicionario amplo
-- validar a licenca da fonte escolhida e registrar hash/versao do arquivo bruto
+- transformar a fonte candidata em decisao de produto somente depois de revisao
+  humana/legal da licenca
+- decidir se a importacao ampla de `pt-BR` usara lemas Hunspell, expansao de
+  flexoes ou curadoria propria
 - decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
 - substituir a baseline minima `pt-PT` por fonte ampla licenciada e auditada
 - auditar a distribuicao de pecas `pt-PT`; por enquanto ela e uma baseline
@@ -3917,6 +3989,7 @@ Validacao minima:
 
 ```bash
 zsh scripts/test-dictionary-import-tooling.sh
+zsh scripts/test-libreoffice-dictionary-sample.sh
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
 zsh scripts/run-sql-test-suite.sh all
@@ -4018,7 +4091,8 @@ Sequencia pragmatica:
 5. Ampliar Playwright para submit real por slots e ciclos de voting.
 6. Criar sistema de bots para testes e simulacoes.
 7. Preparar primeira demo interna.
-8. So entao iniciar humano contra bot de produto.
+8. Fechar a decisao de produto sobre fonte ampla licenciada do dicionario.
+9. So entao iniciar humano contra bot de produto.
 
 ---
 
@@ -4390,6 +4464,68 @@ Observacao operacional:
 - esta rodada nao importa fonte real nem adiciona dump amplo ao repositorio
 - a pipeline nova recebe payload JSON auditado e o conversor CSV local ja gera
   payload ou SQL completo para a RPC administrativa
+
+## 1.2 Atualizacao operacional de continuidade - 2026-06-21
+
+Estado desta frente:
+
+- branch de implementacao: `feature/licensed-dictionary-source-sample`
+- foco: validar tecnicamente uma primeira fonte lexical licenciada sem
+  versionar dump amplo no repositorio
+- fonte candidata: LibreOffice dictionaries Hunspell `pt_BR`
+- README upstream declara licenca `LGPLv3/MPL`
+- commit upstream verificado:
+  `93d537dc6afb0130de3da75d42c070ac267db957`
+- arquivo bruto verificado:
+  `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_BR/pt_BR.dic`
+- README/licenca verificado:
+  `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_BR/README_pt_BR.txt`
+- SHA-256 de `pt_BR.dic`:
+  `a38bfb26b68ece2834e79fe83e48d5792652970ace12db89d1b9674bf9933183`
+- SHA-256 de `README_pt_BR.txt`:
+  `9974ce691fdc1fe731717d7a2dc668244405fdc2bf9bf3367eb9b29e85177c88`
+- contagem declarada no `.dic`: `312368`
+
+Arquivos novos desta frente:
+
+- `scripts/prepare-libreoffice-dictionary-sample.py`
+- `scripts/import-libreoffice-pt-br-sample.sh`
+- `scripts/test-libreoffice-dictionary-sample.sh`
+
+Leitura correta:
+
+- a fonte esta validada tecnicamente como candidata de amostra local
+- isso nao e aprovacao legal final para uso em produto distribuido
+- a amostra usa `source = libreoffice_hunspell_pt_br_sample`
+- a politica inicial filtra apenas lemas simples, com letras portuguesas, entre
+  3 e 15 caracteres, sem hifen, abreviacoes, siglas ou nomes proprios
+- `p_deactivate_missing` nao deve ser usado nessa amostra, porque ela nao
+  representa substituicao completa da fonte
+
+Comandos de referencia desta frente:
+
+```bash
+zsh scripts/test-libreoffice-dictionary-sample.sh
+zsh scripts/import-libreoffice-pt-br-sample.sh --limit 100
+zsh scripts/import-libreoffice-pt-br-sample.sh --limit 100 --execute
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
+
+Validacao confirmada nesta frente:
+
+- `zsh scripts/test-libreoffice-dictionary-sample.sh`
+- `zsh scripts/test-dictionary-import-tooling.sh`
+- `python3 -m py_compile scripts/prepare-dictionary-import.py scripts/prepare-libreoffice-dictionary-sample.py`
+- `zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --limit 25`
+- `zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --limit 25 --execute`
+- primeira execucao da amostra: 25 linhas inseridas, 0 puladas
+- segunda execucao da mesma amostra: 0 inseridas, 25 atualizadas
+- `supabase db reset`
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
 
 Validacao confirmada nesta rodada:
 
@@ -5321,6 +5457,203 @@ def main() -> int:
 if __name__ == "__main__":
     raise SystemExit(main())
 
+## FILE: scripts/prepare-libreoffice-dictionary-sample.py
+
+#!/usr/bin/env python3
+"""Extract a controlled CSV sample from a LibreOffice Hunspell .dic file."""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import sys
+from pathlib import Path
+
+
+LOWERCASE_PORTUGUESE_LETTERS = set(
+    "abcdefghijklmnopqrstuvwxyz"
+    "áàâãä"
+    "éèêë"
+    "íìîï"
+    "óòôõö"
+    "úùûü"
+    "ç"
+)
+ACCENT_TRANSLATION = str.maketrans(
+    "ÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ",
+    "AAAAAEEEEIIIIOOOOOUUUUC",
+)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Convert a LibreOffice Hunspell .dic file into a small Patxanga "
+            "dictionary import CSV sample."
+        ),
+    )
+    parser.add_argument("dic_file", type=Path, help="Source Hunspell .dic file.")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="CSV output path. Defaults to stdout.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=100,
+        help="Maximum number of selected entries. Default: 100.",
+    )
+    parser.add_argument(
+        "--min-length",
+        type=int,
+        default=3,
+        help="Minimum base word length. Default: 3.",
+    )
+    parser.add_argument(
+        "--max-length",
+        type=int,
+        default=15,
+        help="Maximum base word length. Default: 15.",
+    )
+    parser.add_argument(
+        "--include-non-lowercase",
+        action="store_true",
+        help=(
+            "Include uppercase or mixed-case bases. Default skips them to avoid "
+            "proper nouns and acronyms in the first technical sample."
+        ),
+    )
+    parser.add_argument(
+        "--encoding",
+        default="utf-8-sig",
+        help="Input encoding. Default: utf-8-sig.",
+    )
+    return parser.parse_args()
+
+
+def normalize_like_database(word: str) -> str:
+    return word.upper().translate(ACCENT_TRANSLATION)
+
+
+def extract_base_word(raw_line: str) -> str:
+    stripped = raw_line.strip()
+    if stripped == "":
+        return ""
+
+    token = stripped.split(maxsplit=1)[0]
+    return token.split("/", maxsplit=1)[0].strip()
+
+
+def is_declared_count_line(raw_line: str) -> bool:
+    return raw_line.strip().lstrip("\ufeff").isdigit()
+
+
+def is_candidate(base_word: str, args: argparse.Namespace) -> bool:
+    if len(base_word) < args.min_length or len(base_word) > args.max_length:
+        return False
+
+    lowered = base_word.lower()
+    if any(character not in LOWERCASE_PORTUGUESE_LETTERS for character in lowered):
+        return False
+
+    if not args.include_non_lowercase and base_word != lowered:
+        return False
+
+    return True
+
+
+def iter_selected_entries(args: argparse.Namespace) -> tuple[list[dict[str, str]], dict[str, int | None]]:
+    if args.limit < 1:
+        raise ValueError("--limit must be greater than zero")
+    if args.min_length < 1:
+        raise ValueError("--min-length must be greater than zero")
+    if args.max_length < args.min_length:
+        raise ValueError("--max-length must be greater than or equal to --min-length")
+
+    selected: list[dict[str, str]] = []
+    seen_normalized: set[str] = set()
+    declared_count: int | None = None
+    source_entries = 0
+    skipped = 0
+
+    with args.dic_file.open("r", encoding=args.encoding, newline="") as dic_handle:
+        for line_number, raw_line in enumerate(dic_handle, start=1):
+            if line_number == 1 and is_declared_count_line(raw_line):
+                declared_count = int(raw_line.strip().lstrip("\ufeff"))
+                continue
+
+            source_entries += 1
+            base_word = extract_base_word(raw_line)
+            if not is_candidate(base_word, args):
+                skipped += 1
+                continue
+
+            normalized = normalize_like_database(base_word)
+            if normalized in seen_normalized:
+                skipped += 1
+                continue
+
+            seen_normalized.add(normalized)
+            selected.append(
+                {
+                    "word": base_word.upper(),
+                    "is_active": "true",
+                    "source_line": str(line_number),
+                }
+            )
+
+            if len(selected) >= args.limit:
+                break
+
+    return selected, {
+        "declared_count": declared_count,
+        "source_entries_scanned": source_entries,
+        "selected": len(selected),
+        "skipped": skipped,
+    }
+
+
+def write_csv(entries: list[dict[str, str]], output_path: Path | None) -> None:
+    fieldnames = ["word", "is_active", "source_line"]
+
+    if output_path is None:
+        writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(entries)
+        return
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8", newline="") as csv_handle:
+        writer = csv.DictWriter(csv_handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(entries)
+
+
+def main() -> int:
+    args = parse_args()
+
+    try:
+        entries, stats = iter_selected_entries(args)
+        write_csv(entries, args.output)
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(f"prepare-libreoffice-dictionary-sample: {exc}", file=sys.stderr)
+        return 1
+
+    print(
+        "prepare-libreoffice-dictionary-sample: "
+        f"declared_count={stats['declared_count']} "
+        f"scanned={stats['source_entries_scanned']} "
+        f"selected={stats['selected']} "
+        f"skipped={stats['skipped']}",
+        file=sys.stderr,
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
 ## FILE: scripts/test-dictionary-import-tooling.sh
 
 #!/bin/zsh
@@ -5397,6 +5730,225 @@ fi
 grep -q "SQL mode requires --language" "$tmp_dir/missing-language.out"
 
 echo "Dictionary import tooling test passed"
+
+## FILE: scripts/test-libreoffice-dictionary-sample.sh
+
+#!/bin/zsh
+set -euo pipefail
+
+repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$repo_dir"
+
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+
+fixture_dic="$tmp_dir/pt_BR_fixture.dic"
+sample_csv="$tmp_dir/sample.csv"
+import_sql="$tmp_dir/import.sql"
+
+cat > "$fixture_dic" <<'DIC'
+9
+casa/AB
+mesa/CD
+A.C.
+Coca-Cola
+ação/EF
+árvore/GH
+aa
+mão/IJ
+casa/KL
+DIC
+
+python3 scripts/prepare-libreoffice-dictionary-sample.py \
+  "$fixture_dic" \
+  --limit 5 \
+  --output "$sample_csv" \
+  2> "$tmp_dir/extractor.stderr"
+
+grep -q "declared_count=9" "$tmp_dir/extractor.stderr"
+grep -q "selected=5" "$tmp_dir/extractor.stderr"
+
+python3 - "$sample_csv" <<'PY'
+import csv
+import sys
+
+with open(sys.argv[1], encoding="utf-8", newline="") as csv_handle:
+    rows = list(csv.DictReader(csv_handle))
+
+expected = [
+    {"word": "CASA", "is_active": "true", "source_line": "2"},
+    {"word": "MESA", "is_active": "true", "source_line": "3"},
+    {"word": "AÇÃO", "is_active": "true", "source_line": "6"},
+    {"word": "ÁRVORE", "is_active": "true", "source_line": "7"},
+    {"word": "MÃO", "is_active": "true", "source_line": "9"},
+]
+
+assert rows == expected, rows
+PY
+
+python3 scripts/prepare-dictionary-import.py \
+  "$sample_csv" \
+  --mode sql \
+  --language pt-BR \
+  --source libreoffice_hunspell_pt_br_sample_test \
+  --license-name "LGPLv3/MPL" \
+  --source-version fixture \
+  --license-url https://example.test/license \
+  --source-url https://example.test/pt_BR.dic \
+  --imported-by script-test \
+  --metadata-json '{"fixture":true}' \
+  > "$import_sql"
+
+grep -q "libreoffice_hunspell_pt_br_sample_test" "$import_sql"
+grep -q "AÇÃO" "$import_sql"
+grep -q '"input_rows":5' "$import_sql"
+
+echo "LibreOffice dictionary sample test passed"
+
+## FILE: scripts/import-libreoffice-pt-br-sample.sh
+
+#!/bin/zsh
+set -euo pipefail
+
+repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$repo_dir"
+
+source_dir="${PATXANGA_DICTIONARY_SOURCE_DIR:-/private/tmp/patxanga-dictionary-sources/libreoffice-pt-br}"
+limit="${PATXANGA_DICTIONARY_SAMPLE_LIMIT:-100}"
+execute=0
+skip_download=0
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --execute)
+      execute=1
+      shift
+      ;;
+    --skip-download)
+      skip_download=1
+      shift
+      ;;
+    --limit)
+      limit="$2"
+      shift 2
+      ;;
+    --source-dir)
+      source_dir="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+mkdir -p "$source_dir"
+
+dic_url="https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_BR/pt_BR.dic"
+readme_url="https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_BR/README_pt_BR.txt"
+commit_url="https://api.github.com/repos/LibreOffice/dictionaries/commits/master"
+
+dic_file="$source_dir/pt_BR.dic"
+readme_file="$source_dir/README_pt_BR.txt"
+commit_file="$source_dir/master-commit.json"
+sample_csv="$source_dir/patxanga-libreoffice-pt-br-sample-${limit}.csv"
+metadata_file="$source_dir/patxanga-libreoffice-pt-br-sample-${limit}.metadata.json"
+sql_file="$source_dir/patxanga-libreoffice-pt-br-sample-${limit}.sql"
+
+if [ "$skip_download" -eq 0 ]; then
+  curl -L --fail --silent --show-error "$dic_url" -o "$dic_file"
+  curl -L --fail --silent --show-error "$readme_url" -o "$readme_file"
+  curl -L --fail --silent --show-error "$commit_url" -o "$commit_file"
+fi
+
+if [ ! -f "$dic_file" ] || [ ! -f "$readme_file" ]; then
+  echo "Missing source files in $source_dir. Run without --skip-download first." >&2
+  exit 1
+fi
+
+commit_sha="unknown"
+if [ -f "$commit_file" ]; then
+  commit_sha="$(python3 -c "import json, sys; print(json.load(open(sys.argv[1], encoding='utf-8'))['sha'])" "$commit_file")"
+fi
+
+dic_sha256="$(LC_ALL=C shasum -a 256 "$dic_file" | awk '{print $1}')"
+readme_sha256="$(LC_ALL=C shasum -a 256 "$readme_file" | awk '{print $1}')"
+declared_count="$(python3 -c "import sys; print(open(sys.argv[1], encoding='utf-8-sig').readline().strip())" "$dic_file")"
+
+python3 scripts/prepare-libreoffice-dictionary-sample.py \
+  "$dic_file" \
+  --limit "$limit" \
+  --output "$sample_csv"
+
+python3 - "$metadata_file" "$dic_sha256" "$readme_sha256" "$declared_count" "$limit" "$commit_sha" <<'PY'
+import json
+import sys
+
+metadata_path, dic_sha256, readme_sha256, declared_count, limit, commit_sha = sys.argv[1:]
+metadata = {
+    "technical_validation_only": True,
+    "source_family": "LibreOffice dictionaries Hunspell pt_BR",
+    "raw_sha256": dic_sha256,
+    "readme_sha256": readme_sha256,
+    "declared_entry_count": int(declared_count),
+    "sample_limit": int(limit),
+    "upstream_commit_sha": commit_sha,
+    "filter": {
+        "min_length": 3,
+        "max_length": 15,
+        "letters_only": True,
+        "lowercase_source_only": True,
+        "dedupe_like_database": True,
+    },
+}
+
+with open(metadata_path, "w", encoding="utf-8") as metadata_handle:
+    json.dump(metadata, metadata_handle, ensure_ascii=False, separators=(",", ":"))
+PY
+
+python3 scripts/prepare-dictionary-import.py \
+  "$sample_csv" \
+  --mode sql \
+  --language pt-BR \
+  --source libreoffice_hunspell_pt_br_sample \
+  --license-name "LGPLv3/MPL" \
+  --source-version "$commit_sha" \
+  --license-url "$readme_url" \
+  --source-url "$dic_url" \
+  --imported-by scripts/import-libreoffice-pt-br-sample.sh \
+  --metadata-json "$(cat "$metadata_file")" \
+  > "$sql_file"
+
+echo "LibreOffice pt-BR sample prepared"
+echo "source_dir=$source_dir"
+echo "upstream_commit_sha=$commit_sha"
+echo "dic_sha256=$dic_sha256"
+echo "readme_sha256=$readme_sha256"
+echo "sample_csv=$sample_csv"
+echo "metadata_json=$metadata_file"
+echo "import_sql=$sql_file"
+
+if [ "$execute" -eq 1 ]; then
+  container="${SUPABASE_DB_CONTAINER:-supabase_db_patxanga-core}"
+  docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$sql_file"
+  docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d postgres <<'SQL'
+select
+    source,
+    source_version,
+    license_name,
+    total_rows,
+    valid_rows,
+    inserted_count,
+    updated_count,
+    skipped_count,
+    deactivated_count
+from public.patxanga_dictionary_import_batches
+where source = 'libreoffice_hunspell_pt_br_sample'
+order by created_at desc
+limit 1;
+SQL
+fi
 
 ## FILE: scripts/run-bot-simulation.sh
 

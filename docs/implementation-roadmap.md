@@ -35,7 +35,7 @@ Leitura atual do projeto:
 | Primeira tela jogavel | Existe, mas ainda precisa evoluir de sandbox operacional para produto |
 | Rack e composicao por slots | Implementado como superficie oficial de preparo no frontend |
 | Votacao | Funcional, mas ainda precisa UX de produto |
-| Dicionario | Contrato por idioma/fonte/ativo consolidado; seed PT-BR pequeno para QA |
+| Dicionario | Contrato por idioma/fonte/ativo consolidado; seed PT-BR pequeno para QA; fonte LibreOffice Hunspell pt-BR validada como candidata tecnica de amostra |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
 | Bots de teste e simulacao | Prioridade alta; frente iniciada com contrato, runner e smoke deterministico |
 | Bot | Apenas modelado no banco; ainda nao existe modo jogavel humano contra bot |
@@ -360,11 +360,23 @@ Estado atual:
   ou SQL completo para a RPC administrativa
 - `scripts/test-dictionary-import-tooling.sh` cobre o conversor sem depender de
   fonte lexical real
+- fonte candidata LibreOffice Hunspell `pt_BR` verificada tecnicamente com
+  README licenciando `LGPLv3/MPL`, commit upstream, hashes SHA-256 do `.dic` e
+  do README registrados em `docs/dictionary-import-pipeline-v1.0.md`
+- `scripts/prepare-libreoffice-dictionary-sample.py` extrai uma amostra CSV
+  pequena e conservadora do `.dic`
+- `scripts/import-libreoffice-pt-br-sample.sh` baixa a fonte para
+  `/private/tmp`, registra metadados, gera SQL auditado e opcionalmente executa
+  a primeira importacao controlada local
+- `scripts/test-libreoffice-dictionary-sample.sh` cobre o extrator com fixture
+  local, sem rede
 
 Proximos passos:
 
-- escolher fonte licenciada para dicionario amplo
-- validar a licenca da fonte escolhida e registrar hash/versao do arquivo bruto
+- transformar a fonte candidata em decisao de produto somente depois de revisao
+  humana/legal da licenca
+- decidir se a importacao ampla de `pt-BR` usara lemas Hunspell, expansao de
+  flexoes ou curadoria propria
 - decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
 - substituir a baseline minima `pt-PT` por fonte ampla licenciada e auditada
 - auditar a distribuicao de pecas `pt-PT`; por enquanto ela e uma baseline
@@ -374,6 +386,7 @@ Validacao minima:
 
 ```bash
 zsh scripts/test-dictionary-import-tooling.sh
+zsh scripts/test-libreoffice-dictionary-sample.sh
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
 zsh scripts/run-sql-test-suite.sh all
@@ -475,7 +488,8 @@ Sequencia pragmatica:
 5. Ampliar Playwright para submit real por slots e ciclos de voting.
 6. Criar sistema de bots para testes e simulacoes.
 7. Preparar primeira demo interna.
-8. So entao iniciar humano contra bot de produto.
+8. Fechar a decisao de produto sobre fonte ampla licenciada do dicionario.
+9. So entao iniciar humano contra bot de produto.
 
 ---
 

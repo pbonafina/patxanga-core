@@ -105,6 +105,68 @@ Observacao operacional:
 - a pipeline nova recebe payload JSON auditado e o conversor CSV local ja gera
   payload ou SQL completo para a RPC administrativa
 
+## 1.2 Atualizacao operacional de continuidade - 2026-06-21
+
+Estado desta frente:
+
+- branch de implementacao: `feature/licensed-dictionary-source-sample`
+- foco: validar tecnicamente uma primeira fonte lexical licenciada sem
+  versionar dump amplo no repositorio
+- fonte candidata: LibreOffice dictionaries Hunspell `pt_BR`
+- README upstream declara licenca `LGPLv3/MPL`
+- commit upstream verificado:
+  `93d537dc6afb0130de3da75d42c070ac267db957`
+- arquivo bruto verificado:
+  `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_BR/pt_BR.dic`
+- README/licenca verificado:
+  `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_BR/README_pt_BR.txt`
+- SHA-256 de `pt_BR.dic`:
+  `a38bfb26b68ece2834e79fe83e48d5792652970ace12db89d1b9674bf9933183`
+- SHA-256 de `README_pt_BR.txt`:
+  `9974ce691fdc1fe731717d7a2dc668244405fdc2bf9bf3367eb9b29e85177c88`
+- contagem declarada no `.dic`: `312368`
+
+Arquivos novos desta frente:
+
+- `scripts/prepare-libreoffice-dictionary-sample.py`
+- `scripts/import-libreoffice-pt-br-sample.sh`
+- `scripts/test-libreoffice-dictionary-sample.sh`
+
+Leitura correta:
+
+- a fonte esta validada tecnicamente como candidata de amostra local
+- isso nao e aprovacao legal final para uso em produto distribuido
+- a amostra usa `source = libreoffice_hunspell_pt_br_sample`
+- a politica inicial filtra apenas lemas simples, com letras portuguesas, entre
+  3 e 15 caracteres, sem hifen, abreviacoes, siglas ou nomes proprios
+- `p_deactivate_missing` nao deve ser usado nessa amostra, porque ela nao
+  representa substituicao completa da fonte
+
+Comandos de referencia desta frente:
+
+```bash
+zsh scripts/test-libreoffice-dictionary-sample.sh
+zsh scripts/import-libreoffice-pt-br-sample.sh --limit 100
+zsh scripts/import-libreoffice-pt-br-sample.sh --limit 100 --execute
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
+
+Validacao confirmada nesta frente:
+
+- `zsh scripts/test-libreoffice-dictionary-sample.sh`
+- `zsh scripts/test-dictionary-import-tooling.sh`
+- `python3 -m py_compile scripts/prepare-dictionary-import.py scripts/prepare-libreoffice-dictionary-sample.py`
+- `zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --limit 25`
+- `zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --limit 25 --execute`
+- primeira execucao da amostra: 25 linhas inseridas, 0 puladas
+- segunda execucao da mesma amostra: 0 inseridas, 25 atualizadas
+- `supabase db reset`
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+
 Validacao confirmada nesta rodada:
 
 - `zsh scripts/run-bot-simulation.sh smoke`
