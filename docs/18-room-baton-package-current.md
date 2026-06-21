@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-21 09:02:58
+Generated at: 2026-06-21 09:08:40
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,16 +93,10 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## feature/lexical-policy-imported-words-regression
-M  docs/00-index.md
-M  docs/18-room-baton-package-current.md
-M  docs/current-development-continuity-spec-v1.0.md
-M  docs/dictionary-import-pipeline-v1.0.md
-M  docs/implementation-roadmap.md
-A  docs/lexical-policy-v1.0.md
-M  generate-room-baton-package.sh
-M  scripts/run-sql-test-suite.sh
-A  sql/tests/test_dictionary_imported_words_engine_path.sql
+## feature/offline-lexical-policy-boundaries
+ M docs/current-development-continuity-spec-v1.0.md
+ M docs/lexical-policy-v1.0.md
+ M scripts/test-libreoffice-dictionary-sample.sh
 ```
 
 ### git remote -v
@@ -113,7 +107,9 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-1476a40 (HEAD -> feature/lexical-policy-imported-words-regression, origin/develop, origin/HEAD, develop) Merge pull request #8 from pbonafina/feature/licensed-pt-pt-dictionary-sample
+f6c18f1 (HEAD -> feature/offline-lexical-policy-boundaries, origin/develop, origin/HEAD, develop) Merge pull request #9 from pbonafina/feature/lexical-policy-imported-words-regression
+a8222ee test: add lexical policy imported word regression
+1476a40 Merge pull request #8 from pbonafina/feature/licensed-pt-pt-dictionary-sample
 6927487 feat: add pt-PT dictionary source sample
 bfeacea Merge pull request #7 from pbonafina/feature/licensed-dictionary-source-sample
 159ee49 feat: validate licensed dictionary source sample
@@ -126,8 +122,6 @@ a3cac88 fix: add pt-PT language baseline
 6c5d636 Merge pull request #3 from pbonafina/feature/match-language-dictionary-validation
 cbb3dd8 (origin/feature/match-language-dictionary-validation, feature/match-language-dictionary-validation) fix: validate words against match language
 51109b7 Merge pull request #2 from pbonafina/feature/bot-long-simulations
-26cc872 (origin/feature/bot-long-simulations, feature/bot-long-simulations) test: extend bot simulations and dictionary contract
-0d3997c Merge pull request #1 from pbonafina/upgrade/next16-audit
 ```
 
 ### tail -n 60 ../project-log.md
@@ -3525,8 +3519,14 @@ Uma mudanca nesta politica deve manter cobertura automatizada para:
 Teste de referencia:
 
 ```bash
+zsh scripts/test-libreoffice-dictionary-sample.sh
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_imported_words_engine_path.sql
 ```
+
+O teste offline do extrator cobre as fronteiras conservadoras da politica v1:
+hifen, abreviacao com ponto, sigla, nome proprio, digito, apostrofo e palavra
+curta ficam fora da amostra automatica; lemas simples com acento continuam
+entrando.
 
 ## Decisoes pendentes
 
@@ -4837,6 +4837,32 @@ Validacao confirmada nesta frente:
 - `zsh scripts/run-sql-test-suite.sh all`
 - `zsh scripts/run-bot-simulation.sh all`
 
+## 1.5 Atualizacao operacional de continuidade - 2026-06-21 offline
+
+Estado desta frente reduzida:
+
+- branch de implementacao: `feature/offline-lexical-policy-boundaries`
+- foco: reforcar a politica lexical v1 sem rede e sem banco
+- teste offline ampliado em `scripts/test-libreoffice-dictionary-sample.sh`
+
+Cobertura adicionada:
+
+- hifen fica fora da amostra automatica
+- abreviacao com ponto fica fora
+- sigla/acronimo fica fora
+- nome proprio com maiuscula inicial fica fora
+- palavra com digito fica fora
+- palavra com apostrofo fica fora
+- palavra curta fica fora
+- lema simples acentuado continua entrando
+
+Validacao de referencia:
+
+```bash
+zsh scripts/test-libreoffice-dictionary-sample.sh
+git diff --check
+```
+
 Validacao confirmada nesta rodada:
 
 - `zsh scripts/run-bot-simulation.sh smoke`
@@ -6055,6 +6081,8 @@ trap 'rm -rf "$tmp_dir"' EXIT
 fixture_dic="$tmp_dir/pt_BR_fixture.dic"
 sample_csv="$tmp_dir/sample.csv"
 import_sql="$tmp_dir/import.sql"
+boundary_dic="$tmp_dir/policy_boundary_fixture.dic"
+boundary_csv="$tmp_dir/policy_boundary.csv"
 pt_pt_source_dir="$tmp_dir/pt-pt-source"
 pt_pt_sql="$pt_pt_source_dir/patxanga-libreoffice-pt-pt-sample-3.sql"
 
@@ -6114,6 +6142,42 @@ python3 scripts/prepare-dictionary-import.py \
 grep -q "libreoffice_hunspell_pt_br_sample_test" "$import_sql"
 grep -q "AÇÃO" "$import_sql"
 grep -q '"input_rows":5' "$import_sql"
+
+cat > "$boundary_dic" <<'DIC'
+10
+coração/AB
+luso-brasileiro/CD
+A.C.
+NASA
+Lisboa
+abc123
+d'água
+aa
+árvore/EF
+há-o/GH
+DIC
+
+python3 scripts/prepare-libreoffice-dictionary-sample.py \
+  "$boundary_dic" \
+  --limit 10 \
+  --output "$boundary_csv" \
+  2> "$tmp_dir/boundary.stderr"
+
+grep -q "declared_count=10" "$tmp_dir/boundary.stderr"
+grep -q "selected=2" "$tmp_dir/boundary.stderr"
+
+python3 - "$boundary_csv" <<'PY'
+import csv
+import sys
+
+with open(sys.argv[1], encoding="utf-8", newline="") as csv_handle:
+    rows = list(csv.DictReader(csv_handle))
+
+expected_words = ["CORAÇÃO", "ÁRVORE"]
+actual_words = [row["word"] for row in rows]
+
+assert actual_words == expected_words, rows
+PY
 
 mkdir -p "$pt_pt_source_dir"
 cat > "$pt_pt_source_dir/pt_PT.dic" <<'DIC'

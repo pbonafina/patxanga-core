@@ -10,6 +10,8 @@ trap 'rm -rf "$tmp_dir"' EXIT
 fixture_dic="$tmp_dir/pt_BR_fixture.dic"
 sample_csv="$tmp_dir/sample.csv"
 import_sql="$tmp_dir/import.sql"
+boundary_dic="$tmp_dir/policy_boundary_fixture.dic"
+boundary_csv="$tmp_dir/policy_boundary.csv"
 pt_pt_source_dir="$tmp_dir/pt-pt-source"
 pt_pt_sql="$pt_pt_source_dir/patxanga-libreoffice-pt-pt-sample-3.sql"
 
@@ -69,6 +71,42 @@ python3 scripts/prepare-dictionary-import.py \
 grep -q "libreoffice_hunspell_pt_br_sample_test" "$import_sql"
 grep -q "AÇÃO" "$import_sql"
 grep -q '"input_rows":5' "$import_sql"
+
+cat > "$boundary_dic" <<'DIC'
+10
+coração/AB
+luso-brasileiro/CD
+A.C.
+NASA
+Lisboa
+abc123
+d'água
+aa
+árvore/EF
+há-o/GH
+DIC
+
+python3 scripts/prepare-libreoffice-dictionary-sample.py \
+  "$boundary_dic" \
+  --limit 10 \
+  --output "$boundary_csv" \
+  2> "$tmp_dir/boundary.stderr"
+
+grep -q "declared_count=10" "$tmp_dir/boundary.stderr"
+grep -q "selected=2" "$tmp_dir/boundary.stderr"
+
+python3 - "$boundary_csv" <<'PY'
+import csv
+import sys
+
+with open(sys.argv[1], encoding="utf-8", newline="") as csv_handle:
+    rows = list(csv.DictReader(csv_handle))
+
+expected_words = ["CORAÇÃO", "ÁRVORE"]
+actual_words = [row["word"] for row in rows]
+
+assert actual_words == expected_words, rows
+PY
 
 mkdir -p "$pt_pt_source_dir"
 cat > "$pt_pt_source_dir/pt_PT.dic" <<'DIC'
