@@ -351,6 +351,7 @@ Estado atual:
   como palavra reconhecida, sem cair em votacao
 - pipeline administrativa de importacao documentada em
   `docs/dictionary-import-pipeline-v1.0.md`
+- politica lexical v1 documentada em `docs/lexical-policy-v1.0.md`
 - `import_patxanga_dictionary_entries(...)` cria lote auditavel, deduplica
   entradas normalizadas, registra fonte/licenca/versao e pode desativar
   palavras ausentes em importacao de substituicao completa
@@ -376,6 +377,9 @@ Estado atual:
   local em `pt-PT`
 - `scripts/test-libreoffice-dictionary-sample.sh` cobre o extrator com fixture
   local e tambem exercita o gerador `pt-PT`, sem rede
+- `sql/tests/test_dictionary_imported_words_engine_path.sql` prova que palavras
+  importadas alimentam `validate_word`, `preview_move` e `submit_move` sem
+  exigir votacao
 
 Proximos passos:
 
@@ -384,7 +388,8 @@ Proximos passos:
   README e `LICENSES.txt` registram licencas em formatos diferentes
 - decidir se a importacao ampla de `pt-BR`/`pt-PT` usara lemas Hunspell,
   expansao de flexoes ou curadoria propria
-- decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
+- evoluir a politica para flexoes, nomes proprios, siglas, hifen e variantes
+  apenas quando houver fonte/curadoria especifica
 - substituir a baseline minima `pt-PT` por fonte ampla licenciada e auditada
 - auditar a distribuicao de pecas `pt-PT`; por enquanto ela e uma baseline
   operacional derivada de `pt-BR`
@@ -396,6 +401,7 @@ zsh scripts/test-dictionary-import-tooling.sh
 zsh scripts/test-libreoffice-dictionary-sample.sh
 zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25 --execute
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_imported_words_engine_path.sql
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
 zsh scripts/run-sql-test-suite.sh all
 ```

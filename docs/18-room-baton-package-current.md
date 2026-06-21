@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-21 08:50:33
+Generated at: 2026-06-21 09:02:58
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,14 +93,16 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## feature/licensed-pt-pt-dictionary-sample
+## feature/lexical-policy-imported-words-regression
+M  docs/00-index.md
 M  docs/18-room-baton-package-current.md
 M  docs/current-development-continuity-spec-v1.0.md
 M  docs/dictionary-import-pipeline-v1.0.md
 M  docs/implementation-roadmap.md
+A  docs/lexical-policy-v1.0.md
 M  generate-room-baton-package.sh
-A  scripts/import-libreoffice-pt-pt-sample.sh
-M  scripts/test-libreoffice-dictionary-sample.sh
+M  scripts/run-sql-test-suite.sh
+A  sql/tests/test_dictionary_imported_words_engine_path.sql
 ```
 
 ### git remote -v
@@ -111,7 +113,9 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-bfeacea (HEAD -> feature/licensed-pt-pt-dictionary-sample, origin/develop, origin/HEAD, develop) Merge pull request #7 from pbonafina/feature/licensed-dictionary-source-sample
+1476a40 (HEAD -> feature/lexical-policy-imported-words-regression, origin/develop, origin/HEAD, develop) Merge pull request #8 from pbonafina/feature/licensed-pt-pt-dictionary-sample
+6927487 feat: add pt-PT dictionary source sample
+bfeacea Merge pull request #7 from pbonafina/feature/licensed-dictionary-source-sample
 159ee49 feat: validate licensed dictionary source sample
 7b4ea65 Merge pull request #6 from pbonafina/feature/dictionary-csv-import-tooling
 86358e3 feat: add dictionary CSV import tooling
@@ -124,8 +128,6 @@ cbb3dd8 (origin/feature/match-language-dictionary-validation, feature/match-lang
 51109b7 Merge pull request #2 from pbonafina/feature/bot-long-simulations
 26cc872 (origin/feature/bot-long-simulations, feature/bot-long-simulations) test: extend bot simulations and dictionary contract
 0d3997c Merge pull request #1 from pbonafina/upgrade/next16-audit
-a263bb7 (origin/upgrade/next16-audit, upgrade/next16-audit) docs: refresh baton package after checkpoint
-d1ee0c2 fix(docs): generate baton package atomically
 ```
 
 ### tail -n 60 ../project-log.md
@@ -255,6 +257,43 @@ SQL
 - abrir http://localhost:3001
 - preencher match_id e user_id no formulario principal, ou usar `Usar host` / `Usar guest`
 - se disponivel, carregar os IDs na secao `Alternar host e guest` para trocar de papel sem recolar UUIDs
+
+## FILE: docs/00-index.md
+
+# PATXANGA - INDICE DE DOCUMENTACAO
+
+## Para jogador e produto
+
+- `docs/como-jogar-patxanga.md` - manual inicial de como jogar Patxanga.
+- `docs/implementation-roadmap.md` - roadmap consolidado de implementacao.
+- `docs/01-product-vision.md` - visao de produto e diferenciais do jogo.
+- `docs/10-letter-distribution.md` - distribuicao oficial de pecas.
+- `docs/11-board-layout.md` - layout oficial do tabuleiro.
+
+## Regras e contratos tecnicos
+
+- `docs/12-submit-move-contract.md` - contrato congelado de envio de jogada.
+- `docs/lexical-policy-v1.0.md` - politica de palavras reconhecidas, importadas e votadas.
+- `docs/frontend-contract-rpcs-v1.0.md` - RPCs usadas pelo frontend.
+- `docs/frontend-contract-screen-actions-v1.0.md` - acoes permitidas por tela.
+- `docs/frontend-contract-match-states-v1.0.md` - estados oficiais da partida.
+- `docs/frontend-contract-pending-vote-ux-v1.0.md` - comportamento de votacao pendente.
+- `docs/frontend-rack-composition-ux-v1.0.md` - composicao local do rack por slots.
+- `docs/07-bot-engine.md` - contrato inicial de bots de teste e simulacao.
+
+## Operacao e continuidade
+
+- `docs/current-development-continuity-spec-v1.0.md` - status atual do desenvolvimento.
+- `docs/18-room-baton-package-current.md` - pacote atual de continuidade.
+- `docs/15-local-ops-and-collaboration-protocol.md` - protocolo local de trabalho.
+
+## Arquivos ainda vazios
+
+- `docs/02-functional-spec.md`
+- `docs/05-api-contracts.md`
+- `docs/06-game-engine-rules.md`
+- `docs/08-realtime-flow.md`
+- `docs/09-deployment-plan.md`
 
 ## FILE: docs/17-continuity-activation-brief-v1.0.md
 
@@ -3389,6 +3428,115 @@ Arquivos SQL relevantes:
 - `sql/rpc/evaluate_match_end.sql`
 - `sql/rpc/forfeit_match.sql`
 
+## FILE: docs/lexical-policy-v1.0.md
+
+# PATXANGA - Lexical Policy
+Version: 1.0
+Status: ACTIVE CONTRACT
+
+## Objective
+
+Definir quais palavras podem entrar automaticamente no dicionario reconhecido
+pela engine e quais devem continuar passando pelo fluxo de votacao.
+
+Esta politica nao decide a licenca de uma fonte. Ela define o comportamento de
+produto para entradas lexicais depois que uma fonte ja foi considerada aceitavel
+para o uso pretendido.
+
+## Regra central
+
+A engine aceita automaticamente apenas palavras ativas em
+`patxanga_dictionary` para o idioma da partida.
+
+Nao existe fallback entre idiomas:
+
+- partida `pt-BR` consulta apenas entradas `pt-BR`
+- partida `pt-PT` consulta apenas entradas `pt-PT`
+
+Palavra nao reconhecida nao bloqueia o jogo. Ela entra no fluxo de
+`pending_vote`, conforme o contrato de `submit_patxanga_move(...)`.
+
+## Politica v1 para importacoes amplas
+
+Para a primeira importacao ampla, a politica e conservadora:
+
+- aceitar apenas lemas de uma unica palavra
+- aceitar apenas letras portuguesas suportadas pela normalizacao atual
+- aceitar palavras de 3 a 15 caracteres
+- deduplicar pela normalizacao do banco
+- registrar fonte, versao, licenca, URL, hash e lote de importacao
+- manter `pt-BR` e `pt-PT` como universos lexicais separados
+
+Ficam fora da importacao automatica ampla v1:
+
+- palavras com hifen
+- abreviacoes com ponto
+- siglas e acronimos
+- nomes proprios
+- expressoes com espaco
+- palavras com apostrofo ou cliticos especiais
+- estrangeirismos sem decisao explicita de produto
+- variantes que dependam de regra regional ainda nao documentada
+
+Essas categorias podem ser aceitas por votacao durante a partida ou por uma
+curadoria futura com fonte e politica proprias.
+
+## Acentos e normalizacao
+
+O banco normaliza palavras com `normalize_patxanga_word(...)`, convertendo para
+maiusculas e removendo acentos suportados.
+
+Consequencia operacional:
+
+- uma entrada `ACAO` valida `ACAO` e `ação`
+- uma entrada `ÁBACO` valida `ABACO` e `ábaco`
+- a palavra exibida na jogada continua vindo das pecas colocadas no tabuleiro
+
+Essa normalizacao e intencional para reduzir atrito de jogo. Uma politica mais
+estrita de acentos pode ser avaliada depois.
+
+## Fontes atuais
+
+Fontes tecnicamente validadas como candidatas de amostra:
+
+- LibreOffice Hunspell `pt_BR`
+- LibreOffice Hunspell `pt_PT`
+
+Status de produto:
+
+- `pt_BR`: candidata tecnica com README declarando `LGPLv3/MPL`
+- `pt_PT`: candidata tecnica pendente de revisao humana/legal, porque README e
+  `LICENSES.txt` registram licencas em formatos diferentes
+
+Nenhum dump amplo deve ser versionado no repositorio. Importacoes devem usar a
+pipeline auditavel documentada em `docs/dictionary-import-pipeline-v1.0.md`.
+
+## Criterio de regressao
+
+Uma mudanca nesta politica deve manter cobertura automatizada para:
+
+- `validate_word(...)` reconhecendo palavra importada ativa
+- `preview_patxanga_move(...)` marcando palavra importada como reconhecida
+- `submit_patxanga_move(...)` aceitando jogada com palavra importada sem
+  `pending_vote`
+- separacao por idioma
+- palavra inativa permanecendo nao reconhecida
+
+Teste de referencia:
+
+```bash
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_imported_words_engine_path.sql
+```
+
+## Decisoes pendentes
+
+- aprovar ou rejeitar juridicamente a fonte ampla `pt_PT`
+- decidir se hifen pode entrar via curadoria propria
+- decidir tratamento de nomes proprios
+- decidir tratamento de siglas e acronimos
+- decidir se flexoes Hunspell devem ser expandidas ou se apenas lemas entram
+- decidir distribuicao de pecas especifica para `pt-PT`
+
 ## FILE: docs/dictionary-import-pipeline-v1.0.md
 
 # PATXANGA - Dictionary Import Pipeline
@@ -3403,6 +3551,9 @@ gigantes e sem acoplar a engine a uma fonte lexical ainda nao verificada.
 O jogo continua consultando apenas `validate_word(p_word, p_language)`. A
 pipeline de importacao e uma camada administrativa para popular e atualizar
 `patxanga_dictionary` com metadados de fonte, versao, licenca e lote.
+
+A politica de produto para o que entra automaticamente no dicionario esta em
+`docs/lexical-policy-v1.0.md`.
 
 ## Fonte e licenca
 
@@ -3647,6 +3798,7 @@ zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --limit 25 --exec
 zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25 --execute
 supabase db reset
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_imported_words_engine_path.sql
 zsh scripts/run-sql-test-suite.sh all
 zsh scripts/run-bot-simulation.sh all
 ```
@@ -4006,6 +4158,7 @@ Estado atual:
   como palavra reconhecida, sem cair em votacao
 - pipeline administrativa de importacao documentada em
   `docs/dictionary-import-pipeline-v1.0.md`
+- politica lexical v1 documentada em `docs/lexical-policy-v1.0.md`
 - `import_patxanga_dictionary_entries(...)` cria lote auditavel, deduplica
   entradas normalizadas, registra fonte/licenca/versao e pode desativar
   palavras ausentes em importacao de substituicao completa
@@ -4031,6 +4184,9 @@ Estado atual:
   local em `pt-PT`
 - `scripts/test-libreoffice-dictionary-sample.sh` cobre o extrator com fixture
   local e tambem exercita o gerador `pt-PT`, sem rede
+- `sql/tests/test_dictionary_imported_words_engine_path.sql` prova que palavras
+  importadas alimentam `validate_word`, `preview_move` e `submit_move` sem
+  exigir votacao
 
 Proximos passos:
 
@@ -4039,7 +4195,8 @@ Proximos passos:
   README e `LICENSES.txt` registram licencas em formatos diferentes
 - decidir se a importacao ampla de `pt-BR`/`pt-PT` usara lemas Hunspell,
   expansao de flexoes ou curadoria propria
-- decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
+- evoluir a politica para flexoes, nomes proprios, siglas, hifen e variantes
+  apenas quando houver fonte/curadoria especifica
 - substituir a baseline minima `pt-PT` por fonte ampla licenciada e auditada
 - auditar a distribuicao de pecas `pt-PT`; por enquanto ela e uma baseline
   operacional derivada de `pt-BR`
@@ -4051,6 +4208,7 @@ zsh scripts/test-dictionary-import-tooling.sh
 zsh scripts/test-libreoffice-dictionary-sample.sh
 zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25 --execute
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_imported_words_engine_path.sql
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
 zsh scripts/run-sql-test-suite.sh all
 ```
@@ -4638,6 +4796,44 @@ Validacao confirmada nesta frente antes do reset:
 - segunda execucao da mesma amostra `pt-PT`: 0 inseridas, 25 atualizadas
 - `supabase db reset`
 - `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+
+## 1.4 Atualizacao operacional de continuidade - 2026-06-21 politica lexical
+
+Estado desta frente:
+
+- branch de implementacao: `feature/lexical-policy-imported-words-regression`
+- foco: documentar a politica lexical v1 e provar que palavras importadas pela
+  pipeline alimentam o caminho real da engine
+- politica criada em `docs/lexical-policy-v1.0.md`
+- teste criado em `sql/tests/test_dictionary_imported_words_engine_path.sql`
+- runner `scripts/run-sql-test-suite.sh` passa a incluir esse teste no perfil
+  `engine_regression`
+
+Leitura correta:
+
+- a politica v1 e conservadora para importacoes amplas
+- lemas simples, alfabeticos, ativos e auditados podem ser reconhecidos
+  automaticamente
+- hifen, siglas, nomes proprios, abreviacoes, cliticos especiais e
+  estrangeirismos continuam fora da importacao ampla automatica ate curadoria
+  especifica
+- palavras fora do dicionario ativo seguem pelo fluxo de votacao
+- `pt-BR` e `pt-PT` continuam separados, sem fallback entre idiomas
+
+Comandos de referencia desta frente:
+
+```bash
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_imported_words_engine_path.sql
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
+
+Validacao confirmada nesta frente:
+
+- `git diff --check`
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_imported_words_engine_path.sql`
 - `zsh scripts/run-sql-test-suite.sh all`
 - `zsh scripts/run-bot-simulation.sh all`
 
@@ -6383,6 +6579,7 @@ typeset -a lobby_ops_tests=(
 typeset -a engine_regression_tests=(
   "sql/tests/test_dictionary_contract.sql"
   "sql/tests/test_dictionary_import_pipeline.sql"
+  "sql/tests/test_dictionary_imported_words_engine_path.sql"
   "sql/tests/test_exchange_tiles.sql"
   "sql/tests/test_pass_turn.sql"
   "sql/tests/test_submit_move_auto.sql"
@@ -8152,6 +8349,347 @@ begin
 
     delete from public.patxanga_dictionary_import_batches
     where source = 'import_pipeline_test';
+end $$;
+
+## FILE: sql/tests/test_dictionary_imported_words_engine_path.sql
+
+-- ============================================================
+-- PATXANGA - TEST: imported dictionary words through engine path
+-- Purpose: validate imported words in validate, preview and submit
+-- ============================================================
+
+do $$
+declare
+    v_pt_br_user1 uuid := gen_random_uuid();
+    v_pt_br_user2 uuid := gen_random_uuid();
+    v_pt_pt_user1 uuid := gen_random_uuid();
+    v_pt_pt_user2 uuid := gen_random_uuid();
+    v_pt_br_match_id uuid;
+    v_pt_pt_match_id uuid;
+    v_pt_br_player_id uuid;
+    v_pt_pt_player_id uuid;
+    v_pt_br_import_result jsonb;
+    v_pt_pt_import_result jsonb;
+    v_pt_br_preview_result jsonb;
+    v_pt_pt_preview_result jsonb;
+    v_pt_br_submit_result jsonb;
+    v_pt_pt_submit_result jsonb;
+    v_pt_br_accepted_move_count integer;
+    v_pt_pt_accepted_move_count integer;
+    v_pt_br_source_row_count integer;
+    v_pt_pt_source_row_count integer;
+    v_n_id uuid := gen_random_uuid();
+    v_e_id uuid := gen_random_uuid();
+    v_x_id uuid := gen_random_uuid();
+    v_o_id uuid := gen_random_uuid();
+    v_a1_id uuid := gen_random_uuid();
+    v_b_id uuid := gen_random_uuid();
+    v_a2_id uuid := gen_random_uuid();
+    v_c_id uuid := gen_random_uuid();
+    v_o2_id uuid := gen_random_uuid();
+begin
+    delete from public.patxanga_dictionary
+    where source = 'imported_words_engine_test';
+
+    delete from public.patxanga_dictionary_import_batches
+    where source = 'imported_words_engine_test';
+
+    if public.validate_word('NEXO', 'pt-BR') is true then
+        raise exception 'Fixture word NEXO unexpectedly validates before import';
+    end if;
+
+    if public.validate_word('ABACO', 'pt-PT') is true then
+        raise exception 'Fixture word ABACO unexpectedly validates before import';
+    end if;
+
+    select public.import_patxanga_dictionary_entries(
+        p_language := 'pt-BR',
+        p_source := 'imported_words_engine_test',
+        p_license_name := 'Test Fixture License',
+        p_entries := jsonb_build_array(
+            jsonb_build_object('word', 'NEXO'),
+            jsonb_build_object('word', 'FALSO', 'is_active', false)
+        ),
+        p_source_version := 'fixture-v1',
+        p_license_url := 'https://example.test/license',
+        p_source_url := 'https://example.test/pt-br-source',
+        p_imported_by := 'sql-test',
+        p_metadata := jsonb_build_object(
+            'fixture', true,
+            'policy', 'docs/lexical-policy-v1.0.md'
+        ),
+        p_deactivate_missing := false
+    )
+    into v_pt_br_import_result;
+
+    select public.import_patxanga_dictionary_entries(
+        p_language := 'pt-PT',
+        p_source := 'imported_words_engine_test',
+        p_license_name := 'Test Fixture License',
+        p_entries := jsonb_build_array(
+            jsonb_build_object('word', 'ÁBACO')
+        ),
+        p_source_version := 'fixture-v1',
+        p_license_url := 'https://example.test/license',
+        p_source_url := 'https://example.test/pt-pt-source',
+        p_imported_by := 'sql-test',
+        p_metadata := jsonb_build_object(
+            'fixture', true,
+            'policy', 'docs/lexical-policy-v1.0.md'
+        ),
+        p_deactivate_missing := false
+    )
+    into v_pt_pt_import_result;
+
+    if (v_pt_br_import_result->>'inserted_count')::integer <> 2 then
+        raise exception 'Expected pt-BR fixture import to insert 2 rows, got %',
+            v_pt_br_import_result;
+    end if;
+
+    if (v_pt_pt_import_result->>'inserted_count')::integer <> 1 then
+        raise exception 'Expected pt-PT fixture import to insert 1 row, got %',
+            v_pt_pt_import_result;
+    end if;
+
+    if public.validate_word('NEXO', 'pt-BR') is not true then
+        raise exception 'Expected imported pt-BR NEXO to validate';
+    end if;
+
+    if public.validate_word('FALSO', 'pt-BR') is not false then
+        raise exception 'Expected inactive imported pt-BR FALSO not to validate';
+    end if;
+
+    if public.validate_word('nexo', 'pt-PT') is not false then
+        raise exception 'Expected imported pt-BR NEXO not to leak into pt-PT';
+    end if;
+
+    if public.validate_word('ABACO', 'pt-PT') is not true then
+        raise exception 'Expected imported pt-PT ABACO to validate from ÁBACO';
+    end if;
+
+    if public.validate_word('ábaco', 'pt-PT') is not true then
+        raise exception 'Expected lowercase accented pt-PT ábaco to validate';
+    end if;
+
+    select count(*)
+    into v_pt_br_source_row_count
+    from public.patxanga_dictionary
+    where language = 'pt-BR'
+      and source = 'imported_words_engine_test'
+      and word_normalized in ('NEXO', 'FALSO');
+
+    if v_pt_br_source_row_count <> 2 then
+        raise exception 'Expected 2 pt-BR imported source rows, got %',
+            v_pt_br_source_row_count;
+    end if;
+
+    select count(*)
+    into v_pt_pt_source_row_count
+    from public.patxanga_dictionary
+    where language = 'pt-PT'
+      and source = 'imported_words_engine_test'
+      and word_normalized = 'ABACO';
+
+    if v_pt_pt_source_row_count <> 1 then
+        raise exception 'Expected 1 pt-PT imported source row, got %',
+            v_pt_pt_source_row_count;
+    end if;
+
+    v_pt_br_match_id := public.create_patxanga_match(
+        p_host_user_id := v_pt_br_user1,
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    perform public.join_patxanga_match(
+        p_match_id := v_pt_br_match_id,
+        p_user_id := v_pt_br_user2
+    );
+
+    perform public.start_patxanga_match(v_pt_br_match_id);
+
+    select current_turn_player_id
+    into v_pt_br_player_id
+    from public.patxanga_matches
+    where id = v_pt_br_match_id;
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_n_id::text, 'letter', 'N', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_e_id::text, 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_x_id::text, 'letter', 'X', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_o_id::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_pt_br_player_id;
+
+    v_pt_br_preview_result := public.preview_patxanga_move(
+        v_pt_br_match_id,
+        v_pt_br_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_n_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_e_id::text, 'row', 8, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_x_id::text, 'row', 8, 'col', 10, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_o_id::text, 'row', 8, 'col', 11, 'declared_letter', null)
+        )
+    );
+
+    if v_pt_br_preview_result->>'status' <> 'ok' then
+        raise exception 'Expected pt-BR imported NEXO preview ok, got %',
+            v_pt_br_preview_result;
+    end if;
+
+    if v_pt_br_preview_result->>'main_word' <> 'NEXO' then
+        raise exception 'Expected pt-BR preview main_word NEXO, got %',
+            v_pt_br_preview_result;
+    end if;
+
+    if coalesce((v_pt_br_preview_result->>'requires_vote')::boolean, true) is not false then
+        raise exception 'Expected imported pt-BR NEXO not to require vote, got %',
+            v_pt_br_preview_result;
+    end if;
+
+    v_pt_br_submit_result := public.submit_patxanga_move(
+        v_pt_br_match_id,
+        v_pt_br_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_n_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_e_id::text, 'row', 8, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_x_id::text, 'row', 8, 'col', 10, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_o_id::text, 'row', 8, 'col', 11, 'declared_letter', null)
+        )
+    );
+
+    if v_pt_br_submit_result->>'status' <> 'success' then
+        raise exception 'Expected imported pt-BR NEXO submit success, got %',
+            v_pt_br_submit_result;
+    end if;
+
+    select count(*)
+    into v_pt_br_accepted_move_count
+    from public.patxanga_moves
+    where id = (v_pt_br_submit_result->>'move_id')::uuid
+      and match_id = v_pt_br_match_id
+      and player_id = v_pt_br_player_id
+      and main_word = 'NEXO'
+      and status = 'accepted'
+      and is_dictionary_recognized = true
+      and requires_vote = false;
+
+    if v_pt_br_accepted_move_count <> 1 then
+        raise exception 'Expected exactly 1 accepted imported pt-BR NEXO move, got %',
+            v_pt_br_accepted_move_count;
+    end if;
+
+    v_pt_pt_match_id := public.create_patxanga_match(
+        p_host_user_id := v_pt_pt_user1,
+        p_language := 'pt-PT',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    perform public.join_patxanga_match(
+        p_match_id := v_pt_pt_match_id,
+        p_user_id := v_pt_pt_user2
+    );
+
+    perform public.start_patxanga_match(v_pt_pt_match_id);
+
+    select current_turn_player_id
+    into v_pt_pt_player_id
+    from public.patxanga_matches
+    where id = v_pt_pt_match_id;
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_a1_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_b_id::text, 'letter', 'B', 'points', 3, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_a2_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_c_id::text, 'letter', 'C', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_o2_id::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_pt_pt_player_id;
+
+    v_pt_pt_preview_result := public.preview_patxanga_move(
+        v_pt_pt_match_id,
+        v_pt_pt_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_a1_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_b_id::text, 'row', 8, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_a2_id::text, 'row', 8, 'col', 10, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_c_id::text, 'row', 8, 'col', 11, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_o2_id::text, 'row', 8, 'col', 12, 'declared_letter', null)
+        )
+    );
+
+    if v_pt_pt_preview_result->>'status' <> 'ok' then
+        raise exception 'Expected pt-PT imported ABACO preview ok, got %',
+            v_pt_pt_preview_result;
+    end if;
+
+    if v_pt_pt_preview_result->>'main_word' <> 'ABACO' then
+        raise exception 'Expected pt-PT preview main_word ABACO, got %',
+            v_pt_pt_preview_result;
+    end if;
+
+    if coalesce((v_pt_pt_preview_result->>'requires_vote')::boolean, true) is not false then
+        raise exception 'Expected imported pt-PT ABACO not to require vote, got %',
+            v_pt_pt_preview_result;
+    end if;
+
+    v_pt_pt_submit_result := public.submit_patxanga_move(
+        v_pt_pt_match_id,
+        v_pt_pt_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_a1_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_b_id::text, 'row', 8, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_a2_id::text, 'row', 8, 'col', 10, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_c_id::text, 'row', 8, 'col', 11, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_o2_id::text, 'row', 8, 'col', 12, 'declared_letter', null)
+        )
+    );
+
+    if v_pt_pt_submit_result->>'status' <> 'success' then
+        raise exception 'Expected imported pt-PT ABACO submit success, got %',
+            v_pt_pt_submit_result;
+    end if;
+
+    select count(*)
+    into v_pt_pt_accepted_move_count
+    from public.patxanga_moves
+    where id = (v_pt_pt_submit_result->>'move_id')::uuid
+      and match_id = v_pt_pt_match_id
+      and player_id = v_pt_pt_player_id
+      and main_word = 'ABACO'
+      and status = 'accepted'
+      and is_dictionary_recognized = true
+      and requires_vote = false;
+
+    if v_pt_pt_accepted_move_count <> 1 then
+        raise exception 'Expected exactly 1 accepted imported pt-PT ABACO move, got %',
+            v_pt_pt_accepted_move_count;
+    end if;
+
+    raise notice 'Dictionary imported words engine path test passed';
+    raise notice 'pt_br_import_result=%', v_pt_br_import_result;
+    raise notice 'pt_pt_import_result=%', v_pt_pt_import_result;
+    raise notice 'pt_br_preview_result=%', v_pt_br_preview_result;
+    raise notice 'pt_pt_preview_result=%', v_pt_pt_preview_result;
+    raise notice 'pt_br_submit_result=%', v_pt_br_submit_result;
+    raise notice 'pt_pt_submit_result=%', v_pt_pt_submit_result;
+
+    delete from public.patxanga_dictionary
+    where source = 'imported_words_engine_test';
+
+    delete from public.patxanga_dictionary_import_batches
+    where source = 'imported_words_engine_test';
 end $$;
 
 ## FILE: sql/simulations/bot_simulation_smoke.sql

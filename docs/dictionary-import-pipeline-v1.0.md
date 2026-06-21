@@ -11,6 +11,9 @@ O jogo continua consultando apenas `validate_word(p_word, p_language)`. A
 pipeline de importacao e uma camada administrativa para popular e atualizar
 `patxanga_dictionary` com metadados de fonte, versao, licenca e lote.
 
+A politica de produto para o que entra automaticamente no dicionario esta em
+`docs/lexical-policy-v1.0.md`.
+
 ## Fonte e licenca
 
 Antes de importar uma fonte real, registrar explicitamente:
@@ -254,6 +257,7 @@ zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --limit 25 --exec
 zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25 --execute
 supabase db reset
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_imported_words_engine_path.sql
 zsh scripts/run-sql-test-suite.sh all
 zsh scripts/run-bot-simulation.sh all
 ```

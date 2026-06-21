@@ -11,6 +11,7 @@
 ## Regras e contratos tecnicos
 
 - `docs/12-submit-move-contract.md` - contrato congelado de envio de jogada.
+- `docs/lexical-policy-v1.0.md` - politica de palavras reconhecidas, importadas e votadas.
 - `docs/frontend-contract-rpcs-v1.0.md` - RPCs usadas pelo frontend.
 - `docs/frontend-contract-screen-actions-v1.0.md` - acoes permitidas por tela.
 - `docs/frontend-contract-match-states-v1.0.md` - estados oficiais da partida.

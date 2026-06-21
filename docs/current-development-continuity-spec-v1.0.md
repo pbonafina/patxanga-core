@@ -221,6 +221,44 @@ Validacao confirmada nesta frente antes do reset:
 - `zsh scripts/run-sql-test-suite.sh all`
 - `zsh scripts/run-bot-simulation.sh all`
 
+## 1.4 Atualizacao operacional de continuidade - 2026-06-21 politica lexical
+
+Estado desta frente:
+
+- branch de implementacao: `feature/lexical-policy-imported-words-regression`
+- foco: documentar a politica lexical v1 e provar que palavras importadas pela
+  pipeline alimentam o caminho real da engine
+- politica criada em `docs/lexical-policy-v1.0.md`
+- teste criado em `sql/tests/test_dictionary_imported_words_engine_path.sql`
+- runner `scripts/run-sql-test-suite.sh` passa a incluir esse teste no perfil
+  `engine_regression`
+
+Leitura correta:
+
+- a politica v1 e conservadora para importacoes amplas
+- lemas simples, alfabeticos, ativos e auditados podem ser reconhecidos
+  automaticamente
+- hifen, siglas, nomes proprios, abreviacoes, cliticos especiais e
+  estrangeirismos continuam fora da importacao ampla automatica ate curadoria
+  especifica
+- palavras fora do dicionario ativo seguem pelo fluxo de votacao
+- `pt-BR` e `pt-PT` continuam separados, sem fallback entre idiomas
+
+Comandos de referencia desta frente:
+
+```bash
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_imported_words_engine_path.sql
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
+
+Validacao confirmada nesta frente:
+
+- `git diff --check`
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_imported_words_engine_path.sql`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+
 Validacao confirmada nesta rodada:
 
 - `zsh scripts/run-bot-simulation.sh smoke`
