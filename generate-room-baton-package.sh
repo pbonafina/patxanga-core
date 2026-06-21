@@ -254,6 +254,7 @@ trap 'rm -f "$TMP_OUT"' EXIT
   echo
 
   for file in \
+    docs/00-index.md \
     docs/17-continuity-activation-brief-v1.0.md \
     docs/16-room-restart-prompt-v1.0.md \
     docs/continuity-package-v1.6.md \
@@ -267,6 +268,7 @@ trap 'rm -f "$TMP_OUT"' EXIT
     docs/frontend-rack-composition-ux-v1.0.md \
     docs/frontend-rack-composition-implementation-plan-v1.0.md \
     docs/como-jogar-patxanga.md \
+    docs/lexical-policy-v1.0.md \
     docs/dictionary-import-pipeline-v1.0.md \
     docs/implementation-roadmap.md \
     docs/07-bot-engine.md \
@@ -292,6 +294,7 @@ trap 'rm -f "$TMP_OUT"' EXIT
     sql/seeds/004_dictionary_pt_pt_core_seed.sql \
     sql/tests/test_dictionary_contract.sql \
     sql/tests/test_dictionary_import_pipeline.sql \
+    sql/tests/test_dictionary_imported_words_engine_path.sql \
     sql/simulations/bot_simulation_smoke.sql \
     sql/simulations/bot_simulation_pending_vote.sql \
     sql/simulations/bot_simulation_exchange_tiles.sql \
