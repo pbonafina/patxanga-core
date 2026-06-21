@@ -1,4 +1,193 @@
 import { expect, test } from "@playwright/test";
+import { execFileSync } from "node:child_process";
+import type { Page } from "@playwright/test";
+
+type SlotMoveScenario = {
+  matchId: string;
+  currentUserId: string;
+  tileIds: Record<string, string>;
+};
+
+function runDatabaseJson<T>(sql: string): T {
+  const containerName =
+    process.env.PATXANGA_DB_CONTAINER ?? "supabase_db_patxanga-core";
+  const output = execFileSync(
+    "docker",
+    [
+      "exec",
+      "-i",
+      containerName,
+      "psql",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-qAt",
+      "-U",
+      "postgres",
+      "-d",
+      "postgres",
+    ],
+    {
+      input: sql,
+      encoding: "utf8",
+    }
+  ).trim();
+  const jsonLine = output.split("\n").at(-1);
+
+  if (!jsonLine) {
+    throw new Error("Database setup returned no JSON payload.");
+  }
+
+  return JSON.parse(jsonLine) as T;
+}
+
+function createSlotMoveScenario(word: "DA" | "TS"): SlotMoveScenario {
+  const rack =
+    word === "DA"
+      ? {
+          firstLetter: "D",
+          secondLetter: "A",
+          firstPoints: 2,
+          secondPoints: 1,
+          suffix: [
+            ["S", 1],
+            ["E", 1],
+            ["M", 2],
+            ["O", 1],
+            ["R", 1],
+          ],
+        }
+      : {
+          firstLetter: "T",
+          secondLetter: "S",
+          firstPoints: 2,
+          secondPoints: 1,
+          suffix: [
+            ["A", 1],
+            ["R", 1],
+            ["E", 1],
+            ["M", 2],
+            ["O", 1],
+          ],
+        };
+
+  return runDatabaseJson<SlotMoveScenario>(`
+create temp table e2e_slot_move_result(payload text);
+
+do $setup$
+declare
+    v_host_user_id uuid := gen_random_uuid();
+    v_guest_user_id uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_current_player_id uuid;
+    v_current_user_id uuid;
+    v_first_tile_id uuid := gen_random_uuid();
+    v_second_tile_id uuid := gen_random_uuid();
+begin
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_host_user_id,
+        p_host_guest_name := 'Slot E2E Host',
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    perform public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_guest_user_id,
+        p_guest_name := 'Slot E2E Guest'
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    select current_turn_player_id
+    into v_current_player_id
+    from public.patxanga_matches
+    where id = v_match_id;
+
+    select user_id
+    into v_current_user_id
+    from public.patxanga_players
+    where id = v_current_player_id;
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object(
+                'id', v_first_tile_id::text,
+                'letter', '${rack.firstLetter}',
+                'points', ${rack.firstPoints},
+                'is_special', false,
+                'special_type', null
+            ),
+            jsonb_build_object(
+                'id', v_second_tile_id::text,
+                'letter', '${rack.secondLetter}',
+                'points', ${rack.secondPoints},
+                'is_special', false,
+                'special_type', null
+            ),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', '${rack.suffix[0][0]}', 'points', ${rack.suffix[0][1]}, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', '${rack.suffix[1][0]}', 'points', ${rack.suffix[1][1]}, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', '${rack.suffix[2][0]}', 'points', ${rack.suffix[2][1]}, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', '${rack.suffix[3][0]}', 'points', ${rack.suffix[3][1]}, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', '${rack.suffix[4][0]}', 'points', ${rack.suffix[4][1]}, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_current_player_id;
+
+    insert into e2e_slot_move_result(payload)
+    values (
+        jsonb_build_object(
+            'matchId', v_match_id,
+            'currentUserId', v_current_user_id,
+            'tileIds', jsonb_build_object(
+                '${rack.firstLetter}', v_first_tile_id,
+                '${rack.secondLetter}', v_second_tile_id
+            )
+        )::text
+    );
+end
+$setup$;
+
+select payload from e2e_slot_move_result;
+`);
+}
+
+async function openPreparedMatch(page: Page, scenario: SlotMoveScenario) {
+  await page.goto("/");
+
+  await page.getByLabel("match_id", { exact: true }).fill(scenario.matchId);
+  await page
+    .getByLabel("user_id da sessao (temporario neste bootstrap real)")
+    .fill(scenario.currentUserId);
+  await page.getByRole("button", { name: "Abrir partida" }).click();
+
+  await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+}
+
+async function placeTileThroughSlot(
+  page: Page,
+  tileId: string,
+  slotNumber: number,
+  rowIndex: number,
+  colIndex: number
+) {
+  const slot = page.getByTestId(`rack-slot-${slotNumber}`);
+  const tile = page.getByTestId(`rack-tile-${tileId}`);
+  const boardCell = page.getByTestId(`board-cell-${rowIndex}-${colIndex}`);
+
+  await slot.click();
+  await tile.click();
+  await expect(page.getByTestId(`rack-slot-${slotNumber}-bound-tile`)).toBeVisible();
+
+  await boardCell.click();
+
+  await expect(page.getByTestId(`rack-slot-${slotNumber}-association`)).toHaveText(
+    `${rowIndex + 1},${colIndex + 1}`
+  );
+  await expect(
+    page.getByTestId(`board-cell-${rowIndex}-${colIndex}-slot-badges`)
+  ).toContainText(`S${slotNumber}`);
+}
 
 test.describe("browser validation scenarios", () => {
   test("runs invite, lobby, resume and forfeit flows from the test page", async ({
@@ -106,5 +295,48 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByText("0 peças em preparo")).toBeVisible();
     await expect(page.getByTestId("rack-slot-1-bound-tile")).toHaveCount(0);
     await expect(page.getByTestId("rack-slot-1-association")).toHaveCount(0);
+  });
+
+  test("submits an accepted word through rack slots", async ({ page }) => {
+    const scenario = createSlotMoveScenario("DA");
+
+    await openPreparedMatch(page, scenario);
+
+    await placeTileThroughSlot(page, scenario.tileIds.D, 1, 7, 7);
+    await placeTileThroughSlot(page, scenario.tileIds.A, 2, 7, 8);
+
+    await expect(page.getByText("2 peças em preparo")).toBeVisible();
+    await expect(page.getByText("Palavra principal: DA")).toBeVisible();
+    await expect(page.getByText("dicionario reconhece")).toBeVisible();
+
+    await page.getByRole("button", { name: "Confirmar jogada" }).click();
+
+    await expect(page.getByText("Aguardando o outro jogador")).toBeVisible();
+    await expect(page.getByText("0 peças em preparo")).toBeVisible();
+    await expect(page.getByTestId("board-cell-7-7")).toContainText("D");
+    await expect(page.getByTestId("board-cell-7-8")).toContainText("A");
+  });
+
+  test("sends an unrecognized slot word to pending vote", async ({ page }) => {
+    const scenario = createSlotMoveScenario("TS");
+
+    await openPreparedMatch(page, scenario);
+
+    await placeTileThroughSlot(page, scenario.tileIds.T, 1, 7, 7);
+    await placeTileThroughSlot(page, scenario.tileIds.S, 2, 7, 8);
+
+    await expect(page.getByText("2 peças em preparo")).toBeVisible();
+    await expect(page.getByText("Palavra principal: TS")).toBeVisible();
+    await expect(page.getByText("vai para votacao")).toBeVisible();
+
+    await page.getByRole("button", { name: "Confirmar jogada" }).click();
+
+    await expect(page.getByText("A mesa está em votação")).toBeVisible();
+    await expect(page.getByText("Jogada aguardando decisão da mesa")).toBeVisible();
+    await expect(page.getByText("Palavra principal:")).toBeVisible();
+    await expect(page.getByText("TS", { exact: true })).toBeVisible();
+    await expect(page.getByText("O tabuleiro oficial continua intacto")).toBeVisible();
+    await expect(page.getByTestId("board-cell-7-7")).toContainText("T");
+    await expect(page.getByTestId("board-cell-7-8")).toContainText("S");
   });
 });
