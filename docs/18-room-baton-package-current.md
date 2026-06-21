@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-21 11:33:21
+Generated at: 2026-06-21 16:54:41
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,23 +93,19 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## feature/human-vs-bot-pass-mvp
+## feature/easy-bot-opening-policy
  M docs/07-bot-engine.md
+ M docs/18-room-baton-package-current.md
  M docs/current-development-continuity-spec-v1.0.md
+ M docs/frontend-contract-rpcs-v1.0.md
  M docs/implementation-roadmap.md
- M frontend/components/GamePlayScreen.tsx
- M frontend/components/PlayersSection.tsx
- M frontend/lib/backend/matchBootstrap.mock.ts
- M frontend/lib/backend/matchBootstrap.real.ts
- M frontend/next-env.d.ts
  M frontend/pages/index.tsx
  M frontend/tests/browser-validation.spec.ts
- M frontend/types/match.ts
  M generate-room-baton-package.sh
  M scripts/run-sql-test-suite.sh
- M sql/rpc/get_match_bootstrap.sql
-?? sql/tests/test_match_bootstrap_bot_metadata.sql
-?? supabase/migrations/20260621093000_26_match_bootstrap_bot_metadata.sql
+?? sql/rpc/submit_easy_bot_turn.sql
+?? sql/tests/test_easy_bot_turn_policy.sql
+?? supabase/migrations/20260621105000_27_easy_bot_opening_policy.sql
 ```
 
 ### git remote -v
@@ -120,7 +116,9 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-fa4702d (HEAD -> feature/human-vs-bot-pass-mvp, origin/develop, origin/HEAD, develop) Merge pull request #12 from pbonafina/feature/slot-submit-playwright-regression
+1899fce (HEAD -> feature/easy-bot-opening-policy, origin/develop, origin/HEAD, develop) Merge pull request #13 from pbonafina/feature/human-vs-bot-pass-mvp
+ebf032e (origin/feature/human-vs-bot-pass-mvp) feat: add human vs bot pass mvp
+fa4702d Merge pull request #12 from pbonafina/feature/slot-submit-playwright-regression
 f4ada51 test: cover slot submit browser flows
 2d415d9 Merge pull request #11 from pbonafina/feature/lexical-policy-voting-regression
 b71e1b0 test: cover lexical policy voting path
@@ -133,8 +131,6 @@ a8222ee test: add lexical policy imported word regression
 bfeacea Merge pull request #7 from pbonafina/feature/licensed-dictionary-source-sample
 159ee49 feat: validate licensed dictionary source sample
 7b4ea65 Merge pull request #6 from pbonafina/feature/dictionary-csv-import-tooling
-86358e3 feat: add dictionary CSV import tooling
-3cc1c70 Merge pull request #5 from pbonafina/feature/dictionary-import-pipeline
 ```
 
 ### tail -n 60 ../project-log.md
@@ -2372,7 +2368,7 @@ Fim do documento.
 ## FILE: docs/frontend-contract-rpcs-v1.0.md
 
 # PATXANGA — FRONTEND CONTRACT: RPCs
-Version: 1.0
+Version: 1.1
 Status: ACTIVE OPERATIONAL BASELINE
 Base normativa:
 - Context Snapshot Master v1.6
@@ -2403,6 +2399,7 @@ Ele não redefine engine, não substitui migrations e não altera a autoridade d
 - `submit_patxanga_move()`
 - `submit_patxanga_vote()`
 - `submit_patxanga_pass_turn()`
+- `submit_patxanga_easy_bot_turn()`
 - `submit_patxanga_exchange_tiles()`
 
 ## 4. Contrato operacional por RPC
@@ -2583,6 +2580,29 @@ Trocar peças do rack com o bag.
 #### Regra de autoridade do backend
 - backend valida posse das peças e executa a troca
 - frontend não remove peças definitivamente antes da confirmação oficial
+
+### 4.8 `submit_patxanga_easy_bot_turn()`
+
+#### Finalidade
+Executar o turno automatico de um jogador bot `easy`.
+
+#### Parâmetros de entrada
+- `p_match_id uuid`
+- `p_player_id uuid`
+
+#### Saída esperada
+Um dos ramos operacionais abaixo:
+- `bot_action = place_word`, quando o bot encontrou abertura valida no dicionario ativo
+- `bot_action = pass`, quando nao encontrou jogada segura e caiu no fallback de passe
+
+#### Estados relevantes para UI
+- `active`
+
+#### Regra de autoridade do backend
+- frontend apenas dispara a RPC quando o turno atual pertence a um bot
+- a RPC delega jogada real para `submit_patxanga_move()`
+- a RPC delega fallback para `submit_patxanga_pass_turn()`
+- frontend nao monta palavra, nao calcula score e nao avanca turno localmente
 
 ## 5. Regras transversais para UI
 
@@ -3863,7 +3883,7 @@ Leitura atual do projeto:
 | Dicionario | Contrato por idioma/fonte/ativo consolidado; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
 | Bots de teste e simulacao | Baseline alta: contrato, runner e sete cenarios deterministicos validados |
-| Bot | MVP humano contra bot criado; bot `easy` passa automaticamente, sem inteligencia de jogada ainda |
+| Bot | MVP humano contra bot criado; bot `easy` tenta abertura valida por dicionario e passa como fallback |
 | Documentacao de jogador | Manual inicial criado em `docs/como-jogar-patxanga.md` |
 
 Diretriz principal:
@@ -4276,19 +4296,21 @@ Estado atual:
 - `join_patxanga_match()` aceita parametros de bot
 - bootstrap de partida expoe metadados de bot para o frontend
 - UI cria partida humano + bot local
-- bot `easy` passa o turno automaticamente quando for sua vez
-- Playwright cobre criacao humano contra bot e auto-pass deterministico
-- ainda nao existe engine de bot que escolha palavras
+- bot `easy` chama `submit_patxanga_easy_bot_turn(...)` quando for sua vez
+- a politica tenta uma abertura horizontal com palavra reconhecida no dicionario ativo
+- se nao houver abertura segura, o bot passa automaticamente
+- SQL cobre jogada real `SOL` e fallback de passe
+- Playwright cobre criacao humano contra bot e jogada real deterministica do bot
+- ainda nao existe bot que encaixe palavras em tabuleiro ja ocupado
 - nao existe Edge Function de bot
-- ainda nao existe bot jogando palavra propria
 
 Entregas futuras:
 
 | Item | Acao | Criterio de saida |
 |------|------|-------------------|
-| Motor simples | Bot escolhe jogada legal simples ou passa | Turno do bot nao trava partida e bot consegue pontuar |
+| Encaixe simples | Bot tenta palavra conectada ao tabuleiro antes de passar | Bot consegue jogar alem da abertura |
 | Execucao automatica | Edge Function ou rotina equivalente executa o turno | Bot joga sem acao manual |
-| Testes | SQL/Playwright cobrem humano contra bot com jogada real do bot | Fluxo fica regressivo |
+| Testes | SQL/Playwright cobrem humano contra bot apos primeira rodada | Fluxo fica regressivo |
 
 Prioridade:
 
@@ -4365,8 +4387,8 @@ Fim do documento.
 
 # PATXANGA - BOT ENGINE
 
-Versao: 0.7
-Status: Baseline de simulacao + MVP humano contra bot com auto-pass
+Versao: 0.8
+Status: Baseline de simulacao + MVP humano contra bot com politica easy de abertura
 
 ---
 
@@ -4446,14 +4468,18 @@ Ja existe:
   `pending_vote` em ponte com peca existente e rejeicao por voto
 - bootstrap de partida expondo `is_bot`, `bot_level` e `bot_profile`
 - UI de partida rapida humano contra bot
-- acao automatica inicial do bot `easy`: passar o turno quando for a vez dele
-- regressao Playwright para criar humano contra bot e validar auto-pass
+- RPC `submit_patxanga_easy_bot_turn(...)`
+- acao automatica inicial do bot `easy`: tentar abertura valida por dicionario
+  ativo antes de passar
+- fallback de passe quando nao ha palavra segura para abertura
+- regressao SQL para `place_word` real e fallback de passe do bot `easy`
+- regressao Playwright para criar humano contra bot e validar jogada real do bot
 
 Ainda nao existe:
 
 - engine autonoma de bot
 - Edge Function de bot
-- bot que escolha jogada por conta propria
+- bot que encaixe palavras em tabuleiro ja ocupado
 
 ---
 
@@ -4508,19 +4534,31 @@ e joga no centro.
 
 Uso inicial:
 
-- palavra `DA`
-- posicoes `(8,8)` e `(8,9)`
-- score esperado: 6
+- palavras do dicionario ativo que possam ser formadas com letras normais
+  do rack
+- posicoes iniciando em `(8,8)`, horizontalmente
+- exemplo de regressao: `SOL` em `(8,8)`, `(8,9)` e `(8,10)`
+- score esperado no exemplo: 8
+- RPC de produto inicial: `submit_patxanga_easy_bot_turn(...)`
+
+Limites atuais:
+
+- nao usa curingas nem pecas especiais
+- nao tenta encaixe em tabuleiro ja ocupado
+- nao faz busca combinatoria ampla
+- escolhe a primeira palavra valida por tamanho e ordem alfabetica
 
 ### `pass_turn`
 
-Executa `submit_patxanga_pass_turn(...)` quando for turno do bot.
+Executa `submit_patxanga_pass_turn(...)` quando for turno do bot e a politica
+nao encontrar jogada segura.
 
 Uso inicial:
 
 - validar avancar turno
 - validar replay de passe
 - validar ciclo de pass futuro
+- manter partida humano contra bot sem travar
 
 ### Futuras politicas
 
@@ -4579,8 +4617,9 @@ Nao faz parte desta fase:
 Excecao entregue no MVP 2026-06-21:
 
 - a UI ja permite criar uma partida humano contra bot local
-- o bot `easy` ainda nao escolhe palavra; ele apenas passa o turno
-  automaticamente
+- o bot `easy` tenta abertura horizontal com palavra reconhecida pelo dicionario
+  ativo
+- se nao houver abertura segura, ele passa automaticamente
 - essa automacao existe para provar o ciclo de produto sem travar partida
   quando o turno chega ao bot
 
@@ -4600,10 +4639,9 @@ A primeira fase de bots de teste esta iniciada. Criterios ja atendidos:
 
 Proximo criterio de avanco:
 
-- extrair uma politica simples de bot `easy` que tente uma abertura valida
-  antes de passar
-- manter fallback de passe quando nao houver jogada segura
-- cobrir a primeira jogada real do bot por SQL/Playwright
+- permitir uma politica simples de encaixe em tabuleiro ja ocupado
+- decidir se o bot `easy` pode usar curingas ou se isso fica para outro nivel
+- cobrir jogada real do bot apos a primeira rodada por SQL/Playwright
 
 Fim do documento.
 
@@ -5085,6 +5123,47 @@ Validacao confirmada nesta frente:
 - `cd frontend && npm run build`
 - `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
 
+## 1.9 Atualizacao operacional de continuidade - 2026-06-21 politica easy de bot
+
+Estado desta frente:
+
+- branch de implementacao: `feature/easy-bot-opening-policy`
+- foco: substituir auto-pass puro por politica minima de jogada real
+- migration nova: `supabase/migrations/20260621105000_27_easy_bot_opening_policy.sql`
+- RPC nova: `submit_patxanga_easy_bot_turn(...)`
+- teste SQL novo: `sql/tests/test_easy_bot_turn_policy.sql`
+- Playwright atualizado em `frontend/tests/browser-validation.spec.ts`
+
+Entregue:
+
+- bot `easy` tenta uma abertura horizontal no centro antes de passar
+- a palavra candidata vem de `patxanga_dictionary` filtrada por idioma,
+  `is_active=true`, tamanho 2..7 e letras normais disponiveis no rack
+- a RPC delega a jogada real para `submit_patxanga_move(...)`
+- quando nao ha abertura segura, a RPC delega para `submit_patxanga_pass_turn(...)`
+- a UI passou a chamar `submit_patxanga_easy_bot_turn(...)` no turno do bot
+- o feedback visual diferencia `Bot jogou PALAVRA` de `Bot passou o turno`
+
+Limite explicito:
+
+- a politica so tenta abertura em tabuleiro vazio
+- nao usa curingas nem pecas especiais
+- nao tenta encaixar em pecas ja existentes
+- nao substitui uma futura Edge Function ou runner server-side
+
+Validacao inicial confirmada nesta frente:
+
+- `cd frontend && npm run lint`
+- `cd frontend && npm run build`
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_easy_bot_turn_policy.sql`
+- `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+- `supabase db reset`
+- apos reset: `zsh scripts/run-sql-test-suite.sh all`
+- apos reset: `zsh scripts/run-bot-simulation.sh all`
+- apos reset: `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+
 ## 2. Matriz objetiva de avanco
 
 Percentual global estimado nesta leitura: `75%`
@@ -5100,8 +5179,8 @@ Regra de leitura:
 | --- | --- | --- | --- |
 | Engine backend server-authoritative | 90% | Core congelado e validado com match lifecycle, submit, pending_vote, pass, exchange e endgame | Tie-break mais sofisticado e qualquer endurecimento final de cobertura que surgir do produto |
 | Fluxos operacionais lobby/convites/retomada/desistencia | 85% | Baseline operacional real implementada e validada | Mais validacao de produto na UI final e possivel refino de ergonomia |
-| Primeira tela jogavel / gameplay frontend | 75% | Rack, preview, slots oficiais, submit/pending_vote por slots e MVP humano contra bot com auto-pass entregues | Decidir convergencia do fluxo oficial, refinar UX e evoluir bot alem de passe |
-| Automacao e regressao | 85% | Build verde, Playwright cobre slots reais e humano contra bot; suite SQL reutilizavel verde | Cobrir bot com primeira jogada real e mais regressao de recomposicao |
+| Primeira tela jogavel / gameplay frontend | 78% | Rack, preview, slots oficiais, submit/pending_vote por slots e MVP humano contra bot com jogada real de abertura do bot entregues | Decidir convergencia do fluxo oficial, refinar UX e evoluir bot para encaixe apos abertura |
+| Automacao e regressao | 87% | Build verde, Playwright cobre slots reais e humano contra bot; suite SQL cobre bot com abertura real e fallback de passe | Cobrir bot apos primeira rodada e mais regressao de recomposicao |
 | Continuidade operacional e rastreabilidade | 85% | Kit de continuidade, processo de bastao, logstep e baseline documental estao fortes | Triar os 2 untracked ambiguos e manter o pacote `current` sempre refreshado nos marcos certos |
 
 Leitura executiva:
@@ -6752,6 +6831,7 @@ typeset -a engine_regression_tests=(
   "sql/tests/test_dictionary_import_pipeline.sql"
   "sql/tests/test_dictionary_imported_words_engine_path.sql"
   "sql/tests/test_dictionary_policy_voting_path.sql"
+  "sql/tests/test_easy_bot_turn_policy.sql"
   "sql/tests/test_exchange_tiles.sql"
   "sql/tests/test_pass_turn.sql"
   "sql/tests/test_submit_move_auto.sql"
@@ -7324,6 +7404,189 @@ end;
 $$;
 
 grant execute on function public.preview_patxanga_move(uuid, uuid, jsonb)
+to authenticated, anon;
+
+## FILE: sql/rpc/submit_easy_bot_turn.sql
+
+-- ============================================================
+-- PATXANGA - RPC: submit_patxanga_easy_bot_turn()
+-- Purpose: first product bot policy: valid opening word before pass
+-- ============================================================
+
+create or replace function public.submit_patxanga_easy_bot_turn(
+    p_match_id uuid,
+    p_player_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as
+$$
+declare
+    v_match record;
+    v_player record;
+    v_existing_tile_count integer;
+    v_candidate_word text;
+    v_placed_tiles jsonb;
+    v_result jsonb;
+    v_pass_reason text;
+begin
+    select *
+    into v_match
+    from patxanga_matches
+    where id = p_match_id
+    for update;
+
+    if not found then
+        raise exception 'Match not found';
+    end if;
+
+    if v_match.status <> 'active' then
+        raise exception 'Match not active';
+    end if;
+
+    if v_match.current_turn_player_id <> p_player_id then
+        raise exception 'Not your turn';
+    end if;
+
+    select *
+    into v_player
+    from patxanga_players
+    where id = p_player_id
+      and match_id = p_match_id
+    for update;
+
+    if not found then
+        raise exception 'Player not found';
+    end if;
+
+    if coalesce(v_player.is_bot, false) is not true then
+        raise exception 'Player is not a bot';
+    end if;
+
+    if coalesce(v_player.bot_level, '') <> 'easy' then
+        raise exception 'Only easy bot policy is supported';
+    end if;
+
+    select count(*)
+    into v_existing_tile_count
+    from jsonb_array_elements(v_match.board_state) as board_row(row_data)
+    cross join jsonb_array_elements(board_row.row_data) as board_cell(cell_data)
+    where jsonb_typeof(board_cell.cell_data->'tile') = 'object';
+
+    if v_existing_tile_count > 0 then
+        v_pass_reason := 'board_not_empty';
+    else
+        with rack_letter_counts as (
+            select
+                public.normalize_patxanga_word(rack_tile.tile->>'letter') as letter,
+                count(*) as available
+            from jsonb_array_elements(v_player.rack_state) as rack_tile(tile)
+            where coalesce((rack_tile.tile->>'is_special')::boolean, false) is false
+              and nullif(coalesce(rack_tile.tile->>'special_type', ''), '') is null
+              and char_length(public.normalize_patxanga_word(rack_tile.tile->>'letter')) = 1
+            group by 1
+        )
+        select dictionary.word_normalized
+        into v_candidate_word
+        from patxanga_dictionary dictionary
+        where dictionary.language = v_match.language
+          and dictionary.is_active = true
+          and char_length(dictionary.word_normalized) between 2 and 7
+          and dictionary.word_normalized ~ '^[A-Z]+$'
+          and not exists (
+              select 1
+              from (
+                  select
+                      substring(dictionary.word_normalized from letter_index.i for 1) as letter,
+                      count(*) as needed
+                  from generate_series(1, char_length(dictionary.word_normalized)) as letter_index(i)
+                  group by 1
+              ) required_letters
+              left join rack_letter_counts rack_letters
+                on rack_letters.letter = required_letters.letter
+              where required_letters.needed > coalesce(rack_letters.available, 0)
+          )
+        order by char_length(dictionary.word_normalized), dictionary.word_normalized
+        limit 1;
+
+        if v_candidate_word is null then
+            v_pass_reason := 'no_opening_word';
+        else
+            with needed_letters as (
+                select
+                    letter_index.i as position,
+                    substring(v_candidate_word from letter_index.i for 1) as letter,
+                    row_number() over (
+                        partition by substring(v_candidate_word from letter_index.i for 1)
+                        order by letter_index.i
+                    ) as occurrence
+                from generate_series(1, char_length(v_candidate_word)) as letter_index(i)
+            ),
+            rack_tiles as (
+                select
+                    rack_tile.tile->>'id' as tile_id,
+                    public.normalize_patxanga_word(rack_tile.tile->>'letter') as letter,
+                    row_number() over (
+                        partition by public.normalize_patxanga_word(rack_tile.tile->>'letter')
+                        order by rack_tile.ordinality
+                    ) as occurrence
+                from jsonb_array_elements(v_player.rack_state)
+                    with ordinality as rack_tile(tile, ordinality)
+                where coalesce((rack_tile.tile->>'is_special')::boolean, false) is false
+                  and nullif(coalesce(rack_tile.tile->>'special_type', ''), '') is null
+                  and char_length(public.normalize_patxanga_word(rack_tile.tile->>'letter')) = 1
+            )
+            select jsonb_agg(
+                jsonb_build_object(
+                    'tile_id', rack_tiles.tile_id,
+                    'row', 8,
+                    'col', 8 + needed_letters.position - 1,
+                    'declared_letter', null
+                )
+                order by needed_letters.position
+            )
+            into v_placed_tiles
+            from needed_letters
+            join rack_tiles
+              on rack_tiles.letter = needed_letters.letter
+             and rack_tiles.occurrence = needed_letters.occurrence;
+
+            if v_placed_tiles is null
+               or jsonb_array_length(v_placed_tiles) <> char_length(v_candidate_word) then
+                v_pass_reason := 'opening_tile_mapping_failed';
+            else
+                v_result := public.submit_patxanga_move(
+                    p_match_id,
+                    p_player_id,
+                    v_placed_tiles
+                );
+
+                return v_result || jsonb_build_object(
+                    'bot_action', 'place_word',
+                    'bot_strategy', 'easy_opening_dictionary_word',
+                    'main_word', v_candidate_word,
+                    'placed_tiles', v_placed_tiles
+                );
+            end if;
+        end if;
+    end if;
+
+    v_result := public.submit_patxanga_pass_turn(
+        p_match_id,
+        p_player_id
+    );
+
+    return v_result || jsonb_build_object(
+        'bot_action', 'pass',
+        'bot_strategy', 'easy_opening_dictionary_word',
+        'pass_reason', v_pass_reason
+    );
+end;
+$$;
+
+grant execute on function public.submit_patxanga_easy_bot_turn(uuid, uuid)
 to authenticated, anon;
 
 ## FILE: sql/rpc/submit_move.sql
@@ -9010,6 +9273,210 @@ begin
     raise notice 'Dictionary policy voting path test passed';
     raise notice 'preview_result=%', v_preview_result;
     raise notice 'submit_result=%', v_submit_result;
+end $$;
+
+## FILE: sql/tests/test_easy_bot_turn_policy.sql
+
+-- ============================================================
+-- PATXANGA - TEST: easy bot turn policy
+-- Purpose: bot tries a valid opening word before pass fallback
+-- ============================================================
+
+do $$
+declare
+    v_human_user_id uuid := gen_random_uuid();
+    v_bot_user_id uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_human_player_id uuid;
+    v_bot_player_id uuid;
+    v_tile_s_id uuid := gen_random_uuid();
+    v_tile_o_id uuid := gen_random_uuid();
+    v_tile_l_id uuid := gen_random_uuid();
+    v_result jsonb;
+    v_accepted_move_count integer;
+    v_current_turn_player_id uuid;
+
+    v_fallback_human_user_id uuid := gen_random_uuid();
+    v_fallback_bot_user_id uuid := gen_random_uuid();
+    v_fallback_match_id uuid;
+    v_fallback_bot_player_id uuid;
+    v_fallback_result jsonb;
+    v_pass_move_count integer;
+begin
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_human_user_id,
+        p_host_guest_name := 'Human SQL',
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    select id
+    into v_human_player_id
+    from public.patxanga_players
+    where match_id = v_match_id
+      and user_id = v_human_user_id;
+
+    v_bot_player_id := public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_bot_user_id,
+        p_guest_name := 'Bot Easy',
+        p_is_bot := true,
+        p_bot_level := 'easy',
+        p_bot_profile := 'balanced'
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_tile_s_id::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_tile_o_id::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_tile_l_id::text, 'letter', 'L', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Q', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'X', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Z', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'K', 'points', 7, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_bot_player_id;
+
+    update public.patxanga_matches
+    set current_turn_player_id = v_bot_player_id,
+        updated_at = now()
+    where id = v_match_id;
+
+    v_result := public.submit_patxanga_easy_bot_turn(
+        v_match_id,
+        v_bot_player_id
+    );
+
+    if v_result->>'status' <> 'success' then
+        raise exception 'Expected easy bot turn success, got %', v_result;
+    end if;
+
+    if v_result->>'bot_action' <> 'place_word' then
+        raise exception 'Expected easy bot to place a word, got %', v_result;
+    end if;
+
+    if v_result->>'main_word' <> 'SOL' then
+        raise exception 'Expected easy bot opening word SOL, got %', v_result;
+    end if;
+
+    if (v_result->'score'->>'total_score')::integer <> 8 then
+        raise exception 'Expected SOL opening score 8, got %', v_result;
+    end if;
+
+    if (select board_state #>> '{7,7,tile,letter}' from public.patxanga_matches where id = v_match_id) <> 'S' then
+        raise exception 'Expected S at board center after bot opening';
+    end if;
+
+    if (select board_state #>> '{7,8,tile,letter}' from public.patxanga_matches where id = v_match_id) <> 'O' then
+        raise exception 'Expected O after board center after bot opening';
+    end if;
+
+    if (select board_state #>> '{7,9,tile,letter}' from public.patxanga_matches where id = v_match_id) <> 'L' then
+        raise exception 'Expected L after board center after bot opening';
+    end if;
+
+    select count(*)
+    into v_accepted_move_count
+    from public.patxanga_moves
+    where match_id = v_match_id
+      and player_id = v_bot_player_id
+      and move_type = 'place_word'
+      and status = 'accepted'
+      and main_word = 'SOL'
+      and score_total = 8;
+
+    if v_accepted_move_count <> 1 then
+        raise exception 'Expected exactly 1 accepted SOL bot move, got %',
+            v_accepted_move_count;
+    end if;
+
+    select current_turn_player_id
+    into v_current_turn_player_id
+    from public.patxanga_matches
+    where id = v_match_id;
+
+    if v_current_turn_player_id <> v_human_player_id then
+        raise exception 'Expected turn to return to human after bot move, got %',
+            v_current_turn_player_id;
+    end if;
+
+    v_fallback_match_id := public.create_patxanga_match(
+        p_host_user_id := v_fallback_human_user_id,
+        p_host_guest_name := 'Human Fallback SQL',
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    v_fallback_bot_player_id := public.join_patxanga_match(
+        p_match_id := v_fallback_match_id,
+        p_user_id := v_fallback_bot_user_id,
+        p_guest_name := 'Bot Fallback',
+        p_is_bot := true,
+        p_bot_level := 'easy',
+        p_bot_profile := 'balanced'
+    );
+
+    perform public.start_patxanga_match(v_fallback_match_id);
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Q', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'X', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Z', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'K', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Y', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'W', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'H', 'points', 4, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_fallback_bot_player_id;
+
+    update public.patxanga_matches
+    set current_turn_player_id = v_fallback_bot_player_id,
+        updated_at = now()
+    where id = v_fallback_match_id;
+
+    v_fallback_result := public.submit_patxanga_easy_bot_turn(
+        v_fallback_match_id,
+        v_fallback_bot_player_id
+    );
+
+    if v_fallback_result->>'status' <> 'success' then
+        raise exception 'Expected fallback bot turn success, got %',
+            v_fallback_result;
+    end if;
+
+    if v_fallback_result->>'bot_action' <> 'pass' then
+        raise exception 'Expected fallback bot action pass, got %',
+            v_fallback_result;
+    end if;
+
+    if v_fallback_result->>'pass_reason' <> 'no_opening_word' then
+        raise exception 'Expected fallback reason no_opening_word, got %',
+            v_fallback_result;
+    end if;
+
+    select count(*)
+    into v_pass_move_count
+    from public.patxanga_moves
+    where match_id = v_fallback_match_id
+      and player_id = v_fallback_bot_player_id
+      and move_type = 'pass'
+      and status = 'accepted';
+
+    if v_pass_move_count <> 1 then
+        raise exception 'Expected exactly 1 fallback pass move, got %',
+            v_pass_move_count;
+    end if;
+
+    raise notice 'Easy bot turn policy test passed';
+    raise notice 'opening_result=%', v_result;
+    raise notice 'fallback_result=%', v_fallback_result;
 end $$;
 
 ## FILE: sql/tests/test_match_bootstrap_bot_metadata.sql
@@ -12942,6 +13409,189 @@ end;
 $$;
 
 grant execute on function public.get_patxanga_match_bootstrap(uuid, uuid)
+to authenticated, anon;
+
+## FILE: supabase/migrations/20260621105000_27_easy_bot_opening_policy.sql
+
+-- ============================================================
+-- PATXANGA - RPC: submit_patxanga_easy_bot_turn()
+-- Purpose: first product bot policy: valid opening word before pass
+-- ============================================================
+
+create or replace function public.submit_patxanga_easy_bot_turn(
+    p_match_id uuid,
+    p_player_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as
+$$
+declare
+    v_match record;
+    v_player record;
+    v_existing_tile_count integer;
+    v_candidate_word text;
+    v_placed_tiles jsonb;
+    v_result jsonb;
+    v_pass_reason text;
+begin
+    select *
+    into v_match
+    from patxanga_matches
+    where id = p_match_id
+    for update;
+
+    if not found then
+        raise exception 'Match not found';
+    end if;
+
+    if v_match.status <> 'active' then
+        raise exception 'Match not active';
+    end if;
+
+    if v_match.current_turn_player_id <> p_player_id then
+        raise exception 'Not your turn';
+    end if;
+
+    select *
+    into v_player
+    from patxanga_players
+    where id = p_player_id
+      and match_id = p_match_id
+    for update;
+
+    if not found then
+        raise exception 'Player not found';
+    end if;
+
+    if coalesce(v_player.is_bot, false) is not true then
+        raise exception 'Player is not a bot';
+    end if;
+
+    if coalesce(v_player.bot_level, '') <> 'easy' then
+        raise exception 'Only easy bot policy is supported';
+    end if;
+
+    select count(*)
+    into v_existing_tile_count
+    from jsonb_array_elements(v_match.board_state) as board_row(row_data)
+    cross join jsonb_array_elements(board_row.row_data) as board_cell(cell_data)
+    where jsonb_typeof(board_cell.cell_data->'tile') = 'object';
+
+    if v_existing_tile_count > 0 then
+        v_pass_reason := 'board_not_empty';
+    else
+        with rack_letter_counts as (
+            select
+                public.normalize_patxanga_word(rack_tile.tile->>'letter') as letter,
+                count(*) as available
+            from jsonb_array_elements(v_player.rack_state) as rack_tile(tile)
+            where coalesce((rack_tile.tile->>'is_special')::boolean, false) is false
+              and nullif(coalesce(rack_tile.tile->>'special_type', ''), '') is null
+              and char_length(public.normalize_patxanga_word(rack_tile.tile->>'letter')) = 1
+            group by 1
+        )
+        select dictionary.word_normalized
+        into v_candidate_word
+        from patxanga_dictionary dictionary
+        where dictionary.language = v_match.language
+          and dictionary.is_active = true
+          and char_length(dictionary.word_normalized) between 2 and 7
+          and dictionary.word_normalized ~ '^[A-Z]+$'
+          and not exists (
+              select 1
+              from (
+                  select
+                      substring(dictionary.word_normalized from letter_index.i for 1) as letter,
+                      count(*) as needed
+                  from generate_series(1, char_length(dictionary.word_normalized)) as letter_index(i)
+                  group by 1
+              ) required_letters
+              left join rack_letter_counts rack_letters
+                on rack_letters.letter = required_letters.letter
+              where required_letters.needed > coalesce(rack_letters.available, 0)
+          )
+        order by char_length(dictionary.word_normalized), dictionary.word_normalized
+        limit 1;
+
+        if v_candidate_word is null then
+            v_pass_reason := 'no_opening_word';
+        else
+            with needed_letters as (
+                select
+                    letter_index.i as position,
+                    substring(v_candidate_word from letter_index.i for 1) as letter,
+                    row_number() over (
+                        partition by substring(v_candidate_word from letter_index.i for 1)
+                        order by letter_index.i
+                    ) as occurrence
+                from generate_series(1, char_length(v_candidate_word)) as letter_index(i)
+            ),
+            rack_tiles as (
+                select
+                    rack_tile.tile->>'id' as tile_id,
+                    public.normalize_patxanga_word(rack_tile.tile->>'letter') as letter,
+                    row_number() over (
+                        partition by public.normalize_patxanga_word(rack_tile.tile->>'letter')
+                        order by rack_tile.ordinality
+                    ) as occurrence
+                from jsonb_array_elements(v_player.rack_state)
+                    with ordinality as rack_tile(tile, ordinality)
+                where coalesce((rack_tile.tile->>'is_special')::boolean, false) is false
+                  and nullif(coalesce(rack_tile.tile->>'special_type', ''), '') is null
+                  and char_length(public.normalize_patxanga_word(rack_tile.tile->>'letter')) = 1
+            )
+            select jsonb_agg(
+                jsonb_build_object(
+                    'tile_id', rack_tiles.tile_id,
+                    'row', 8,
+                    'col', 8 + needed_letters.position - 1,
+                    'declared_letter', null
+                )
+                order by needed_letters.position
+            )
+            into v_placed_tiles
+            from needed_letters
+            join rack_tiles
+              on rack_tiles.letter = needed_letters.letter
+             and rack_tiles.occurrence = needed_letters.occurrence;
+
+            if v_placed_tiles is null
+               or jsonb_array_length(v_placed_tiles) <> char_length(v_candidate_word) then
+                v_pass_reason := 'opening_tile_mapping_failed';
+            else
+                v_result := public.submit_patxanga_move(
+                    p_match_id,
+                    p_player_id,
+                    v_placed_tiles
+                );
+
+                return v_result || jsonb_build_object(
+                    'bot_action', 'place_word',
+                    'bot_strategy', 'easy_opening_dictionary_word',
+                    'main_word', v_candidate_word,
+                    'placed_tiles', v_placed_tiles
+                );
+            end if;
+        end if;
+    end if;
+
+    v_result := public.submit_patxanga_pass_turn(
+        p_match_id,
+        p_player_id
+    );
+
+    return v_result || jsonb_build_object(
+        'bot_action', 'pass',
+        'bot_strategy', 'easy_opening_dictionary_word',
+        'pass_reason', v_pass_reason
+    );
+end;
+$$;
+
+grant execute on function public.submit_patxanga_easy_bot_turn(uuid, uuid)
 to authenticated, anon;
 
 ## FRASE PADRAO DE PASSAGEM DE BASTAO

@@ -89,6 +89,13 @@ type RpcInvitePlayerResult = {
   status: string;
 };
 
+type RpcEasyBotTurnResult = {
+  bot_action?: "place_word" | "pass";
+  main_word?: string | null;
+  pass_reason?: string | null;
+  status?: string;
+};
+
 const DEFAULT_RACK_SLOT_IDS = ["__slot__:1", "__slot__:2", "__slot__:3"] as const;
 const INSERTION_TARGET_PREFIX = "__insert__:";
 const DECLARED_LETTER_SPECIAL_TYPES = new Set([
@@ -738,12 +745,12 @@ export default function HomePage() {
     botAutoActionKeyRef.current = botActionKey;
     let cancelled = false;
 
-    async function submitBotPassTurn() {
+    async function submitEasyBotTurn() {
       botAutoActionInFlightRef.current = true;
       setIsAutoPlayingBotTurn(true);
       setBotActionError(null);
       setBotActionMessage(
-        `${currentTurnPlayerSummary?.display_name ?? "Bot"} esta passando o turno.`
+        `${currentTurnPlayerSummary?.display_name ?? "Bot"} esta tentando uma jogada.`
       );
 
       try {
@@ -754,7 +761,7 @@ export default function HomePage() {
           throw new Error("Supabase client indisponivel para acao automatica do bot.");
         }
 
-        const { error } = await client.rpc("submit_patxanga_pass_turn", {
+        const { data, error } = await client.rpc("submit_patxanga_easy_bot_turn", {
           p_match_id: resolvedBootstrap.matchId,
           p_player_id: resolvedBootstrap.currentTurnPlayerId,
         });
@@ -782,7 +789,14 @@ export default function HomePage() {
           playerIdInput,
           refreshedData.status
         );
-        setBotActionMessage("Bot passou o turno automaticamente.");
+
+        const botTurnResult = data as RpcEasyBotTurnResult | null;
+
+        if (botTurnResult?.bot_action === "place_word") {
+          setBotActionMessage(`Bot jogou ${botTurnResult.main_word ?? "uma palavra"}.`);
+        } else {
+          setBotActionMessage("Bot passou o turno automaticamente.");
+        }
       } catch (error) {
         if (!cancelled) {
           setBotActionError(
@@ -801,7 +815,7 @@ export default function HomePage() {
     }
 
     const timer = window.setTimeout(() => {
-      void submitBotPassTurn();
+      void submitEasyBotTurn();
     }, 350);
 
     return () => {
@@ -1302,7 +1316,9 @@ export default function HomePage() {
       setQuickMatchSession(nextQuickMatchSession);
       setSessionSwitchDraft(nextQuickMatchSession);
       setSessionSwitchError(null);
-      setBotActionMessage("Partida contra bot criada. O bot easy passa automaticamente no MVP.");
+      setBotActionMessage(
+        "Partida contra bot criada. O bot easy tenta uma abertura valida antes de passar."
+      );
 
       setMatchIdInput(matchId);
       setPlayerIdInput(hostUserId);
