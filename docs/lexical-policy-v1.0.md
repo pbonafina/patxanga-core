@@ -93,8 +93,14 @@ Uma mudanca nesta politica deve manter cobertura automatizada para:
 Teste de referencia:
 
 ```bash
+zsh scripts/test-libreoffice-dictionary-sample.sh
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_imported_words_engine_path.sql
 ```
+
+O teste offline do extrator cobre as fronteiras conservadoras da politica v1:
+hifen, abreviacao com ponto, sigla, nome proprio, digito, apostrofo e palavra
+curta ficam fora da amostra automatica; lemas simples com acento continuam
+entrando.
 
 ## Decisoes pendentes
 

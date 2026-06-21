@@ -259,6 +259,32 @@ Validacao confirmada nesta frente:
 - `zsh scripts/run-sql-test-suite.sh all`
 - `zsh scripts/run-bot-simulation.sh all`
 
+## 1.5 Atualizacao operacional de continuidade - 2026-06-21 offline
+
+Estado desta frente reduzida:
+
+- branch de implementacao: `feature/offline-lexical-policy-boundaries`
+- foco: reforcar a politica lexical v1 sem rede e sem banco
+- teste offline ampliado em `scripts/test-libreoffice-dictionary-sample.sh`
+
+Cobertura adicionada:
+
+- hifen fica fora da amostra automatica
+- abreviacao com ponto fica fora
+- sigla/acronimo fica fora
+- nome proprio com maiuscula inicial fica fora
+- palavra com digito fica fora
+- palavra com apostrofo fica fora
+- palavra curta fica fora
+- lema simples acentuado continua entrando
+
+Validacao de referencia:
+
+```bash
+zsh scripts/test-libreoffice-dictionary-sample.sh
+git diff --check
+```
+
 Validacao confirmada nesta rodada:
 
 - `zsh scripts/run-bot-simulation.sh smoke`
