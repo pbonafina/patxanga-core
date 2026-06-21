@@ -295,6 +295,7 @@ trap 'rm -f "$TMP_OUT"' EXIT
     sql/tests/test_dictionary_contract.sql \
     sql/tests/test_dictionary_import_pipeline.sql \
     sql/tests/test_dictionary_imported_words_engine_path.sql \
+    sql/tests/test_dictionary_policy_voting_path.sql \
     sql/simulations/bot_simulation_smoke.sql \
     sql/simulations/bot_simulation_pending_vote.sql \
     sql/simulations/bot_simulation_exchange_tiles.sql \

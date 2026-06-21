@@ -87,6 +87,10 @@ Uma mudanca nesta politica deve manter cobertura automatizada para:
 - `preview_patxanga_move(...)` marcando palavra importada como reconhecida
 - `submit_patxanga_move(...)` aceitando jogada com palavra importada sem
   `pending_vote`
+- `preview_patxanga_move(...)` marcando palavra fora do dicionario ativo como
+  exigindo votacao
+- `submit_patxanga_move(...)` criando `pending_vote` para palavra fora do
+  dicionario ativo sem mutar o board
 - separacao por idioma
 - palavra inativa permanecendo nao reconhecida
 
@@ -95,6 +99,7 @@ Teste de referencia:
 ```bash
 zsh scripts/test-libreoffice-dictionary-sample.sh
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_imported_words_engine_path.sql
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_policy_voting_path.sql
 ```
 
 O teste offline do extrator cobre as fronteiras conservadoras da politica v1:
