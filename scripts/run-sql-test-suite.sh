@@ -33,18 +33,28 @@ typeset -a engine_regression_tests=(
   "sql/tests/test_submit_move_pending_vote_reject.sql"
 )
 
+typeset -a entrypoint_regression_tests=(
+  "sql/tests/test_get_match_bootstrap.sql"
+  "sql/tests/test_get_pending_vote_context.sql"
+  "sql/tests/test_preview_move.sql"
+  "sql/tests/test_submit_move_bridge_existing_board_tile.sql"
+  "sql/tests/test_hydrate_placed_tiles_declared_letter.sql"
+)
+
 usage() {
   cat <<'EOF'
 Usage:
   zsh scripts/run-sql-test-suite.sh lobby_ops
   zsh scripts/run-sql-test-suite.sh engine_regression
+  zsh scripts/run-sql-test-suite.sh entrypoint_regression
   zsh scripts/run-sql-test-suite.sh all
   zsh scripts/run-sql-test-suite.sh path/to/test.sql [path/to/other.sql ...]
 
 Profiles:
   lobby_ops          Lobby, invite, resume and forfeit operational coverage
   engine_regression  Dictionary, exchange, pass turn, match end and pending vote coverage
-  all                Both predefined profiles above
+  entrypoint_regression  Bootstrap, pending-vote context, preview and helper RPC coverage
+  all                All predefined profiles above
 EOF
 }
 
@@ -61,8 +71,11 @@ resolve_tests() {
     engine_regression)
       printf '%s\n' "${engine_regression_tests[@]}"
       ;;
+    entrypoint_regression)
+      printf '%s\n' "${entrypoint_regression_tests[@]}"
+      ;;
     all)
-      printf '%s\n' "${lobby_ops_tests[@]}" "${engine_regression_tests[@]}"
+      printf '%s\n' "${lobby_ops_tests[@]}" "${engine_regression_tests[@]}" "${entrypoint_regression_tests[@]}"
       ;;
     *)
       printf '%s\n' "$@"

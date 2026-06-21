@@ -18,6 +18,7 @@
 - `docs/frontend-contract-pending-vote-ux-v1.0.md` - comportamento de votacao pendente.
 - `docs/frontend-rack-composition-ux-v1.0.md` - composicao local do rack por slots.
 - `docs/07-bot-engine.md` - contrato inicial de bots de teste e simulacao.
+- `docs/testing-program-v1.0.md` - programacao operacional de testes.
 
 ## Operacao e continuidade
 
