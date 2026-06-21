@@ -270,6 +270,7 @@ trap 'rm -f "$TMP_OUT"' EXIT
     docs/como-jogar-patxanga.md \
     docs/lexical-policy-v1.0.md \
     docs/dictionary-import-pipeline-v1.0.md \
+    docs/testing-program-v1.0.md \
     docs/implementation-roadmap.md \
     docs/07-bot-engine.md \
     docs/current-development-continuity-spec-v1.0.md \
@@ -298,7 +299,12 @@ trap 'rm -f "$TMP_OUT"' EXIT
     sql/tests/test_dictionary_imported_words_engine_path.sql \
     sql/tests/test_dictionary_policy_voting_path.sql \
     sql/tests/test_easy_bot_turn_policy.sql \
+    sql/tests/test_get_match_bootstrap.sql \
+    sql/tests/test_get_pending_vote_context.sql \
+    sql/tests/test_hydrate_placed_tiles_declared_letter.sql \
     sql/tests/test_match_bootstrap_bot_metadata.sql \
+    sql/tests/test_preview_move.sql \
+    sql/tests/test_submit_move_bridge_existing_board_tile.sql \
     sql/simulations/bot_simulation_smoke.sql \
     sql/simulations/bot_simulation_pending_vote.sql \
     sql/simulations/bot_simulation_exchange_tiles.sql \

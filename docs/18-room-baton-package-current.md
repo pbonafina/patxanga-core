@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-21 16:54:41
+Generated at: 2026-06-21 17:00:54
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,19 +93,12 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## feature/easy-bot-opening-policy
- M docs/07-bot-engine.md
- M docs/18-room-baton-package-current.md
+## docs/test-program
+ M docs/00-index.md
  M docs/current-development-continuity-spec-v1.0.md
- M docs/frontend-contract-rpcs-v1.0.md
- M docs/implementation-roadmap.md
- M frontend/pages/index.tsx
- M frontend/tests/browser-validation.spec.ts
  M generate-room-baton-package.sh
  M scripts/run-sql-test-suite.sh
-?? sql/rpc/submit_easy_bot_turn.sql
-?? sql/tests/test_easy_bot_turn_policy.sql
-?? supabase/migrations/20260621105000_27_easy_bot_opening_policy.sql
+?? docs/testing-program-v1.0.md
 ```
 
 ### git remote -v
@@ -116,7 +109,9 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-1899fce (HEAD -> feature/easy-bot-opening-policy, origin/develop, origin/HEAD, develop) Merge pull request #13 from pbonafina/feature/human-vs-bot-pass-mvp
+7248b54 (HEAD -> docs/test-program, origin/develop, origin/HEAD, develop) Merge pull request #14 from pbonafina/feature/easy-bot-opening-policy
+d449253 (origin/feature/easy-bot-opening-policy) feat: add easy bot opening policy
+1899fce Merge pull request #13 from pbonafina/feature/human-vs-bot-pass-mvp
 ebf032e (origin/feature/human-vs-bot-pass-mvp) feat: add human vs bot pass mvp
 fa4702d Merge pull request #12 from pbonafina/feature/slot-submit-playwright-regression
 f4ada51 test: cover slot submit browser flows
@@ -129,8 +124,6 @@ a8222ee test: add lexical policy imported word regression
 1476a40 Merge pull request #8 from pbonafina/feature/licensed-pt-pt-dictionary-sample
 6927487 feat: add pt-PT dictionary source sample
 bfeacea Merge pull request #7 from pbonafina/feature/licensed-dictionary-source-sample
-159ee49 feat: validate licensed dictionary source sample
-7b4ea65 Merge pull request #6 from pbonafina/feature/dictionary-csv-import-tooling
 ```
 
 ### tail -n 60 ../project-log.md
@@ -283,6 +276,7 @@ SQL
 - `docs/frontend-contract-pending-vote-ux-v1.0.md` - comportamento de votacao pendente.
 - `docs/frontend-rack-composition-ux-v1.0.md` - composicao local do rack por slots.
 - `docs/07-bot-engine.md` - contrato inicial de bots de teste e simulacao.
+- `docs/testing-program-v1.0.md` - programacao operacional de testes.
 
 ## Operacao e continuidade
 
@@ -3841,6 +3835,454 @@ zsh scripts/run-sql-test-suite.sh all
 zsh scripts/run-bot-simulation.sh all
 ```
 
+## FILE: docs/testing-program-v1.0.md
+
+# PATXANGA - PROGRAMACAO DE TESTES
+
+Versao: 1.0
+Status: BASELINE OPERACIONAL
+
+---
+
+## 1. Objetivo
+
+Definir quais testes devem ser executados no Patxanga, em que momento e com
+qual criterio de aceite.
+
+Esta programacao nao substitui o julgamento tecnico. Ela define o minimo
+obrigatorio para evitar regressao silenciosa em:
+
+- engine SQL server-authoritative
+- lobby, convite, retomada e desistencia
+- frontend jogavel
+- composicao de rack por slots
+- pending vote
+- dicionario por idioma
+- bots de teste, simulacao e humano contra bot
+- migrations do Supabase
+
+---
+
+## 2. Regra central
+
+Nenhuma frente funcional deve ser considerada pronta sem pelo menos uma
+validacao automatizada pertinente.
+
+Quando houver migration nova, o teste local da funcao alterada nao basta:
+`supabase db reset` deve passar para provar que a cadeia completa de migrations
+recria o banco do zero.
+
+Quando houver mudanca visual/interacional, build verde nao basta:
+Playwright deve passar e, se o ajuste depender de julgamento visual, deve haver
+rodada manual de browser seguindo `docs/frontend-browser-validation-procedure-v1.0.md`.
+
+---
+
+## 3. Inventario de testes automatizados
+
+### 3.1 Frontend estatico
+
+Comandos:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+```
+
+Usar quando:
+
+- qualquer arquivo em `frontend/` mudar
+- tipos compartilhados de bootstrap/match mudarem
+- dependencia ou configuracao de frontend mudar
+
+Aceite:
+
+- `lint` sem erro
+- `build` sem erro TypeScript ou Next
+- se `frontend/next-env.d.ts` for alterado por `next dev`/Playwright, restaurar
+  antes do commit quando for apenas artefato local
+
+### 3.2 Browser automatizado
+
+Comando:
+
+```bash
+cd frontend
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+```
+
+Cobre hoje:
+
+- convite, lobby, retomada e desistencia
+- associacao local de slot ao board sem mutar gameplay
+- composicao oficial de jogada por slots
+- criacao de partida humano contra bot
+- bot `easy` jogando abertura real `SOL`
+- submit aceito por slots
+- palavra nao reconhecida indo para `pending_vote`
+
+Usar quando:
+
+- `frontend/pages/index.tsx` mudar
+- componentes de board/rack/gameplay mudarem
+- contratos de bootstrap ou RPC consumidos pelo frontend mudarem
+- fluxo humano contra bot mudar
+- lobby/convite/retomada/desistencia mudar
+
+Aceite:
+
+- todos os cenarios passam
+- se falhar por conflito de servidor local, encerrar o processo conflitante e
+  repetir
+
+### 3.3 SQL - operacao de lobby e presenca
+
+Comando:
+
+```bash
+zsh scripts/run-sql-test-suite.sh lobby_ops
+```
+
+Testes:
+
+- `sql/tests/test_resume_match.sql`
+- `sql/tests/test_start_match_from_lobby.sql`
+- `sql/tests/test_direct_invite_flow.sql`
+- `sql/tests/test_direct_invite_decline.sql`
+- `sql/tests/test_forfeit_single_player.sql`
+- `sql/tests/test_forfeit_all_players.sql`
+- `sql/tests/test_list_pending_invites.sql`
+- `sql/tests/test_list_resumable_matches.sql`
+- `sql/tests/test_match_bootstrap_bot_metadata.sql`
+
+Usar quando:
+
+- lobby, convite, presenca, retomada, forfeit ou bootstrap mudarem
+- migrations alterarem tabelas de match/player/presence/lobby
+
+### 3.4 SQL - engine e dicionario
+
+Comando:
+
+```bash
+zsh scripts/run-sql-test-suite.sh engine_regression
+```
+
+Testes:
+
+- `sql/tests/test_dictionary_contract.sql`
+- `sql/tests/test_dictionary_import_pipeline.sql`
+- `sql/tests/test_dictionary_imported_words_engine_path.sql`
+- `sql/tests/test_dictionary_policy_voting_path.sql`
+- `sql/tests/test_easy_bot_turn_policy.sql`
+- `sql/tests/test_exchange_tiles.sql`
+- `sql/tests/test_pass_turn.sql`
+- `sql/tests/test_submit_move_auto.sql`
+- `sql/tests/test_match_end_all_passed.sql`
+- `sql/tests/test_match_end_empty_rack.sql`
+- `sql/tests/test_match_end_final_penalty.sql`
+- `sql/tests/test_submit_move_pending_vote.sql`
+- `sql/tests/test_submit_move_pending_vote_accept.sql`
+- `sql/tests/test_submit_move_pending_vote_reject.sql`
+
+Usar quando:
+
+- `submit_patxanga_move`, pass, exchange, vote, scoring, endgame ou dicionario
+  mudarem
+- qualquer politica de bot de produto/teste mudar
+- regras de idioma ou importacao lexical mudarem
+
+### 3.5 SQL - entrypoints e helpers
+
+Comando:
+
+```bash
+zsh scripts/run-sql-test-suite.sh entrypoint_regression
+```
+
+Testes:
+
+- `sql/tests/test_get_match_bootstrap.sql`
+- `sql/tests/test_get_pending_vote_context.sql`
+- `sql/tests/test_preview_move.sql`
+- `sql/tests/test_submit_move_bridge_existing_board_tile.sql`
+- `sql/tests/test_hydrate_placed_tiles_declared_letter.sql`
+
+Usar quando:
+
+- bootstrap ou pending vote context mudarem
+- preview de jogada mudar
+- alinhamento/ponte com pecas existentes mudar
+- suporte a pecas especiais ou `declared_letter` mudar
+
+### 3.6 SQL completo
+
+Comando:
+
+```bash
+zsh scripts/run-sql-test-suite.sh all
+```
+
+Uso:
+
+- antes de abrir PR com backend ou SQL
+- antes de merge de frente funcional
+- depois de `supabase db reset`
+- em regressao periodica
+
+`all` deve executar todos os perfis SQL predefinidos:
+
+- `lobby_ops`
+- `engine_regression`
+- `entrypoint_regression`
+
+### 3.7 Simulacoes de bot
+
+Comandos:
+
+```bash
+zsh scripts/run-bot-simulation.sh smoke
+zsh scripts/run-bot-simulation.sh long
+zsh scripts/run-bot-simulation.sh all
+```
+
+Cenarios de `all`:
+
+- smoke bot-vs-bot com jogada valida e passe
+- pending vote com rejeicao e aceitacao
+- exchange tiles
+- fim por rack vazio
+- fim por todos passarem
+- erros esperados sem mutacao de estado
+- partida longa multi-turno
+
+Usar quando:
+
+- engine de jogada mudar
+- dicionario/pending vote mudar
+- bot, pass, exchange ou endgame mudar
+- antes de merge de frente de bot
+
+### 3.8 Dicionario e importacao offline
+
+Comandos:
+
+```bash
+zsh scripts/test-dictionary-import-tooling.sh
+zsh scripts/test-libreoffice-dictionary-sample.sh
+zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --limit 25 --execute
+zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25 --execute
+```
+
+Usar quando:
+
+- `scripts/prepare-dictionary-import.py` mudar
+- `scripts/prepare-libreoffice-dictionary-sample.py` mudar
+- scripts `import-libreoffice-*` mudarem
+- contrato de `import_patxanga_dictionary_entries(...)` mudar
+- politica lexical mudar
+
+Depois de importar amostras executadas contra o banco local, rodar:
+
+```bash
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
+
+---
+
+## 4. Programacao por gatilho
+
+### 4.1 Durante desenvolvimento local
+
+Rodar o menor teste que cobre o arquivo alterado.
+
+Exemplos:
+
+| Mudanca | Teste minimo |
+| --- | --- |
+| UI, componentes ou hooks | `cd frontend && npm run lint && npm run build` |
+| Fluxo browser objetivo | Playwright especifico de browser |
+| Uma RPC SQL | teste SQL especifico da RPC |
+| Bot policy | `sql/tests/test_easy_bot_turn_policy.sql` e simulacao relacionada |
+| Dicionario/importacao | tooling offline e teste SQL da pipeline |
+| Apenas documentacao | `git diff --check` |
+
+### 4.2 Antes de commit
+
+Obrigatorio:
+
+```bash
+git diff --check
+```
+
+Adicionar conforme area alterada:
+
+- frontend: `npm run lint`, `npm run build`
+- browser/UX: Playwright
+- SQL/RPC: teste SQL especifico
+- bot: teste SQL especifico e simulacao pertinente
+- docs de continuidade: regenerar `docs/18-room-baton-package-current.md`
+
+### 4.3 Antes de abrir PR
+
+Para mudanca funcional:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+cd ..
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+git diff --check
+```
+
+Se nao houver frontend envolvido, Playwright pode ser omitido com justificativa
+explicita no PR.
+
+Se nao houver SQL/backend envolvido, SQL completo pode ser omitido com
+justificativa explicita no PR.
+
+### 4.4 Gate de migration
+
+Sempre que houver arquivo novo em `supabase/migrations/`:
+
+```bash
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
+
+Se frontend consumir a migration nova:
+
+```bash
+cd frontend
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+```
+
+### 4.5 Gate de merge
+
+Antes de mergear PR funcional:
+
+- PR deve estar `CLEAN`
+- comandos relevantes devem estar listados no corpo do PR
+- worktree local deve estar limpo ou com alteracoes claramente nao relacionadas
+- se `supabase db reset` foi necessario, registrar que passou
+
+### 4.6 Depois do merge
+
+Confirmar:
+
+```bash
+git status --short --branch
+git log -1 --oneline --decorate
+```
+
+Esperado:
+
+- branch local em `develop`
+- `develop` alinhada com `origin/develop`
+- worktree limpo
+
+---
+
+## 5. Programacao periodica
+
+### Rodada rapida diaria, quando houver desenvolvimento ativo
+
+```bash
+cd frontend
+npm run lint
+npm run build
+cd ..
+zsh scripts/run-sql-test-suite.sh all
+```
+
+### Rodada pesada semanal ou antes de marco importante
+
+```bash
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+```
+
+### Rodada de release candidate
+
+Executar a rodada pesada e acrescentar:
+
+- validacao manual de browser se houver alteracao visual
+- teste offline de dicionario se houver qualquer mudanca lexical/importacao
+- revisao do pacote de continuidade
+- revisao do roadmap e docs afetadas
+
+---
+
+## 6. Testes manuais ainda necessarios
+
+Automacao atual ainda nao substitui estas verificacoes:
+
+- inspecao visual do board/rack em desktop e mobile
+- fluxo humano com dois papeis alternando no mesmo navegador
+- votacao pendente com leitura de UX, nao apenas estado SQL
+- clareza de mensagens de erro e recuperacao apos falha
+- responsividade do rack e slots em tela estreita
+- avaliacao de ritmo do humano contra bot
+
+Procedimento base:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Depois seguir `docs/frontend-browser-validation-procedure-v1.0.md`.
+
+---
+
+## 7. Lacunas de automacao a criar
+
+Prioridade alta:
+
+- Playwright para bot jogando apos tabuleiro ja ocupado
+- Playwright para troca de papeis humano/bot depois de multiplos turnos
+- SQL para bot usando ou recusando pecas especiais explicitamente
+- SQL para preview com palavras secundarias quando a extracao evoluir
+
+Prioridade media:
+
+- smoke responsivo em viewport mobile
+- teste automatizado de console sem erros no browser
+- teste de importacao de dicionario com lote maior, depois de decisao de fonte
+
+Prioridade baixa:
+
+- performance basica de bootstrap em partidas com historico maior
+- captura automatica de screenshot de baseline visual
+
+---
+
+## 8. Criterio de aceite de uma frente
+
+Uma frente so deve ser fechada quando:
+
+- testes minimos por gatilho passaram
+- se houve migration, `supabase db reset` passou
+- se houve frontend, lint/build passaram
+- se houve fluxo objetivo de browser, Playwright passou
+- se houve UX visual, rodada manual foi registrada
+- se houve bot/engine, SQL e simulacoes pertinentes passaram
+- excecoes foram registradas explicitamente
+
+Fim do documento.
+
 ## FILE: docs/implementation-roadmap.md
 
 # PATXANGA - ROADMAP CONSOLIDADO DE IMPLEMENTACAO
@@ -5163,6 +5605,30 @@ Validacao inicial confirmada nesta frente:
 - apos reset: `zsh scripts/run-sql-test-suite.sh all`
 - apos reset: `zsh scripts/run-bot-simulation.sh all`
 - apos reset: `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+
+## 1.10 Atualizacao operacional de continuidade - 2026-06-21 programacao de testes
+
+Estado desta frente:
+
+- branch de implementacao: `docs/test-program`
+- foco: consolidar quando rodar cada tipo de teste
+- documento novo: `docs/testing-program-v1.0.md`
+- runner ajustado: `scripts/run-sql-test-suite.sh`
+
+Entregue:
+
+- programacao por gatilho: desenvolvimento local, pre-commit, PR, migration,
+  merge, pos-merge, rodada diaria, rodada pesada e release candidate
+- inventario dos testes de frontend, Playwright, SQL, simulacoes de bot,
+  dicionario/importacao e validacao manual
+- perfil SQL novo `entrypoint_regression`
+- perfil SQL `all` passa a incluir tambem bootstrap, pending vote context,
+  preview, bridge com peca existente e declared_letter em pecas especiais
+
+Validacao inicial confirmada nesta frente:
+
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_get_match_bootstrap.sql sql/tests/test_get_pending_vote_context.sql sql/tests/test_preview_move.sql sql/tests/test_submit_move_bridge_existing_board_tile.sql sql/tests/test_hydrate_placed_tiles_declared_letter.sql`
+- `zsh scripts/run-sql-test-suite.sh all`
 
 ## 2. Matriz objetiva de avanco
 
@@ -6843,18 +7309,28 @@ typeset -a engine_regression_tests=(
   "sql/tests/test_submit_move_pending_vote_reject.sql"
 )
 
+typeset -a entrypoint_regression_tests=(
+  "sql/tests/test_get_match_bootstrap.sql"
+  "sql/tests/test_get_pending_vote_context.sql"
+  "sql/tests/test_preview_move.sql"
+  "sql/tests/test_submit_move_bridge_existing_board_tile.sql"
+  "sql/tests/test_hydrate_placed_tiles_declared_letter.sql"
+)
+
 usage() {
   cat <<'EOF'
 Usage:
   zsh scripts/run-sql-test-suite.sh lobby_ops
   zsh scripts/run-sql-test-suite.sh engine_regression
+  zsh scripts/run-sql-test-suite.sh entrypoint_regression
   zsh scripts/run-sql-test-suite.sh all
   zsh scripts/run-sql-test-suite.sh path/to/test.sql [path/to/other.sql ...]
 
 Profiles:
   lobby_ops          Lobby, invite, resume and forfeit operational coverage
   engine_regression  Dictionary, exchange, pass turn, match end and pending vote coverage
-  all                Both predefined profiles above
+  entrypoint_regression  Bootstrap, pending-vote context, preview and helper RPC coverage
+  all                All predefined profiles above
 EOF
 }
 
@@ -6871,8 +7347,11 @@ resolve_tests() {
     engine_regression)
       printf '%s\n' "${engine_regression_tests[@]}"
       ;;
+    entrypoint_regression)
+      printf '%s\n' "${entrypoint_regression_tests[@]}"
+      ;;
     all)
-      printf '%s\n' "${lobby_ops_tests[@]}" "${engine_regression_tests[@]}"
+      printf '%s\n' "${lobby_ops_tests[@]}" "${engine_regression_tests[@]}" "${entrypoint_regression_tests[@]}"
       ;;
     *)
       printf '%s\n' "$@"
@@ -9479,6 +9958,338 @@ begin
     raise notice 'fallback_result=%', v_fallback_result;
 end $$;
 
+## FILE: sql/tests/test_get_match_bootstrap.sql
+
+do
+$$
+declare
+    v_user1 uuid := gen_random_uuid();
+    v_user2 uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_player2_id uuid;
+    v_result jsonb;
+begin
+    v_match_id := public.create_patxanga_match(
+        p_language := 'pt-BR',
+        p_host_user_id := v_user1,
+        p_host_guest_name := 'Host Bootstrap Test',
+        p_max_players := 2
+    );
+
+    perform public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_user2,
+        p_guest_name := 'Guest Bootstrap Test'
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    select id
+    into v_player2_id
+    from patxanga_players
+    where match_id = v_match_id
+      and user_id = v_user2
+    limit 1;
+
+    v_result := public.get_patxanga_match_bootstrap(v_match_id, v_user2);
+
+    raise notice 'Bootstrap result: %', v_result;
+    raise notice 'match_id: %', v_result->>'match_id';
+    raise notice 'status: %', v_result->>'status';
+    raise notice 'player_context.player_id: %', v_result->'player_context'->>'player_id';
+    raise notice 'players_summary length: %', jsonb_array_length(v_result->'players_summary');
+
+    if v_result->>'match_id' <> v_match_id::text then
+        raise exception 'Unexpected match_id in bootstrap payload';
+    end if;
+
+    if v_result->>'status' <> 'active' then
+        raise exception 'Expected active match status in bootstrap payload';
+    end if;
+
+    if v_result->'player_context'->>'player_id' <> v_player2_id::text then
+        raise exception 'Expected player_context.player_id to match joined player';
+    end if;
+
+    if jsonb_typeof(v_result->'board_state') <> 'array' then
+        raise exception 'Expected board_state to be a JSON array';
+    end if;
+
+    if jsonb_array_length(v_result->'players_summary') <> 2 then
+        raise exception 'Expected players_summary with 2 players';
+    end if;
+end;
+$$;
+
+## FILE: sql/tests/test_get_pending_vote_context.sql
+
+do
+$$
+declare
+    v_user1 uuid := gen_random_uuid();
+    v_user2 uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_current_player_id uuid;
+    v_current_user_id uuid;
+    v_other_player_id uuid;
+    v_forced_rack jsonb;
+    v_submit_result jsonb;
+    v_context jsonb;
+begin
+    v_match_id := public.create_patxanga_match(
+        p_language := 'pt-BR',
+        p_host_user_id := v_user1,
+        p_host_guest_name := 'Host Pending Context Test',
+        p_max_players := 2
+    );
+
+    perform public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_user2,
+        p_guest_name := 'Guest Pending Context Test'
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    select current_turn_player_id
+    into v_current_player_id
+    from patxanga_matches
+    where id = v_match_id;
+
+    select user_id
+    into v_current_user_id
+    from patxanga_players
+    where id = v_current_player_id;
+
+    select id
+    into v_other_player_id
+    from patxanga_players
+    where match_id = v_match_id
+      and id <> v_current_player_id
+    limit 1;
+
+    v_forced_rack := jsonb_build_array(
+        jsonb_build_object('id', gen_random_uuid(), 'letter', 'T', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid(), 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid(), 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid(), 'letter', 'M', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid(), 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid(), 'letter', 'D', 'points', 2, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid(), 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null)
+    );
+
+    update patxanga_players
+    set rack_state = v_forced_rack,
+        updated_at = now()
+    where id = v_current_player_id;
+
+    v_submit_result := public.submit_patxanga_move(
+        v_match_id,
+        v_current_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_forced_rack->0->>'id', 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_forced_rack->1->>'id', 'row', 8, 'col', 9, 'declared_letter', null)
+        )
+    );
+
+    v_context := public.get_patxanga_pending_vote_context(v_match_id, v_current_user_id);
+
+    raise notice 'submit result: %', v_submit_result;
+    raise notice 'context: %', v_context;
+
+    if v_submit_result->>'status' <> 'pending_vote' then
+        raise exception 'Expected pending_vote submit result';
+    end if;
+
+    if v_context->>'match_status' <> 'voting' then
+        raise exception 'Expected match_status voting in pending context';
+    end if;
+
+    if v_context->'pending_move' is null then
+        raise exception 'Expected pending_move in pending vote context';
+    end if;
+
+    if v_context->'pending_move'->>'status' <> 'pending_vote' then
+        raise exception 'Expected pending_move.status pending_vote';
+    end if;
+
+    if jsonb_array_length(v_context->'pending_move'->'placed_tiles') <> 2 then
+        raise exception 'Expected 2 placed tiles in pending context';
+    end if;
+end;
+$$;
+
+## FILE: sql/tests/test_hydrate_placed_tiles_declared_letter.sql
+
+do
+$$
+declare
+    v_wildcard_id uuid := gen_random_uuid();
+    v_skip_id uuid := gen_random_uuid();
+    v_pr_id uuid := gen_random_uuid();
+    v_normal_id uuid := gen_random_uuid();
+    v_rack jsonb;
+    v_result jsonb;
+begin
+    v_rack := jsonb_build_array(
+        jsonb_build_object(
+            'id', v_wildcard_id,
+            'letter', null,
+            'points', 0,
+            'is_special', true,
+            'special_type', 'wildcard'
+        ),
+        jsonb_build_object(
+            'id', v_skip_id,
+            'letter', 'SKIP',
+            'points', 0,
+            'is_special', true,
+            'special_type', 'skip_turn'
+        ),
+        jsonb_build_object(
+            'id', v_pr_id,
+            'letter', 'PR',
+            'points', 0,
+            'is_special', true,
+            'special_type', 'patxanga_real'
+        ),
+        jsonb_build_object(
+            'id', v_normal_id,
+            'letter', 'A',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        )
+    );
+
+    begin
+        perform public.hydrate_patxanga_placed_tiles(
+            v_rack,
+            jsonb_build_array(
+                jsonb_build_object(
+                    'tile_id', v_wildcard_id,
+                    'row', 8,
+                    'col', 8,
+                    'declared_letter', null
+                )
+            )
+        );
+        raise exception 'ERRO: wildcard sem declared_letter deveria falhar';
+    exception
+        when others then
+            if position('declared_letter is required for special tile' in SQLERRM) = 0 then
+                raise;
+            end if;
+    end;
+
+    begin
+        perform public.hydrate_patxanga_placed_tiles(
+            v_rack,
+            jsonb_build_array(
+                jsonb_build_object(
+                    'tile_id', v_skip_id,
+                    'row', 8,
+                    'col', 8,
+                    'declared_letter', null
+                )
+            )
+        );
+        raise exception 'ERRO: skip_turn sem declared_letter deveria falhar';
+    exception
+        when others then
+            if position('declared_letter is required for special tile' in SQLERRM) = 0 then
+                raise;
+            end if;
+    end;
+
+    begin
+        perform public.hydrate_patxanga_placed_tiles(
+            v_rack,
+            jsonb_build_array(
+                jsonb_build_object(
+                    'tile_id', v_pr_id,
+                    'row', 8,
+                    'col', 8,
+                    'declared_letter', null
+                )
+            )
+        );
+        raise exception 'ERRO: patxanga_real sem declared_letter deveria falhar';
+    exception
+        when others then
+            if position('declared_letter is required for special tile' in SQLERRM) = 0 then
+                raise;
+            end if;
+    end;
+
+    v_result := public.hydrate_patxanga_placed_tiles(
+        v_rack,
+        jsonb_build_array(
+            jsonb_build_object(
+                'tile_id', v_wildcard_id,
+                'row', 8,
+                'col', 8,
+                'declared_letter', 'a'
+            )
+        )
+    );
+
+    if v_result->0->>'declared_letter' <> 'A' then
+        raise exception 'ERRO: declared_letter deveria ser normalizado para A, mas veio %', v_result->0->>'declared_letter';
+    end if;
+
+    v_result := public.hydrate_patxanga_placed_tiles(
+        v_rack,
+        jsonb_build_array(
+            jsonb_build_object(
+                'tile_id', v_skip_id,
+                'row', 8,
+                'col', 8,
+                'declared_letter', 'p'
+            )
+        )
+    );
+
+    if v_result->0->>'declared_letter' <> 'P' then
+        raise exception 'ERRO: declared_letter de skip_turn deveria ser normalizado para P, mas veio %', v_result->0->>'declared_letter';
+    end if;
+
+    v_result := public.hydrate_patxanga_placed_tiles(
+        v_rack,
+        jsonb_build_array(
+            jsonb_build_object(
+                'tile_id', v_pr_id,
+                'row', 8,
+                'col', 8,
+                'declared_letter', 'r'
+            )
+        )
+    );
+
+    if v_result->0->>'declared_letter' <> 'R' then
+        raise exception 'ERRO: declared_letter de patxanga_real deveria ser normalizado para R, mas veio %', v_result->0->>'declared_letter';
+    end if;
+
+    v_result := public.hydrate_patxanga_placed_tiles(
+        v_rack,
+        jsonb_build_array(
+            jsonb_build_object(
+                'tile_id', v_normal_id,
+                'row', 8,
+                'col', 9,
+                'declared_letter', 'Z'
+            )
+        )
+    );
+
+    if (v_result->0->>'declared_letter') is not null then
+        raise exception 'ERRO: tile normal nao deveria persistir declared_letter';
+    end if;
+
+    raise notice 'OK: hydrate_patxanga_placed_tiles exige e normaliza declared_letter para todas as pecas especiais';
+end;
+$$;
+
 ## FILE: sql/tests/test_match_bootstrap_bot_metadata.sql
 
 -- ============================================================
@@ -9536,6 +10347,400 @@ begin
 
     raise notice 'Match bootstrap bot metadata test passed';
     raise notice 'match_id=% bot_player_id=%', v_match_id, v_bot_player_id;
+end $$;
+
+## FILE: sql/tests/test_preview_move.sql
+
+-- ============================================================
+-- PATXANGA - TEST: preview move
+-- Purpose: ensure preview returns score without mutating match state
+-- ============================================================
+
+do $$
+declare
+    v_user1 uuid := gen_random_uuid();
+    v_user2 uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_player_id uuid;
+    v_tile_1 uuid := gen_random_uuid();
+    v_tile_2 uuid := gen_random_uuid();
+    v_rack jsonb;
+    v_preview jsonb;
+    v_invalid_preview jsonb;
+    v_center_tile jsonb;
+    v_rack_after jsonb;
+begin
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_user1,
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    perform public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_user2
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    select current_turn_player_id
+    into v_player_id
+    from patxanga_matches
+    where id = v_match_id;
+
+    v_rack := jsonb_build_array(
+        jsonb_build_object(
+            'id', v_tile_1::text,
+            'letter', 'D',
+            'points', 2,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', v_tile_2::text,
+            'letter', 'A',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'S',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'E',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'M',
+            'points', 2,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'O',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'R',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        )
+    );
+
+    update patxanga_players
+    set rack_state = v_rack,
+        updated_at = now()
+    where id = v_player_id;
+
+    v_preview := public.preview_patxanga_move(
+        v_match_id,
+        v_player_id,
+        jsonb_build_array(
+            jsonb_build_object(
+                'tile_id', v_tile_1::text,
+                'row', 8,
+                'col', 8,
+                'declared_letter', null
+            ),
+            jsonb_build_object(
+                'tile_id', v_tile_2::text,
+                'row', 8,
+                'col', 9,
+                'declared_letter', null
+            )
+        )
+    );
+
+    if v_preview->>'status' <> 'ok' then
+        raise exception 'Expected preview ok, got %', v_preview;
+    end if;
+
+    if v_preview->>'main_word' <> 'DA' then
+        raise exception 'Expected main word DA, got %', v_preview->>'main_word';
+    end if;
+
+    if coalesce((v_preview->'score'->>'total_score')::integer, -1) <> 6 then
+        raise exception 'Expected preview total_score 6, got %', v_preview->'score'->>'total_score';
+    end if;
+
+    if coalesce((v_preview->>'requires_vote')::boolean, true) then
+        raise exception 'Expected preview to be dictionary-recognized, got %', v_preview;
+    end if;
+
+    select board_state->7->7->'tile'
+    into v_center_tile
+    from patxanga_matches
+    where id = v_match_id;
+
+    if coalesce(jsonb_typeof(v_center_tile), 'null') <> 'null' then
+        raise exception 'Preview should not mutate board_state, but center tile became %', v_center_tile;
+    end if;
+
+    select rack_state
+    into v_rack_after
+    from patxanga_players
+    where id = v_player_id;
+
+    if v_rack_after <> v_rack then
+        raise exception 'Preview should not mutate rack_state';
+    end if;
+
+    v_invalid_preview := public.preview_patxanga_move(
+        v_match_id,
+        v_player_id,
+        jsonb_build_array(
+            jsonb_build_object(
+                'tile_id', v_tile_1::text,
+                'row', 8,
+                'col', 8,
+                'declared_letter', null
+            ),
+            jsonb_build_object(
+                'tile_id', v_tile_2::text,
+                'row', 8,
+                'col', 10,
+                'declared_letter', null
+            )
+        )
+    );
+
+    if v_invalid_preview->>'status' <> 'invalid' then
+        raise exception 'Expected invalid preview for gap move, got %', v_invalid_preview;
+    end if;
+
+    if position('Horizontal move contains gaps' in coalesce(v_invalid_preview->>'error', '')) = 0 then
+        raise exception 'Expected gap error in preview, got %', v_invalid_preview;
+    end if;
+end $$;
+
+## FILE: sql/tests/test_submit_move_bridge_existing_board_tile.sql
+
+-- ============================================================
+-- PATXANGA - TEST: submit move bridging existing board tile
+-- Purpose: ensure continuity allows fixed board tiles between placed tiles
+-- ============================================================
+
+do $$
+declare
+    v_user1 uuid := gen_random_uuid();
+    v_user2 uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_opening_player_id uuid;
+    v_second_player_id uuid;
+    v_opening_tile_1 uuid := gen_random_uuid();
+    v_opening_tile_2 uuid := gen_random_uuid();
+    v_bridge_tile_1 uuid := gen_random_uuid();
+    v_bridge_tile_2 uuid := gen_random_uuid();
+    v_opening_rack jsonb;
+    v_bridge_rack jsonb;
+    v_opening_result jsonb;
+    v_bridge_result jsonb;
+begin
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_user1,
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    perform public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_user2
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    select current_turn_player_id
+    into v_opening_player_id
+    from patxanga_matches
+    where id = v_match_id;
+
+    v_opening_rack := jsonb_build_array(
+        jsonb_build_object(
+            'id', v_opening_tile_1::text,
+            'letter', 'D',
+            'points', 2,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', v_opening_tile_2::text,
+            'letter', 'A',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'S',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'E',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'M',
+            'points', 2,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'O',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'R',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        )
+    );
+
+    update patxanga_players
+    set rack_state = v_opening_rack,
+        updated_at = now()
+    where id = v_opening_player_id;
+
+    v_opening_result := public.submit_patxanga_move(
+        v_match_id,
+        v_opening_player_id,
+        jsonb_build_array(
+            jsonb_build_object(
+                'tile_id', v_opening_tile_1::text,
+                'row', 8,
+                'col', 8,
+                'declared_letter', null
+            ),
+            jsonb_build_object(
+                'tile_id', v_opening_tile_2::text,
+                'row', 8,
+                'col', 9,
+                'declared_letter', null
+            )
+        )
+    );
+
+    if v_opening_result->>'status' <> 'success' then
+        raise exception 'Expected opening move success, got %', v_opening_result;
+    end if;
+
+    select current_turn_player_id
+    into v_second_player_id
+    from patxanga_matches
+    where id = v_match_id;
+
+    if v_second_player_id = v_opening_player_id then
+        raise exception 'Expected turn to advance to second player';
+    end if;
+
+    v_bridge_rack := jsonb_build_array(
+        jsonb_build_object(
+            'id', v_bridge_tile_1::text,
+            'letter', 'D',
+            'points', 2,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', v_bridge_tile_2::text,
+            'letter', 'R',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'S',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'E',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'M',
+            'points', 2,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'O',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object(
+            'id', gen_random_uuid()::text,
+            'letter', 'T',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        )
+    );
+
+    update patxanga_players
+    set rack_state = v_bridge_rack,
+        updated_at = now()
+    where id = v_second_player_id;
+
+    v_bridge_result := public.submit_patxanga_move(
+        v_match_id,
+        v_second_player_id,
+        jsonb_build_array(
+            jsonb_build_object(
+                'tile_id', v_bridge_tile_1::text,
+                'row', 7,
+                'col', 9,
+                'declared_letter', null
+            ),
+            jsonb_build_object(
+                'tile_id', v_bridge_tile_2::text,
+                'row', 9,
+                'col', 9,
+                'declared_letter', null
+            )
+        )
+    );
+
+    if v_bridge_result->>'status' <> 'pending_vote' then
+        raise exception 'Expected pending_vote for bridged move, got %', v_bridge_result;
+    end if;
+
+    if v_bridge_result->>'match_status' <> 'voting' then
+        raise exception 'Expected match status voting, got %', v_bridge_result->>'match_status';
+    end if;
 end $$;
 
 ## FILE: sql/simulations/bot_simulation_smoke.sql

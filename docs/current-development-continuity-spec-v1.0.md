@@ -515,6 +515,30 @@ Validacao inicial confirmada nesta frente:
 - apos reset: `zsh scripts/run-bot-simulation.sh all`
 - apos reset: `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
 
+## 1.10 Atualizacao operacional de continuidade - 2026-06-21 programacao de testes
+
+Estado desta frente:
+
+- branch de implementacao: `docs/test-program`
+- foco: consolidar quando rodar cada tipo de teste
+- documento novo: `docs/testing-program-v1.0.md`
+- runner ajustado: `scripts/run-sql-test-suite.sh`
+
+Entregue:
+
+- programacao por gatilho: desenvolvimento local, pre-commit, PR, migration,
+  merge, pos-merge, rodada diaria, rodada pesada e release candidate
+- inventario dos testes de frontend, Playwright, SQL, simulacoes de bot,
+  dicionario/importacao e validacao manual
+- perfil SQL novo `entrypoint_regression`
+- perfil SQL `all` passa a incluir tambem bootstrap, pending vote context,
+  preview, bridge com peca existente e declared_letter em pecas especiais
+
+Validacao inicial confirmada nesta frente:
+
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_get_match_bootstrap.sql sql/tests/test_get_pending_vote_context.sql sql/tests/test_preview_move.sql sql/tests/test_submit_move_bridge_existing_board_tile.sql sql/tests/test_hydrate_placed_tiles_declared_letter.sql`
+- `zsh scripts/run-sql-test-suite.sh all`
+
 ## 2. Matriz objetiva de avanco
 
 Percentual global estimado nesta leitura: `75%`
