@@ -29,6 +29,9 @@ type GamePlayScreenProps = {
   playersSummary: Array<{
     player_id: string;
     display_name: string;
+    is_bot?: boolean;
+    bot_level?: string | null;
+    bot_profile?: string | null;
   }>;
   currentTurnPlayerId: string | null;
 
@@ -147,9 +150,9 @@ export function GamePlayScreen({
 }: GamePlayScreenProps) {
   const gameplayEnabled = isActive || isVoting;
 
-  const currentTurnPlayerName =
-    playersSummary.find((player) => player.player_id === currentTurnPlayerId)?.display_name ??
-    "aguardando definição";
+  const currentTurnPlayer =
+    playersSummary.find((player) => player.player_id === currentTurnPlayerId) ?? null;
+  const currentTurnPlayerName = currentTurnPlayer?.display_name ?? "aguardando definição";
 
   const totalPlayers = playersSummary.length;
   const placedTileCount = placedTilesPreview.length;
@@ -293,6 +296,30 @@ export function GamePlayScreen({
               </span>
             ) : null}
           </div>
+
+          {playersSummary.length > 0 ? (
+            <div style={{ marginTop: 12, display: "grid", gap: 6 }}>
+              {playersSummary.map((player) => (
+                <div
+                  key={player.player_id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    fontSize: 13,
+                    color: "#374151",
+                  }}
+                >
+                  <span>{player.display_name}</span>
+                  <strong>
+                    {player.is_bot
+                      ? `bot ${player.bot_level ?? "sem nivel"} / ${player.bot_profile ?? "sem perfil"}`
+                      : "humano"}
+                  </strong>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
 

@@ -438,6 +438,42 @@ Observacao tecnica:
 - politicas de simulacao como forcar pending_vote, aceitar ou rejeitar voto
   ficam no SQL de cenario, nao no valor persistido de `bot_profile`
 
+## 1.8 Atualizacao operacional de continuidade - 2026-06-21 humano contra bot
+
+Estado desta frente:
+
+- branch de implementacao: `feature/human-vs-bot-pass-mvp`
+- foco: iniciar modo humano contra bot sem criar inteligencia prematura
+- migration nova: `supabase/migrations/20260621093000_26_match_bootstrap_bot_metadata.sql`
+- teste SQL novo: `sql/tests/test_match_bootstrap_bot_metadata.sql`
+- Playwright ampliado em `frontend/tests/browser-validation.spec.ts`
+
+Entregue:
+
+- `get_patxanga_match_bootstrap(...)` agora retorna `is_bot`, `bot_level` e
+  `bot_profile` em `player_context` e `players_summary`
+- tela local tem botao `Gerar partida contra bot`
+- a partida criada tem humano host e bot `easy/balanced`
+- `GamePlayScreen` mostra resumo visivel humano/bot
+- quando o turno atual e de bot, a UI executa `submit_patxanga_pass_turn(...)`
+  uma vez por `matchId + playerId + turnNumber`
+- isso prova o ciclo jogavel sem travar quando o turno chega ao bot
+
+Limite explicito:
+
+- o bot ainda nao escolhe palavras
+- nao ha Edge Function de bot
+- o auto-pass e automacao inicial de MVP, nao comportamento final de produto
+
+Validacao confirmada nesta frente:
+
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_match_bootstrap_bot_metadata.sql`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+- `cd frontend && npm run lint`
+- `cd frontend && npm run build`
+- `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+
 ## 2. Matriz objetiva de avanco
 
 Percentual global estimado nesta leitura: `75%`
@@ -453,8 +489,8 @@ Regra de leitura:
 | --- | --- | --- | --- |
 | Engine backend server-authoritative | 90% | Core congelado e validado com match lifecycle, submit, pending_vote, pass, exchange e endgame | Tie-break mais sofisticado e qualquer endurecimento final de cobertura que surgir do produto |
 | Fluxos operacionais lobby/convites/retomada/desistencia | 85% | Baseline operacional real implementada e validada | Mais validacao de produto na UI final e possivel refino de ergonomia |
-| Primeira tela jogavel / gameplay frontend | 70% | Rack, preview, wildcard, slots permanentes e composicao oficial por slots ja estao entregues | Consolidar submit real por slots, decidir convergencia do fluxo oficial e refinar UX |
-| Automacao e regressao | 80% | Build verde, Playwright verde e suite SQL reutilizavel verde | Cobrir submit real mais rico, recomposicao, pending_vote e regressao do rack apos jogadas reais |
+| Primeira tela jogavel / gameplay frontend | 75% | Rack, preview, slots oficiais, submit/pending_vote por slots e MVP humano contra bot com auto-pass entregues | Decidir convergencia do fluxo oficial, refinar UX e evoluir bot alem de passe |
+| Automacao e regressao | 85% | Build verde, Playwright cobre slots reais e humano contra bot; suite SQL reutilizavel verde | Cobrir bot com primeira jogada real e mais regressao de recomposicao |
 | Continuidade operacional e rastreabilidade | 85% | Kit de continuidade, processo de bastao, logstep e baseline documental estao fortes | Triar os 2 untracked ambiguos e manter o pacote `current` sempre refreshado nos marcos certos |
 
 Leitura executiva:

@@ -46,6 +46,9 @@ export const mockMatchBootstrapService: MatchBootstrapService = {
             seat_index: 1,
             turn_order: 1,
             has_forfeited: false,
+            is_bot: false,
+            bot_level: null,
+            bot_profile: null,
           }
         : null,
       playersSummary: normalizedPlayerId
@@ -57,6 +60,9 @@ export const mockMatchBootstrapService: MatchBootstrapService = {
               seat_index: 1,
               turn_order: 1,
               has_forfeited: false,
+              is_bot: false,
+              bot_level: null,
+              bot_profile: null,
             },
           ]
         : [],

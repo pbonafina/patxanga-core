@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useMatchBootstrap } from "../hooks/useMatchBootstrap";
 import { loadMatchBootstrap } from "../lib/backend/loadMatchBootstrap";
 import {
@@ -432,6 +432,7 @@ export default function HomePage() {
     matchId: string;
     hostUserId: string;
     guestUserId: string;
+    opponentIsBot: boolean;
   } | null>(null);
   const [browserValidationScenarios, setBrowserValidationScenarios] = useState<
     BrowserValidationScenario[]
@@ -459,6 +460,12 @@ export default function HomePage() {
   const [inviteActionInFlightId, setInviteActionInFlightId] = useState<string | null>(null);
   const [isStartingCurrentLobby, setIsStartingCurrentLobby] = useState(false);
   const [isForfeitingCurrentMatch, setIsForfeitingCurrentMatch] = useState(false);
+  const [isCreatingBotMatch, setIsCreatingBotMatch] = useState(false);
+  const [isAutoPlayingBotTurn, setIsAutoPlayingBotTurn] = useState(false);
+  const [botActionMessage, setBotActionMessage] = useState<string | null>(null);
+  const [botActionError, setBotActionError] = useState<string | null>(null);
+  const botAutoActionKeyRef = useRef<string | null>(null);
+  const botAutoActionInFlightRef = useRef(false);
 
   const resolvedBootstrap = useMatchBootstrap(bootstrapData ?? undefined);
   const { isConfigured } = getSupabaseEnv();
@@ -485,6 +492,16 @@ export default function HomePage() {
         return "Estado desconhecido";
     }
   }, [resolvedBootstrap.status]);
+
+  const currentTurnPlayerSummary = useMemo(
+    () =>
+      resolvedBootstrap.playersSummary.find(
+        (player) => player.player_id === resolvedBootstrap.currentTurnPlayerId
+      ) ?? null,
+    [resolvedBootstrap.currentTurnPlayerId, resolvedBootstrap.playersSummary]
+  );
+
+  const isCurrentTurnBot = Boolean(currentTurnPlayerSummary?.is_bot);
 
   const activeSessionRole = useMemo<SessionRole | null>(() => {
     const normalizedMatchId = matchIdInput.trim();
@@ -699,6 +716,110 @@ export default function HomePage() {
 
   useEffect(() => {
     if (
+      !isActive ||
+      !resolvedBootstrap.matchId ||
+      !resolvedBootstrap.currentTurnPlayerId ||
+      !isCurrentTurnBot ||
+      botAutoActionInFlightRef.current
+    ) {
+      return;
+    }
+
+    const botActionKey = [
+      resolvedBootstrap.matchId,
+      resolvedBootstrap.currentTurnPlayerId,
+      resolvedBootstrap.turnNumber,
+    ].join(":");
+
+    if (botAutoActionKeyRef.current === botActionKey) {
+      return;
+    }
+
+    botAutoActionKeyRef.current = botActionKey;
+    let cancelled = false;
+
+    async function submitBotPassTurn() {
+      botAutoActionInFlightRef.current = true;
+      setIsAutoPlayingBotTurn(true);
+      setBotActionError(null);
+      setBotActionMessage(
+        `${currentTurnPlayerSummary?.display_name ?? "Bot"} esta passando o turno.`
+      );
+
+      try {
+        const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
+        const client = getSupabaseBrowserClient();
+
+        if (!client) {
+          throw new Error("Supabase client indisponivel para acao automatica do bot.");
+        }
+
+        const { error } = await client.rpc("submit_patxanga_pass_turn", {
+          p_match_id: resolvedBootstrap.matchId,
+          p_player_id: resolvedBootstrap.currentTurnPlayerId,
+        });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        const refreshedData = await loadMatchBootstrap({
+          matchId: resolvedBootstrap.matchId,
+          playerId: playerIdInput,
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        setBootstrapData(refreshedData);
+        await refreshPendingVoteContext(
+          refreshedData.matchId,
+          playerIdInput,
+          refreshedData.status
+        );
+        setBotActionMessage("Bot passou o turno automaticamente.");
+      } catch (error) {
+        if (!cancelled) {
+          setBotActionError(
+            error instanceof Error
+              ? error.message
+              : "Falha ao executar turno automatico do bot."
+          );
+          setBotActionMessage(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsAutoPlayingBotTurn(false);
+        }
+        botAutoActionInFlightRef.current = false;
+      }
+    }
+
+    const timer = window.setTimeout(() => {
+      void submitBotPassTurn();
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    currentTurnPlayerSummary?.display_name,
+    isActive,
+    isCurrentTurnBot,
+    playerIdInput,
+    resolvedBootstrap.currentTurnPlayerId,
+    resolvedBootstrap.matchId,
+    resolvedBootstrap.turnNumber,
+  ]);
+
+  useEffect(() => {
+    if (
       !resolvedBootstrap.matchId ||
       !resolvedBootstrap.playerId ||
       !isPlayersTurn ||
@@ -839,6 +960,7 @@ export default function HomePage() {
     setSubmitResult(null);
     setVoteResult(null);
     setPendingVoteError(null);
+    setBotActionError(null);
     setSelectedTileId(null);
     setSelectedTileIds([]);
     setSelectedRackSlotId(null);
@@ -1105,6 +1227,7 @@ export default function HomePage() {
         matchId,
         hostUserId,
         guestUserId,
+        opponentIsBot: false,
       };
 
       setQuickMatchSession(nextQuickMatchSession);
@@ -1120,6 +1243,76 @@ export default function HomePage() {
       );
     } finally {
       setIsCreatingQuickMatch(false);
+    }
+  }
+
+  async function handleCreateHumanVsBotMatch() {
+    setQuickMatchError(null);
+    setErrorMessage(null);
+    setBotActionError(null);
+    setBotActionMessage(null);
+    setIsCreatingBotMatch(true);
+
+    try {
+      const client = await getConfiguredBrowserClient();
+
+      const hostUserId = crypto.randomUUID();
+      const botUserId = crypto.randomUUID();
+
+      const { data: matchId, error: createError } = await client.rpc("create_patxanga_match", {
+        p_host_user_id: hostUserId,
+        p_host_guest_name: "Humano Local",
+        p_language: "pt-BR",
+        p_match_mode: "synchronous",
+        p_max_players: 2,
+      });
+
+      if (createError) {
+        throw new Error(createError.message);
+      }
+
+      const { error: joinError } = await client.rpc("join_patxanga_match", {
+        p_match_id: matchId,
+        p_user_id: botUserId,
+        p_guest_name: "Bot Easy",
+        p_is_bot: true,
+        p_bot_level: "easy",
+        p_bot_profile: "balanced",
+      });
+
+      if (joinError) {
+        throw new Error(joinError.message);
+      }
+
+      const { error: startError } = await client.rpc("start_patxanga_match", {
+        p_match_id: matchId,
+      });
+
+      if (startError) {
+        throw new Error(startError.message);
+      }
+
+      const nextQuickMatchSession = {
+        matchId,
+        hostUserId,
+        guestUserId: botUserId,
+        opponentIsBot: true,
+      };
+
+      setQuickMatchSession(nextQuickMatchSession);
+      setSessionSwitchDraft(nextQuickMatchSession);
+      setSessionSwitchError(null);
+      setBotActionMessage("Partida contra bot criada. O bot easy passa automaticamente no MVP.");
+
+      setMatchIdInput(matchId);
+      setPlayerIdInput(hostUserId);
+      await openMatchSession(matchId, hostUserId);
+    } catch (error) {
+      setQuickMatchError(
+        error instanceof Error ? error.message : "Falha ao gerar partida contra bot."
+      );
+    } finally {
+      setIsCreatingBotMatch(false);
     }
   }
 
@@ -1722,7 +1915,7 @@ export default function HomePage() {
 
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
         <h2>Partida local rápida</h2>
-        <p>Gera uma partida de teste local e permite alternar entre host e guest sem copiar IDs manualmente.</p>
+        <p>Gera uma partida de teste local e permite alternar entre sessões sem copiar IDs manualmente.</p>
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
           <button
@@ -1733,6 +1926,16 @@ export default function HomePage() {
             style={{ padding: "10px 14px", cursor: !isConfigured || isCreatingQuickMatch ? "not-allowed" : "pointer" }}
           >
             {isCreatingQuickMatch ? "Gerando partida..." : "Gerar partida local"}
+          </button>
+
+          <button
+            type="button"
+            data-testid="bot-match-create"
+            onClick={handleCreateHumanVsBotMatch}
+            disabled={!isConfigured || isCreatingBotMatch}
+            style={{ padding: "10px 14px", cursor: !isConfigured || isCreatingBotMatch ? "not-allowed" : "pointer" }}
+          >
+            {isCreatingBotMatch ? "Gerando contra bot..." : "Gerar partida contra bot"}
           </button>
 
           {quickMatchSession ? (
@@ -1753,7 +1956,7 @@ export default function HomePage() {
                 disabled={isLoading}
                 style={{ padding: "10px 14px", cursor: isLoading ? "not-allowed" : "pointer" }}
               >
-                Entrar como guest
+                {quickMatchSession.opponentIsBot ? "Abrir como bot (debug)" : "Entrar como guest"}
               </button>
             </>
           ) : null}
@@ -1763,13 +1966,29 @@ export default function HomePage() {
           <div style={{ marginTop: 12, display: "grid", gap: 6, fontFamily: "monospace", fontSize: 13 }}>
             <div>match_id: {quickMatchSession.matchId}</div>
             <div>host_user_id: {quickMatchSession.hostUserId}</div>
-            <div>guest_user_id: {quickMatchSession.guestUserId}</div>
+            <div>
+              {quickMatchSession.opponentIsBot ? "bot_user_id" : "guest_user_id"}:{" "}
+              {quickMatchSession.guestUserId}
+            </div>
           </div>
         ) : null}
 
         {quickMatchError ? (
           <p style={{ marginTop: 12, color: "#b00020" }}>
             <strong>Erro:</strong> {quickMatchError}
+          </p>
+        ) : null}
+
+        {botActionMessage ? (
+          <p data-testid="bot-action-message" style={{ marginTop: 12, color: "#166534" }}>
+            <strong>Bot:</strong>{" "}
+            {isAutoPlayingBotTurn ? "Executando turno automatico..." : botActionMessage}
+          </p>
+        ) : null}
+
+        {botActionError ? (
+          <p data-testid="bot-action-error" style={{ marginTop: 12, color: "#b00020" }}>
+            <strong>Erro do bot:</strong> {botActionError}
           </p>
         ) : null}
       </section>

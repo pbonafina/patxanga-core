@@ -12,6 +12,9 @@ interface RpcPlayerSummary {
   seat_index: number;
   turn_order: number;
   has_forfeited: boolean;
+  is_bot: boolean;
+  bot_level: string | null;
+  bot_profile: string | null;
 }
 
 interface RpcPlayerContext {
@@ -23,6 +26,9 @@ interface RpcPlayerContext {
   seat_index: number;
   turn_order: number;
   has_forfeited: boolean;
+  is_bot: boolean;
+  bot_level: string | null;
+  bot_profile: string | null;
 }
 
 interface RpcMatchBootstrap {

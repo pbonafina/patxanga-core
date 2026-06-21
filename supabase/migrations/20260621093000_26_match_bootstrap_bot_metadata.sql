@@ -1,7 +1,7 @@
 -- ============================================================
 -- PATXANGA - RPC: get_patxanga_match_bootstrap()
 -- Version: 1.1
--- Purpose: Return minimal server-authoritative bootstrap payload for frontend
+-- Purpose: Expose bot metadata required by human-vs-bot MVP UI
 -- ============================================================
 
 create or replace function public.get_patxanga_match_bootstrap(
