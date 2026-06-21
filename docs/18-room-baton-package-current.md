@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-21 09:14:42
+Generated at: 2026-06-21 11:33:21
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,12 +93,23 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## feature/lexical-policy-voting-regression
+## feature/human-vs-bot-pass-mvp
+ M docs/07-bot-engine.md
  M docs/current-development-continuity-spec-v1.0.md
- M docs/lexical-policy-v1.0.md
+ M docs/implementation-roadmap.md
+ M frontend/components/GamePlayScreen.tsx
+ M frontend/components/PlayersSection.tsx
+ M frontend/lib/backend/matchBootstrap.mock.ts
+ M frontend/lib/backend/matchBootstrap.real.ts
+ M frontend/next-env.d.ts
+ M frontend/pages/index.tsx
+ M frontend/tests/browser-validation.spec.ts
+ M frontend/types/match.ts
  M generate-room-baton-package.sh
  M scripts/run-sql-test-suite.sh
-?? sql/tests/test_dictionary_policy_voting_path.sql
+ M sql/rpc/get_match_bootstrap.sql
+?? sql/tests/test_match_bootstrap_bot_metadata.sql
+?? supabase/migrations/20260621093000_26_match_bootstrap_bot_metadata.sql
 ```
 
 ### git remote -v
@@ -109,7 +120,11 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-ece4650 (HEAD -> feature/lexical-policy-voting-regression, origin/develop, origin/HEAD, develop) Merge pull request #10 from pbonafina/feature/offline-lexical-policy-boundaries
+fa4702d (HEAD -> feature/human-vs-bot-pass-mvp, origin/develop, origin/HEAD, develop) Merge pull request #12 from pbonafina/feature/slot-submit-playwright-regression
+f4ada51 test: cover slot submit browser flows
+2d415d9 Merge pull request #11 from pbonafina/feature/lexical-policy-voting-regression
+b71e1b0 test: cover lexical policy voting path
+ece4650 Merge pull request #10 from pbonafina/feature/offline-lexical-policy-boundaries
 c727200 test: cover offline lexical policy boundaries
 f6c18f1 Merge pull request #9 from pbonafina/feature/lexical-policy-imported-words-regression
 a8222ee test: add lexical policy imported word regression
@@ -120,10 +135,6 @@ bfeacea Merge pull request #7 from pbonafina/feature/licensed-dictionary-source-
 7b4ea65 Merge pull request #6 from pbonafina/feature/dictionary-csv-import-tooling
 86358e3 feat: add dictionary CSV import tooling
 3cc1c70 Merge pull request #5 from pbonafina/feature/dictionary-import-pipeline
-0e38fa8 feat: add audited dictionary import pipeline
-44c1eb4 Merge pull request #4 from pbonafina/feature/pt-pt-language-baseline
-a3cac88 fix: add pt-PT language baseline
-6c5d636 Merge pull request #3 from pbonafina/feature/match-language-dictionary-validation
 ```
 
 ### tail -n 60 ../project-log.md
@@ -3851,8 +3862,8 @@ Leitura atual do projeto:
 | Votacao | Funcional, mas ainda precisa UX de produto |
 | Dicionario | Contrato por idioma/fonte/ativo consolidado; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
-| Bots de teste e simulacao | Prioridade alta; frente iniciada com contrato, runner e smoke deterministico |
-| Bot | Apenas modelado no banco; ainda nao existe modo jogavel humano contra bot |
+| Bots de teste e simulacao | Baseline alta: contrato, runner e sete cenarios deterministicos validados |
+| Bot | MVP humano contra bot criado; bot `easy` passa automaticamente, sem inteligencia de jogada ainda |
 | Documentacao de jogador | Manual inicial criado em `docs/como-jogar-patxanga.md` |
 
 Diretriz principal:
@@ -4263,20 +4274,21 @@ Estado atual:
 
 - `patxanga_players` ja possui `is_bot`, `bot_level` e `bot_profile`
 - `join_patxanga_match()` aceita parametros de bot
-- nao existe engine de bot
+- bootstrap de partida expoe metadados de bot para o frontend
+- UI cria partida humano + bot local
+- bot `easy` passa o turno automaticamente quando for sua vez
+- Playwright cobre criacao humano contra bot e auto-pass deterministico
+- ainda nao existe engine de bot que escolha palavras
 - nao existe Edge Function de bot
-- nao existe UI para criar partida contra bot
-- nao existe teste de bot jogando
+- ainda nao existe bot jogando palavra propria
 
 Entregas futuras:
 
 | Item | Acao | Criterio de saida |
 |------|------|-------------------|
-| Contrato de bot de produto | Evoluir `docs/07-bot-engine.md` alem do uso de teste | Regras e limites do bot ficam definidos |
-| Criacao de bot | UI cria segundo jogador como bot | Match inicia com humano + bot |
-| Motor simples | Bot escolhe jogada legal simples ou passa | Turno do bot nao trava partida |
+| Motor simples | Bot escolhe jogada legal simples ou passa | Turno do bot nao trava partida e bot consegue pontuar |
 | Execucao automatica | Edge Function ou rotina equivalente executa o turno | Bot joga sem acao manual |
-| Testes | SQL/Playwright cobrem humano contra bot | Fluxo fica regressivo |
+| Testes | SQL/Playwright cobrem humano contra bot com jogada real do bot | Fluxo fica regressivo |
 
 Prioridade:
 
@@ -4353,8 +4365,8 @@ Fim do documento.
 
 # PATXANGA - BOT ENGINE
 
-Versao: 0.6
-Status: Baseline inicial com smoke, pending_vote, exchange_tiles, endgames, erros esperados e runner recorrente
+Versao: 0.7
+Status: Baseline de simulacao + MVP humano contra bot com auto-pass
 
 ---
 
@@ -4432,12 +4444,16 @@ Ja existe:
 - simulacao de erros esperados sem mutacao de estado
 - simulacao multi-turno combinando jogada aceita, troca, passes,
   `pending_vote` em ponte com peca existente e rejeicao por voto
+- bootstrap de partida expondo `is_bot`, `bot_level` e `bot_profile`
+- UI de partida rapida humano contra bot
+- acao automatica inicial do bot `easy`: passar o turno quando for a vez dele
+- regressao Playwright para criar humano contra bot e validar auto-pass
 
 Ainda nao existe:
 
 - engine autonoma de bot
 - Edge Function de bot
-- UI de humano contra bot
+- bot que escolha jogada por conta propria
 
 ---
 
@@ -4560,6 +4576,14 @@ Nao faz parte desta fase:
 - Edge Function obrigatoria
 - UX de humano contra bot
 
+Excecao entregue no MVP 2026-06-21:
+
+- a UI ja permite criar uma partida humano contra bot local
+- o bot `easy` ainda nao escolhe palavra; ele apenas passa o turno
+  automaticamente
+- essa automacao existe para provar o ciclo de produto sem travar partida
+  quando o turno chega ao bot
+
 Esses itens pertencem a fase posterior de bot de produto.
 
 ---
@@ -4576,8 +4600,10 @@ A primeira fase de bots de teste esta iniciada. Criterios ja atendidos:
 
 Proximo criterio de avanco:
 
-- ampliar combinacoes mais longas de partida
-- iniciar extracao de utilitarios de seed se os SQLs comecarem a repetir demais
+- extrair uma politica simples de bot `easy` que tente uma abertura valida
+  antes de passar
+- manter fallback de passe quando nao houver jogada segura
+- cobrir a primeira jogada real do bot por SQL/Playwright
 
 Fim do documento.
 
@@ -5023,6 +5049,42 @@ Observacao tecnica:
 - politicas de simulacao como forcar pending_vote, aceitar ou rejeitar voto
   ficam no SQL de cenario, nao no valor persistido de `bot_profile`
 
+## 1.8 Atualizacao operacional de continuidade - 2026-06-21 humano contra bot
+
+Estado desta frente:
+
+- branch de implementacao: `feature/human-vs-bot-pass-mvp`
+- foco: iniciar modo humano contra bot sem criar inteligencia prematura
+- migration nova: `supabase/migrations/20260621093000_26_match_bootstrap_bot_metadata.sql`
+- teste SQL novo: `sql/tests/test_match_bootstrap_bot_metadata.sql`
+- Playwright ampliado em `frontend/tests/browser-validation.spec.ts`
+
+Entregue:
+
+- `get_patxanga_match_bootstrap(...)` agora retorna `is_bot`, `bot_level` e
+  `bot_profile` em `player_context` e `players_summary`
+- tela local tem botao `Gerar partida contra bot`
+- a partida criada tem humano host e bot `easy/balanced`
+- `GamePlayScreen` mostra resumo visivel humano/bot
+- quando o turno atual e de bot, a UI executa `submit_patxanga_pass_turn(...)`
+  uma vez por `matchId + playerId + turnNumber`
+- isso prova o ciclo jogavel sem travar quando o turno chega ao bot
+
+Limite explicito:
+
+- o bot ainda nao escolhe palavras
+- nao ha Edge Function de bot
+- o auto-pass e automacao inicial de MVP, nao comportamento final de produto
+
+Validacao confirmada nesta frente:
+
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_match_bootstrap_bot_metadata.sql`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+- `cd frontend && npm run lint`
+- `cd frontend && npm run build`
+- `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+
 ## 2. Matriz objetiva de avanco
 
 Percentual global estimado nesta leitura: `75%`
@@ -5038,8 +5100,8 @@ Regra de leitura:
 | --- | --- | --- | --- |
 | Engine backend server-authoritative | 90% | Core congelado e validado com match lifecycle, submit, pending_vote, pass, exchange e endgame | Tie-break mais sofisticado e qualquer endurecimento final de cobertura que surgir do produto |
 | Fluxos operacionais lobby/convites/retomada/desistencia | 85% | Baseline operacional real implementada e validada | Mais validacao de produto na UI final e possivel refino de ergonomia |
-| Primeira tela jogavel / gameplay frontend | 70% | Rack, preview, wildcard, slots permanentes e composicao oficial por slots ja estao entregues | Consolidar submit real por slots, decidir convergencia do fluxo oficial e refinar UX |
-| Automacao e regressao | 80% | Build verde, Playwright verde e suite SQL reutilizavel verde | Cobrir submit real mais rico, recomposicao, pending_vote e regressao do rack apos jogadas reais |
+| Primeira tela jogavel / gameplay frontend | 75% | Rack, preview, slots oficiais, submit/pending_vote por slots e MVP humano contra bot com auto-pass entregues | Decidir convergencia do fluxo oficial, refinar UX e evoluir bot alem de passe |
+| Automacao e regressao | 85% | Build verde, Playwright cobre slots reais e humano contra bot; suite SQL reutilizavel verde | Cobrir bot com primeira jogada real e mais regressao de recomposicao |
 | Continuidade operacional e rastreabilidade | 85% | Kit de continuidade, processo de bastao, logstep e baseline documental estao fortes | Triar os 2 untracked ambiguos e manter o pacote `current` sempre refreshado nos marcos certos |
 
 Leitura executiva:
@@ -6682,6 +6744,7 @@ typeset -a lobby_ops_tests=(
   "sql/tests/test_forfeit_all_players.sql"
   "sql/tests/test_list_pending_invites.sql"
   "sql/tests/test_list_resumable_matches.sql"
+  "sql/tests/test_match_bootstrap_bot_metadata.sql"
 )
 
 typeset -a engine_regression_tests=(
@@ -8947,6 +9010,65 @@ begin
     raise notice 'Dictionary policy voting path test passed';
     raise notice 'preview_result=%', v_preview_result;
     raise notice 'submit_result=%', v_submit_result;
+end $$;
+
+## FILE: sql/tests/test_match_bootstrap_bot_metadata.sql
+
+-- ============================================================
+-- PATXANGA - TEST: match bootstrap bot metadata
+-- Purpose: frontend can identify bot players for human-vs-bot MVP
+-- ============================================================
+
+do $$
+declare
+    v_human_user_id uuid := gen_random_uuid();
+    v_bot_user_id uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_bot_player_id uuid;
+    v_bootstrap jsonb;
+    v_bot_summary_count integer;
+begin
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_human_user_id,
+        p_host_guest_name := 'Human SQL',
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    v_bot_player_id := public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_bot_user_id,
+        p_guest_name := 'Bot Easy',
+        p_is_bot := true,
+        p_bot_level := 'easy',
+        p_bot_profile := 'balanced'
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    v_bootstrap := public.get_patxanga_match_bootstrap(v_match_id, v_human_user_id);
+
+    if coalesce((v_bootstrap->'player_context'->>'is_bot')::boolean, true) is not false then
+        raise exception 'Expected human player_context.is_bot=false, got %', v_bootstrap;
+    end if;
+
+    select count(*)
+    into v_bot_summary_count
+    from jsonb_array_elements(v_bootstrap->'players_summary') player
+    where (player->>'player_id')::uuid = v_bot_player_id
+      and (player->>'is_bot')::boolean is true
+      and player->>'bot_level' = 'easy'
+      and player->>'bot_profile' = 'balanced';
+
+    if v_bot_summary_count <> 1 then
+        raise exception 'Expected one bot player summary with metadata, got % in %',
+            v_bot_summary_count,
+            v_bootstrap;
+    end if;
+
+    raise notice 'Match bootstrap bot metadata test passed';
+    raise notice 'match_id=% bot_player_id=%', v_match_id, v_bot_player_id;
 end $$;
 
 ## FILE: sql/simulations/bot_simulation_smoke.sql
@@ -12708,6 +12830,119 @@ grant execute on function public.import_patxanga_dictionary_entries(
     jsonb,
     boolean
 ) to service_role;
+
+## FILE: supabase/migrations/20260621093000_26_match_bootstrap_bot_metadata.sql
+
+-- ============================================================
+-- PATXANGA - RPC: get_patxanga_match_bootstrap()
+-- Version: 1.1
+-- Purpose: Expose bot metadata required by human-vs-bot MVP UI
+-- ============================================================
+
+create or replace function public.get_patxanga_match_bootstrap(
+    p_match_id uuid,
+    p_user_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+as
+$$
+declare
+    v_match record;
+    v_player record;
+    v_players_summary jsonb;
+begin
+    select
+        m.id,
+        m.status,
+        m.board_state,
+        m.current_turn_player_id,
+        m.turn_number,
+        m.winner_player_id,
+        m.started_at,
+        m.finished_at
+    into v_match
+    from patxanga_matches m
+    where m.id = p_match_id;
+
+    if not found then
+        raise exception 'Match not found';
+    end if;
+
+    select
+        p.id,
+        p.user_id,
+        p.display_name,
+        p.rack_state,
+        p.score,
+        p.seat_index,
+        p.turn_order,
+        p.has_forfeited,
+        p.is_bot,
+        p.bot_level,
+        p.bot_profile
+    into v_player
+    from patxanga_players p
+    where p.match_id = p_match_id
+      and p.user_id = p_user_id
+    order by p.created_at asc
+    limit 1;
+
+    select coalesce(
+        jsonb_agg(
+            jsonb_build_object(
+                'player_id', p.id,
+                'display_name', p.display_name,
+                'score', p.score,
+                'seat_index', p.seat_index,
+                'turn_order', p.turn_order,
+                'has_forfeited', p.has_forfeited,
+                'is_bot', p.is_bot,
+                'bot_level', p.bot_level,
+                'bot_profile', p.bot_profile
+            )
+            order by p.turn_order asc, p.created_at asc
+        ),
+        '[]'::jsonb
+    )
+    into v_players_summary
+    from patxanga_players p
+    where p.match_id = p_match_id;
+
+    return jsonb_build_object(
+        'match_id', v_match.id,
+        'status', v_match.status,
+        'board_state', v_match.board_state,
+        'current_turn_player_id', v_match.current_turn_player_id,
+        'turn_number', v_match.turn_number,
+        'winner_player_id', v_match.winner_player_id,
+        'started_at', v_match.started_at,
+        'finished_at', v_match.finished_at,
+        'player_context',
+            case
+                when v_player.id is null then null
+                else jsonb_build_object(
+                    'player_id', v_player.id,
+                    'user_id', v_player.user_id,
+                    'display_name', v_player.display_name,
+                    'rack_state', v_player.rack_state,
+                    'score', v_player.score,
+                    'seat_index', v_player.seat_index,
+                    'turn_order', v_player.turn_order,
+                    'has_forfeited', v_player.has_forfeited,
+                    'is_bot', v_player.is_bot,
+                    'bot_level', v_player.bot_level,
+                    'bot_profile', v_player.bot_profile
+                )
+            end,
+        'players_summary', v_players_summary
+    );
+end;
+$$;
+
+grant execute on function public.get_patxanga_match_bootstrap(uuid, uuid)
+to authenticated, anon;
 
 ## FRASE PADRAO DE PASSAGEM DE BASTAO
 

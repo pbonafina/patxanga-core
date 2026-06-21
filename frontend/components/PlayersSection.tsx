@@ -5,6 +5,9 @@ type PlayerSummary = {
   seat_index: number;
   turn_order: number;
   has_forfeited: boolean;
+  is_bot: boolean;
+  bot_level: string | null;
+  bot_profile: string | null;
 };
 
 type PlayersSectionProps = {
@@ -39,6 +42,12 @@ export function PlayersSection({
               >
                 <p><strong>Nome:</strong> {player.display_name}</p>
                 <p><strong>Pontuação:</strong> {player.score}</p>
+                <p>
+                  <strong>Tipo:</strong>{" "}
+                  {player.is_bot
+                    ? `bot ${player.bot_level ?? "sem nivel"} / ${player.bot_profile ?? "sem perfil"}`
+                    : "humano"}
+                </p>
                 <p><strong>Assento:</strong> {player.seat_index}</p>
                 <p><strong>Ordem de turno:</strong> {player.turn_order}</p>
                 <p><strong>Desistiu:</strong> {player.has_forfeited ? "sim" : "nao"}</p>

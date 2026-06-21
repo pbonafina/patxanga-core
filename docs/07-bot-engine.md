@@ -1,7 +1,7 @@
 # PATXANGA - BOT ENGINE
 
-Versao: 0.6
-Status: Baseline inicial com smoke, pending_vote, exchange_tiles, endgames, erros esperados e runner recorrente
+Versao: 0.7
+Status: Baseline de simulacao + MVP humano contra bot com auto-pass
 
 ---
 
@@ -79,12 +79,16 @@ Ja existe:
 - simulacao de erros esperados sem mutacao de estado
 - simulacao multi-turno combinando jogada aceita, troca, passes,
   `pending_vote` em ponte com peca existente e rejeicao por voto
+- bootstrap de partida expondo `is_bot`, `bot_level` e `bot_profile`
+- UI de partida rapida humano contra bot
+- acao automatica inicial do bot `easy`: passar o turno quando for a vez dele
+- regressao Playwright para criar humano contra bot e validar auto-pass
 
 Ainda nao existe:
 
 - engine autonoma de bot
 - Edge Function de bot
-- UI de humano contra bot
+- bot que escolha jogada por conta propria
 
 ---
 
@@ -207,6 +211,14 @@ Nao faz parte desta fase:
 - Edge Function obrigatoria
 - UX de humano contra bot
 
+Excecao entregue no MVP 2026-06-21:
+
+- a UI ja permite criar uma partida humano contra bot local
+- o bot `easy` ainda nao escolhe palavra; ele apenas passa o turno
+  automaticamente
+- essa automacao existe para provar o ciclo de produto sem travar partida
+  quando o turno chega ao bot
+
 Esses itens pertencem a fase posterior de bot de produto.
 
 ---
@@ -223,7 +235,9 @@ A primeira fase de bots de teste esta iniciada. Criterios ja atendidos:
 
 Proximo criterio de avanco:
 
-- ampliar combinacoes mais longas de partida
-- iniciar extracao de utilitarios de seed se os SQLs comecarem a repetir demais
+- extrair uma politica simples de bot `easy` que tente uma abertura valida
+  antes de passar
+- manter fallback de passe quando nao houver jogada segura
+- cobrir a primeira jogada real do bot por SQL/Playwright
 
 Fim do documento.

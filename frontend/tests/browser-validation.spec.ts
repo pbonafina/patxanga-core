@@ -8,6 +8,12 @@ type SlotMoveScenario = {
   tileIds: Record<string, string>;
 };
 
+type HumanVsBotScenario = {
+  matchId: string;
+  humanUserId: string;
+  botPlayerId: string;
+};
+
 function runDatabaseJson<T>(sql: string): T {
   const containerName =
     process.env.PATXANGA_DB_CONTAINER ?? "supabase_db_patxanga-core";
@@ -149,6 +155,56 @@ end
 $setup$;
 
 select payload from e2e_slot_move_result;
+`);
+}
+
+function createHumanVsBotScenarioWithBotTurn(): HumanVsBotScenario {
+  return runDatabaseJson<HumanVsBotScenario>(`
+create temp table e2e_human_vs_bot_result(payload text);
+
+do $setup$
+declare
+    v_human_user_id uuid := gen_random_uuid();
+    v_bot_user_id uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_bot_player_id uuid;
+begin
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_human_user_id,
+        p_host_guest_name := 'Human E2E',
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    v_bot_player_id := public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_bot_user_id,
+        p_guest_name := 'Bot Easy',
+        p_is_bot := true,
+        p_bot_level := 'easy',
+        p_bot_profile := 'balanced'
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    update public.patxanga_matches
+    set current_turn_player_id = v_bot_player_id,
+        updated_at = now()
+    where id = v_match_id;
+
+    insert into e2e_human_vs_bot_result(payload)
+    values (
+        jsonb_build_object(
+            'matchId', v_match_id,
+            'humanUserId', v_human_user_id,
+            'botPlayerId', v_bot_player_id
+        )::text
+    );
+end
+$setup$;
+
+select payload from e2e_human_vs_bot_result;
 `);
 }
 
@@ -295,6 +351,34 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByText("0 peças em preparo")).toBeVisible();
     await expect(page.getByTestId("rack-slot-1-bound-tile")).toHaveCount(0);
     await expect(page.getByTestId("rack-slot-1-association")).toHaveCount(0);
+  });
+
+  test("creates a human versus bot quick match", async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByTestId("bot-match-create").click();
+
+    await expect(page.getByText("bot_user_id:")).toBeVisible();
+    await expect(page.getByText("bot easy / balanced", { exact: true })).toBeVisible();
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+  });
+
+  test("auto-passes a bot turn in a human versus bot match", async ({ page }) => {
+    const scenario = createHumanVsBotScenarioWithBotTurn();
+
+    await page.goto("/");
+
+    await page.getByLabel("match_id", { exact: true }).fill(scenario.matchId);
+    await page
+      .getByLabel("user_id da sessao (temporario neste bootstrap real)")
+      .fill(scenario.humanUserId);
+    await page.getByRole("button", { name: "Abrir partida" }).click();
+
+    await expect(page.getByText("bot easy / balanced", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("bot-action-message")).toContainText(
+      "Bot passou o turno automaticamente."
+    );
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
   });
 
   test("submits an accepted word through rack slots", async ({ page }) => {

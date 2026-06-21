@@ -37,8 +37,8 @@ Leitura atual do projeto:
 | Votacao | Funcional, mas ainda precisa UX de produto |
 | Dicionario | Contrato por idioma/fonte/ativo consolidado; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
-| Bots de teste e simulacao | Prioridade alta; frente iniciada com contrato, runner e smoke deterministico |
-| Bot | Apenas modelado no banco; ainda nao existe modo jogavel humano contra bot |
+| Bots de teste e simulacao | Baseline alta: contrato, runner e sete cenarios deterministicos validados |
+| Bot | MVP humano contra bot criado; bot `easy` passa automaticamente, sem inteligencia de jogada ainda |
 | Documentacao de jogador | Manual inicial criado em `docs/como-jogar-patxanga.md` |
 
 Diretriz principal:
@@ -449,20 +449,21 @@ Estado atual:
 
 - `patxanga_players` ja possui `is_bot`, `bot_level` e `bot_profile`
 - `join_patxanga_match()` aceita parametros de bot
-- nao existe engine de bot
+- bootstrap de partida expoe metadados de bot para o frontend
+- UI cria partida humano + bot local
+- bot `easy` passa o turno automaticamente quando for sua vez
+- Playwright cobre criacao humano contra bot e auto-pass deterministico
+- ainda nao existe engine de bot que escolha palavras
 - nao existe Edge Function de bot
-- nao existe UI para criar partida contra bot
-- nao existe teste de bot jogando
+- ainda nao existe bot jogando palavra propria
 
 Entregas futuras:
 
 | Item | Acao | Criterio de saida |
 |------|------|-------------------|
-| Contrato de bot de produto | Evoluir `docs/07-bot-engine.md` alem do uso de teste | Regras e limites do bot ficam definidos |
-| Criacao de bot | UI cria segundo jogador como bot | Match inicia com humano + bot |
-| Motor simples | Bot escolhe jogada legal simples ou passa | Turno do bot nao trava partida |
+| Motor simples | Bot escolhe jogada legal simples ou passa | Turno do bot nao trava partida e bot consegue pontuar |
 | Execucao automatica | Edge Function ou rotina equivalente executa o turno | Bot joga sem acao manual |
-| Testes | SQL/Playwright cobrem humano contra bot | Fluxo fica regressivo |
+| Testes | SQL/Playwright cobrem humano contra bot com jogada real do bot | Fluxo fica regressivo |
 
 Prioridade:
 
