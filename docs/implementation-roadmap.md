@@ -356,11 +356,15 @@ Estado atual:
   palavras ausentes em importacao de substituicao completa
 - `sql/tests/test_dictionary_import_pipeline.sql` cobre importacao idempotente,
   metadados e desativacao opcional
+- `scripts/prepare-dictionary-import.py` converte CSV auditado em payload JSON
+  ou SQL completo para a RPC administrativa
+- `scripts/test-dictionary-import-tooling.sh` cobre o conversor sem depender de
+  fonte lexical real
 
 Proximos passos:
 
 - escolher fonte licenciada para dicionario amplo
-- criar conversor operacional de CSV/arquivo fonte para o payload JSON da RPC
+- validar a licenca da fonte escolhida e registrar hash/versao do arquivo bruto
 - decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
 - substituir a baseline minima `pt-PT` por fonte ampla licenciada e auditada
 - auditar a distribuicao de pecas `pt-PT`; por enquanto ela e uma baseline
@@ -369,6 +373,7 @@ Proximos passos:
 Validacao minima:
 
 ```bash
+zsh scripts/test-dictionary-import-tooling.sh
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
 zsh scripts/run-sql-test-suite.sh all

@@ -21,8 +21,9 @@ trechos antigos deste documento quando houver divergencia operacional.
 Estado verificado nesta rodada:
 
 - ultima frente local registrada: `feature/dictionary-import-pipeline`
-- foco imediato: fechar pipeline auditavel de importacao de dicionario amplo,
-  sem escolher ainda uma fonte real sem licenca verificada
+- foco imediato: fechar ferramental operacional CSV -> payload/SQL da pipeline
+  auditavel de dicionario, sem escolher ainda uma fonte real sem licenca
+  verificada
 - frente de bots de teste e simulacao ja foi criada antes desta atualizacao e
   continua como regressao obrigatoria
 - roadmap consolidado criado em `docs/implementation-roadmap.md`
@@ -52,6 +53,8 @@ Estado verificado nesta rodada:
 - pipeline auditavel de importacao de dicionario criada em
   `supabase/migrations/20260621090000_25_dictionary_import_pipeline.sql`
 - contrato operacional documentado em `docs/dictionary-import-pipeline-v1.0.md`
+- conversor CSV local criado em `scripts/prepare-dictionary-import.py`
+- teste do conversor criado em `scripts/test-dictionary-import-tooling.sh`
 - seed fonte `pt-PT` espelhado em `sql/seeds/004_dictionary_pt_pt_core_seed.sql`
 - distribuicao fonte `pt-PT` espelhada em
   `sql/seeds/001_patxanga_distribution.sql`
@@ -73,12 +76,13 @@ Leitura correta:
 - dicionario amplo deve vir depois de contrato, fonte e licenca claros
 - a baseline `pt-PT` atual e operacional e minima; nao substitui uma fonte
   ampla, licenciada e auditada
-- a pipeline aceita payload JSON auditado; conversor de CSV/arquivo fonte fica
-  como proximo passo operacional antes de importar dumps reais
+- a pipeline aceita payload JSON auditado e o conversor CSV gera tanto payload
+  quanto SQL completo; o proximo passo e escolher fonte real com licenca clara
 
 Comando atual da frente:
 
 ```bash
+zsh scripts/test-dictionary-import-tooling.sh
 supabase db reset
 zsh scripts/run-sql-test-suite.sh all
 zsh scripts/run-bot-simulation.sh all
@@ -98,8 +102,8 @@ npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
 Observacao operacional:
 
 - esta rodada nao importa fonte real nem adiciona dump amplo ao repositorio
-- a pipeline nova recebe payload JSON auditado; conversor de arquivo fonte/CSV
-  fica como proximo passo operacional
+- a pipeline nova recebe payload JSON auditado e o conversor CSV local ja gera
+  payload ou SQL completo para a RPC administrativa
 
 Validacao confirmada nesta rodada:
 
@@ -113,6 +117,7 @@ Validacao confirmada nesta rodada:
 - `zsh scripts/run-bot-simulation.sh all`
 - `zsh scripts/run-sql-test-suite.sh all`
 - `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql`
+- `zsh scripts/test-dictionary-import-tooling.sh`
 - `supabase db reset`
 - `zsh scripts/run-sql-test-suite.sh all` apos reset
 - `zsh scripts/run-bot-simulation.sh all` apos reset
@@ -253,13 +258,11 @@ Leitura executiva:
   - validacao lexical usando o idioma persistido na partida
   - baseline minima `pt-PT` para distribuicao, seed e partida real
   - pipeline auditavel de importacao de dicionario
+  - conversor CSV operacional para a RPC administrativa
 - working tree esperado antes do commit desta frente:
-  - alteracoes em `sql/tests/test_dictionary_contract.sql`
-  - novo `sql/tests/test_dictionary_import_pipeline.sql`
-  - novo `sql/migrations/003_dictionary_import_pipeline.sql`
-  - novo `sql/rpc/import_dictionary_entries.sql`
-  - novo `supabase/migrations/20260621090000_25_dictionary_import_pipeline.sql`
-  - novo `docs/dictionary-import-pipeline-v1.0.md`
+  - novo `scripts/prepare-dictionary-import.py`
+  - novo `scripts/test-dictionary-import-tooling.sh`
+  - atualizacao de `docs/dictionary-import-pipeline-v1.0.md`
   - atualizacao dos documentos de continuidade e pacote de bastao
 
 Regra de interpretacao:
