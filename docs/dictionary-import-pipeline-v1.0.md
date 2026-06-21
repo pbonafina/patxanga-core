@@ -49,6 +49,46 @@ Regras:
 - acentos sao normalizados pela funcao `normalize_patxanga_word(...)`
 - a chave efetiva continua sendo `language + word_normalized`
 
+## Conversor CSV
+
+O conversor local `scripts/prepare-dictionary-import.py` transforma um CSV com
+cabecalho em payload JSON ou em SQL pronto para execucao administrativa.
+
+Formato minimo do CSV:
+
+```csv
+word,is_active
+CASA,true
+árvore,sim
+PEIXE,false
+```
+
+Gerar apenas o payload JSON:
+
+```bash
+python3 scripts/prepare-dictionary-import.py fonte.csv --pretty > payload.json
+```
+
+Gerar SQL completo para a RPC:
+
+```bash
+python3 scripts/prepare-dictionary-import.py fonte.csv \
+  --mode sql \
+  --language pt-BR \
+  --source pt_br_licensed_words \
+  --license-name LICENSE-NAME \
+  --source-version 2026-06-21 \
+  --license-url https://example.test/license \
+  --source-url https://example.test/source \
+  --imported-by manual-maintenance \
+  --metadata-json '{"sha256":"preencher-com-hash-do-arquivo"}' \
+  > import_dictionary.sql
+```
+
+O conversor preserva linhas com palavra vazia para que a RPC registre
+`skipped_count` no lote. Duplicatas tambem sao preservadas no payload; a RPC faz
+a deduplicacao canonica usando a normalizacao do banco.
+
 ## Execucao
 
 Funcao administrativa. Ela deve ser executada pelo owner do banco, por
@@ -99,6 +139,7 @@ Cada palavra importada recebe:
 Validacao minima apos mudar a pipeline:
 
 ```bash
+zsh scripts/test-dictionary-import-tooling.sh
 supabase db reset
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
 zsh scripts/run-sql-test-suite.sh all

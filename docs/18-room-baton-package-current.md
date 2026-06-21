@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-21 00:44:10
+Generated at: 2026-06-21 08:25:04
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,18 +93,14 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## feature/dictionary-import-pipeline
+## feature/dictionary-csv-import-tooling
  M docs/18-room-baton-package-current.md
  M docs/current-development-continuity-spec-v1.0.md
+ M docs/dictionary-import-pipeline-v1.0.md
  M docs/implementation-roadmap.md
  M generate-room-baton-package.sh
- M scripts/run-sql-test-suite.sh
- M sql/tests/test_dictionary_contract.sql
-?? docs/dictionary-import-pipeline-v1.0.md
-?? sql/migrations/003_dictionary_import_pipeline.sql
-?? sql/rpc/import_dictionary_entries.sql
-?? sql/tests/test_dictionary_import_pipeline.sql
-?? supabase/migrations/20260621090000_25_dictionary_import_pipeline.sql
+?? scripts/prepare-dictionary-import.py
+?? scripts/test-dictionary-import-tooling.sh
 ```
 
 ### git remote -v
@@ -115,7 +111,9 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-44c1eb4 (HEAD -> feature/dictionary-import-pipeline, origin/develop, origin/HEAD, develop) Merge pull request #4 from pbonafina/feature/pt-pt-language-baseline
+3cc1c70 (HEAD -> feature/dictionary-csv-import-tooling, origin/develop, origin/HEAD, develop) Merge pull request #5 from pbonafina/feature/dictionary-import-pipeline
+0e38fa8 feat: add audited dictionary import pipeline
+44c1eb4 Merge pull request #4 from pbonafina/feature/pt-pt-language-baseline
 a3cac88 fix: add pt-PT language baseline
 6c5d636 Merge pull request #3 from pbonafina/feature/match-language-dictionary-validation
 cbb3dd8 (origin/feature/match-language-dictionary-validation, feature/match-language-dictionary-validation) fix: validate words against match language
@@ -128,8 +126,6 @@ d1ee0c2 fix(docs): generate baton package atomically
 cab289b docs: consolidate gameplay and continuity plans
 ea03c80 test(bots): add deterministic simulation suite
 502fe8f fix(sql): persist accepted place word moves
-4436c28 chore(frontend): upgrade next and react baseline
-f2b9aa9 Formaliza matriz objetiva de avanco do projeto
 ```
 
 ### tail -n 60 ../project-log.md
@@ -3446,6 +3442,46 @@ Regras:
 - acentos sao normalizados pela funcao `normalize_patxanga_word(...)`
 - a chave efetiva continua sendo `language + word_normalized`
 
+## Conversor CSV
+
+O conversor local `scripts/prepare-dictionary-import.py` transforma um CSV com
+cabecalho em payload JSON ou em SQL pronto para execucao administrativa.
+
+Formato minimo do CSV:
+
+```csv
+word,is_active
+CASA,true
+árvore,sim
+PEIXE,false
+```
+
+Gerar apenas o payload JSON:
+
+```bash
+python3 scripts/prepare-dictionary-import.py fonte.csv --pretty > payload.json
+```
+
+Gerar SQL completo para a RPC:
+
+```bash
+python3 scripts/prepare-dictionary-import.py fonte.csv \
+  --mode sql \
+  --language pt-BR \
+  --source pt_br_licensed_words \
+  --license-name LICENSE-NAME \
+  --source-version 2026-06-21 \
+  --license-url https://example.test/license \
+  --source-url https://example.test/source \
+  --imported-by manual-maintenance \
+  --metadata-json '{"sha256":"preencher-com-hash-do-arquivo"}' \
+  > import_dictionary.sql
+```
+
+O conversor preserva linhas com palavra vazia para que a RPC registre
+`skipped_count` no lote. Duplicatas tambem sao preservadas no payload; a RPC faz
+a deduplicacao canonica usando a normalizacao do banco.
+
 ## Execucao
 
 Funcao administrativa. Ela deve ser executada pelo owner do banco, por
@@ -3496,6 +3532,7 @@ Cada palavra importada recebe:
 Validacao minima apos mudar a pipeline:
 
 ```bash
+zsh scripts/test-dictionary-import-tooling.sh
 supabase db reset
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
 zsh scripts/run-sql-test-suite.sh all
@@ -3862,11 +3899,15 @@ Estado atual:
   palavras ausentes em importacao de substituicao completa
 - `sql/tests/test_dictionary_import_pipeline.sql` cobre importacao idempotente,
   metadados e desativacao opcional
+- `scripts/prepare-dictionary-import.py` converte CSV auditado em payload JSON
+  ou SQL completo para a RPC administrativa
+- `scripts/test-dictionary-import-tooling.sh` cobre o conversor sem depender de
+  fonte lexical real
 
 Proximos passos:
 
 - escolher fonte licenciada para dicionario amplo
-- criar conversor operacional de CSV/arquivo fonte para o payload JSON da RPC
+- validar a licenca da fonte escolhida e registrar hash/versao do arquivo bruto
 - decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
 - substituir a baseline minima `pt-PT` por fonte ampla licenciada e auditada
 - auditar a distribuicao de pecas `pt-PT`; por enquanto ela e uma baseline
@@ -3875,6 +3916,7 @@ Proximos passos:
 Validacao minima:
 
 ```bash
+zsh scripts/test-dictionary-import-tooling.sh
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
 zsh scripts/run-sql-test-suite.sh all
@@ -4265,8 +4307,9 @@ trechos antigos deste documento quando houver divergencia operacional.
 Estado verificado nesta rodada:
 
 - ultima frente local registrada: `feature/dictionary-import-pipeline`
-- foco imediato: fechar pipeline auditavel de importacao de dicionario amplo,
-  sem escolher ainda uma fonte real sem licenca verificada
+- foco imediato: fechar ferramental operacional CSV -> payload/SQL da pipeline
+  auditavel de dicionario, sem escolher ainda uma fonte real sem licenca
+  verificada
 - frente de bots de teste e simulacao ja foi criada antes desta atualizacao e
   continua como regressao obrigatoria
 - roadmap consolidado criado em `docs/implementation-roadmap.md`
@@ -4296,6 +4339,8 @@ Estado verificado nesta rodada:
 - pipeline auditavel de importacao de dicionario criada em
   `supabase/migrations/20260621090000_25_dictionary_import_pipeline.sql`
 - contrato operacional documentado em `docs/dictionary-import-pipeline-v1.0.md`
+- conversor CSV local criado em `scripts/prepare-dictionary-import.py`
+- teste do conversor criado em `scripts/test-dictionary-import-tooling.sh`
 - seed fonte `pt-PT` espelhado em `sql/seeds/004_dictionary_pt_pt_core_seed.sql`
 - distribuicao fonte `pt-PT` espelhada em
   `sql/seeds/001_patxanga_distribution.sql`
@@ -4317,12 +4362,13 @@ Leitura correta:
 - dicionario amplo deve vir depois de contrato, fonte e licenca claros
 - a baseline `pt-PT` atual e operacional e minima; nao substitui uma fonte
   ampla, licenciada e auditada
-- a pipeline aceita payload JSON auditado; conversor de CSV/arquivo fonte fica
-  como proximo passo operacional antes de importar dumps reais
+- a pipeline aceita payload JSON auditado e o conversor CSV gera tanto payload
+  quanto SQL completo; o proximo passo e escolher fonte real com licenca clara
 
 Comando atual da frente:
 
 ```bash
+zsh scripts/test-dictionary-import-tooling.sh
 supabase db reset
 zsh scripts/run-sql-test-suite.sh all
 zsh scripts/run-bot-simulation.sh all
@@ -4342,8 +4388,8 @@ npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
 Observacao operacional:
 
 - esta rodada nao importa fonte real nem adiciona dump amplo ao repositorio
-- a pipeline nova recebe payload JSON auditado; conversor de arquivo fonte/CSV
-  fica como proximo passo operacional
+- a pipeline nova recebe payload JSON auditado e o conversor CSV local ja gera
+  payload ou SQL completo para a RPC administrativa
 
 Validacao confirmada nesta rodada:
 
@@ -4357,6 +4403,7 @@ Validacao confirmada nesta rodada:
 - `zsh scripts/run-bot-simulation.sh all`
 - `zsh scripts/run-sql-test-suite.sh all`
 - `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql`
+- `zsh scripts/test-dictionary-import-tooling.sh`
 - `supabase db reset`
 - `zsh scripts/run-sql-test-suite.sh all` apos reset
 - `zsh scripts/run-bot-simulation.sh all` apos reset
@@ -4497,13 +4544,11 @@ Leitura executiva:
   - validacao lexical usando o idioma persistido na partida
   - baseline minima `pt-PT` para distribuicao, seed e partida real
   - pipeline auditavel de importacao de dicionario
+  - conversor CSV operacional para a RPC administrativa
 - working tree esperado antes do commit desta frente:
-  - alteracoes em `sql/tests/test_dictionary_contract.sql`
-  - novo `sql/tests/test_dictionary_import_pipeline.sql`
-  - novo `sql/migrations/003_dictionary_import_pipeline.sql`
-  - novo `sql/rpc/import_dictionary_entries.sql`
-  - novo `supabase/migrations/20260621090000_25_dictionary_import_pipeline.sql`
-  - novo `docs/dictionary-import-pipeline-v1.0.md`
+  - novo `scripts/prepare-dictionary-import.py`
+  - novo `scripts/test-dictionary-import-tooling.sh`
+  - atualizacao de `docs/dictionary-import-pipeline-v1.0.md`
   - atualizacao dos documentos de continuidade e pacote de bastao
 
 Regra de interpretacao:
@@ -5066,6 +5111,292 @@ Este processo deve ser usado como base oficial para transicao entre salas
 enquanto o projeto depender de continuidade assistida.
 
 Fim do documento.
+
+## FILE: scripts/prepare-dictionary-import.py
+
+#!/usr/bin/env python3
+"""Prepare audited Patxanga dictionary imports from CSV files.
+
+The script intentionally does not import a real dictionary by itself. It converts
+an audited source file into the JSON payload or SQL call expected by
+public.import_patxanga_dictionary_entries(...).
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+
+VALID_LANGUAGES = {"pt-BR", "pt-PT"}
+TRUE_VALUES = {"1", "true", "t", "yes", "y", "sim", "s", "ativo", "active"}
+FALSE_VALUES = {"0", "false", "f", "no", "n", "nao", "não", "inativo", "inactive"}
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Convert a dictionary CSV file into Patxanga import JSON or SQL.",
+    )
+    parser.add_argument("csv_file", type=Path, help="Source CSV file.")
+    parser.add_argument(
+        "--mode",
+        choices=("payload", "sql"),
+        default="payload",
+        help="Output raw JSON payload or a complete SQL call. Default: payload.",
+    )
+    parser.add_argument(
+        "--word-column",
+        default="word",
+        help="CSV column containing the original word. Default: word.",
+    )
+    parser.add_argument(
+        "--active-column",
+        default="is_active",
+        help="Optional CSV column containing active status. Default: is_active.",
+    )
+    parser.add_argument(
+        "--delimiter",
+        default=",",
+        help="CSV delimiter. Default: comma.",
+    )
+    parser.add_argument(
+        "--encoding",
+        default="utf-8",
+        help="CSV encoding. Default: utf-8.",
+    )
+    parser.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Pretty-print JSON payload.",
+    )
+    parser.add_argument("--language", choices=sorted(VALID_LANGUAGES))
+    parser.add_argument("--source")
+    parser.add_argument("--license-name")
+    parser.add_argument("--source-version")
+    parser.add_argument("--license-url")
+    parser.add_argument("--source-url")
+    parser.add_argument("--imported-by")
+    parser.add_argument(
+        "--metadata-json",
+        default="{}",
+        help="Additional metadata object included in SQL mode. Default: {}.",
+    )
+    parser.add_argument(
+        "--deactivate-missing",
+        action="store_true",
+        help="Use only when the CSV fully replaces an existing language+source.",
+    )
+    return parser.parse_args()
+
+
+def parse_active(raw_value: str | None, row_number: int, column_name: str) -> bool:
+    if raw_value is None or raw_value.strip() == "":
+        return True
+
+    normalized = raw_value.strip().lower()
+    if normalized in TRUE_VALUES:
+        return True
+    if normalized in FALSE_VALUES:
+        return False
+
+    raise ValueError(
+        f"Invalid boolean value in row {row_number}, column {column_name!r}: {raw_value!r}"
+    )
+
+
+def read_entries(args: argparse.Namespace) -> list[dict[str, Any]]:
+    if len(args.delimiter) != 1:
+        raise ValueError("--delimiter must be a single character")
+
+    with args.csv_file.open("r", encoding=args.encoding, newline="") as csv_handle:
+        reader = csv.DictReader(csv_handle, delimiter=args.delimiter)
+        if reader.fieldnames is None:
+            raise ValueError("CSV file must include a header row")
+
+        fieldnames = {name.strip(): name for name in reader.fieldnames if name is not None}
+        if args.word_column not in fieldnames:
+            available = ", ".join(reader.fieldnames)
+            raise ValueError(
+                f"Missing word column {args.word_column!r}. Available columns: {available}"
+            )
+
+        word_column = fieldnames[args.word_column]
+        active_column = fieldnames.get(args.active_column)
+        entries: list[dict[str, Any]] = []
+
+        for row_index, row in enumerate(reader, start=2):
+            word = (row.get(word_column) or "").strip()
+            is_active = parse_active(
+                row.get(active_column) if active_column is not None else None,
+                row_index,
+                args.active_column,
+            )
+            entries.append({"word": word, "is_active": is_active})
+
+    return entries
+
+
+def parse_metadata(raw_metadata: str, csv_file: Path, row_count: int) -> dict[str, Any]:
+    try:
+        metadata = json.loads(raw_metadata)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid --metadata-json: {exc}") from exc
+
+    if not isinstance(metadata, dict):
+        raise ValueError("--metadata-json must be a JSON object")
+
+    return {
+        **metadata,
+        "input_file": str(csv_file),
+        "input_rows": row_count,
+        "converter": "scripts/prepare-dictionary-import.py",
+    }
+
+
+def sql_literal(value: str | None) -> str:
+    if value is None or value == "":
+        return "null"
+    return "'" + value.replace("'", "''") + "'"
+
+
+def sql_jsonb(value: Any) -> str:
+    compact = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return sql_literal(compact) + "::jsonb"
+
+
+def validate_sql_args(args: argparse.Namespace) -> None:
+    required = {
+        "--language": args.language,
+        "--source": args.source,
+        "--license-name": args.license_name,
+    }
+    missing = [option for option, value in required.items() if value is None or value == ""]
+    if missing:
+        raise ValueError("SQL mode requires " + ", ".join(missing))
+
+
+def render_sql(args: argparse.Namespace, entries: list[dict[str, Any]]) -> str:
+    validate_sql_args(args)
+    metadata = parse_metadata(args.metadata_json, args.csv_file, len(entries))
+
+    return "\n".join(
+        [
+            "select public.import_patxanga_dictionary_entries(",
+            f"    p_language := {sql_literal(args.language)},",
+            f"    p_source := {sql_literal(args.source)},",
+            f"    p_license_name := {sql_literal(args.license_name)},",
+            f"    p_entries := {sql_jsonb(entries)},",
+            f"    p_source_version := {sql_literal(args.source_version)},",
+            f"    p_license_url := {sql_literal(args.license_url)},",
+            f"    p_source_url := {sql_literal(args.source_url)},",
+            f"    p_imported_by := {sql_literal(args.imported_by)},",
+            f"    p_metadata := {sql_jsonb(metadata)},",
+            f"    p_deactivate_missing := {'true' if args.deactivate_missing else 'false'}",
+            ");",
+        ]
+    )
+
+
+def main() -> int:
+    args = parse_args()
+
+    try:
+        entries = read_entries(args)
+        if args.mode == "payload":
+            indent = 2 if args.pretty else None
+            print(json.dumps(entries, ensure_ascii=False, indent=indent))
+        else:
+            print(render_sql(args, entries))
+    except (OSError, ValueError) as exc:
+        print(f"prepare-dictionary-import: {exc}", file=sys.stderr)
+        return 1
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
+## FILE: scripts/test-dictionary-import-tooling.sh
+
+#!/bin/zsh
+set -euo pipefail
+
+repo_dir=~/patxanga-bootstrap/patxanga-core
+cd "$repo_dir"
+
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+
+fixture_csv="$tmp_dir/dictionary_fixture.csv"
+payload_json="$tmp_dir/payload.json"
+sql_output="$tmp_dir/import.sql"
+
+cat > "$fixture_csv" <<'CSV'
+word,is_active,notes
+RATO,true,valid
+árvore,sim,accented
+rato,1,duplicate left for database dedupe
+,true,blank preserved for import audit
+PEIXE,false,inactive
+CSV
+
+python3 scripts/prepare-dictionary-import.py \
+  "$fixture_csv" \
+  --pretty \
+  > "$payload_json"
+
+python3 - "$payload_json" <<'PY'
+import json
+import sys
+
+payload_path = sys.argv[1]
+payload = json.load(open(payload_path, encoding="utf-8"))
+
+assert len(payload) == 5, payload
+assert payload[0] == {"word": "RATO", "is_active": True}, payload[0]
+assert payload[1] == {"word": "árvore", "is_active": True}, payload[1]
+assert payload[2] == {"word": "rato", "is_active": True}, payload[2]
+assert payload[3] == {"word": "", "is_active": True}, payload[3]
+assert payload[4] == {"word": "PEIXE", "is_active": False}, payload[4]
+PY
+
+python3 scripts/prepare-dictionary-import.py \
+  "$fixture_csv" \
+  --mode sql \
+  --language pt-BR \
+  --source import_tooling_test \
+  --license-name "Test License" \
+  --source-version fixture-v1 \
+  --license-url https://example.test/license \
+  --source-url https://example.test/source \
+  --imported-by script-test \
+  --metadata-json '{"fixture":true}' \
+  --deactivate-missing \
+  > "$sql_output"
+
+grep -q "public.import_patxanga_dictionary_entries" "$sql_output"
+grep -q "import_tooling_test" "$sql_output"
+grep -q '"converter":"scripts/prepare-dictionary-import.py"' "$sql_output"
+grep -q "p_deactivate_missing := true" "$sql_output"
+
+if python3 scripts/prepare-dictionary-import.py \
+  "$fixture_csv" \
+  --mode sql \
+  --source import_tooling_test \
+  --license-name "Test License" \
+  > "$tmp_dir/missing-language.out" 2>&1; then
+  echo "Expected missing --language to fail" >&2
+  exit 1
+fi
+
+grep -q "SQL mode requires --language" "$tmp_dir/missing-language.out"
+
+echo "Dictionary import tooling test passed"
 
 ## FILE: scripts/run-bot-simulation.sh
 

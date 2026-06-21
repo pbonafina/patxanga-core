@@ -272,6 +272,8 @@ trap 'rm -f "$TMP_OUT"' EXIT
     docs/07-bot-engine.md \
     docs/current-development-continuity-spec-v1.0.md \
     docs/18-room-baton-process-v1.0.md \
+    scripts/prepare-dictionary-import.py \
+    scripts/test-dictionary-import-tooling.sh \
     scripts/run-bot-simulation.sh \
     scripts/run-sql-test-suite.sh \
     sql/migrations/002_dictionary.sql \
