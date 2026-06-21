@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-21 09:08:40
+Generated at: 2026-06-21 09:14:42
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,10 +93,12 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## feature/offline-lexical-policy-boundaries
+## feature/lexical-policy-voting-regression
  M docs/current-development-continuity-spec-v1.0.md
  M docs/lexical-policy-v1.0.md
- M scripts/test-libreoffice-dictionary-sample.sh
+ M generate-room-baton-package.sh
+ M scripts/run-sql-test-suite.sh
+?? sql/tests/test_dictionary_policy_voting_path.sql
 ```
 
 ### git remote -v
@@ -107,7 +109,9 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-f6c18f1 (HEAD -> feature/offline-lexical-policy-boundaries, origin/develop, origin/HEAD, develop) Merge pull request #9 from pbonafina/feature/lexical-policy-imported-words-regression
+ece4650 (HEAD -> feature/lexical-policy-voting-regression, origin/develop, origin/HEAD, develop) Merge pull request #10 from pbonafina/feature/offline-lexical-policy-boundaries
+c727200 test: cover offline lexical policy boundaries
+f6c18f1 Merge pull request #9 from pbonafina/feature/lexical-policy-imported-words-regression
 a8222ee test: add lexical policy imported word regression
 1476a40 Merge pull request #8 from pbonafina/feature/licensed-pt-pt-dictionary-sample
 6927487 feat: add pt-PT dictionary source sample
@@ -120,8 +124,6 @@ bfeacea Merge pull request #7 from pbonafina/feature/licensed-dictionary-source-
 44c1eb4 Merge pull request #4 from pbonafina/feature/pt-pt-language-baseline
 a3cac88 fix: add pt-PT language baseline
 6c5d636 Merge pull request #3 from pbonafina/feature/match-language-dictionary-validation
-cbb3dd8 (origin/feature/match-language-dictionary-validation, feature/match-language-dictionary-validation) fix: validate words against match language
-51109b7 Merge pull request #2 from pbonafina/feature/bot-long-simulations
 ```
 
 ### tail -n 60 ../project-log.md
@@ -3513,6 +3515,10 @@ Uma mudanca nesta politica deve manter cobertura automatizada para:
 - `preview_patxanga_move(...)` marcando palavra importada como reconhecida
 - `submit_patxanga_move(...)` aceitando jogada com palavra importada sem
   `pending_vote`
+- `preview_patxanga_move(...)` marcando palavra fora do dicionario ativo como
+  exigindo votacao
+- `submit_patxanga_move(...)` criando `pending_vote` para palavra fora do
+  dicionario ativo sem mutar o board
 - separacao por idioma
 - palavra inativa permanecendo nao reconhecida
 
@@ -3521,6 +3527,7 @@ Teste de referencia:
 ```bash
 zsh scripts/test-libreoffice-dictionary-sample.sh
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_imported_words_engine_path.sql
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_policy_voting_path.sql
 ```
 
 O teste offline do extrator cobre as fronteiras conservadoras da politica v1:
@@ -4862,6 +4869,43 @@ Validacao de referencia:
 zsh scripts/test-libreoffice-dictionary-sample.sh
 git diff --check
 ```
+
+## 1.6 Atualizacao operacional de continuidade - 2026-06-21 voting lexical
+
+Estado desta frente:
+
+- branch de implementacao: `feature/lexical-policy-voting-regression`
+- foco: provar o caminho complementar da politica lexical v1
+- teste novo: `sql/tests/test_dictionary_policy_voting_path.sql`
+- runner `scripts/run-sql-test-suite.sh` inclui o novo teste em
+  `engine_regression` e `all`
+
+Leitura correta:
+
+- palavra fora do dicionario ativo nao deve ser aceita automaticamente
+- `preview_patxanga_move(...)` deve retornar `requires_vote = true`
+- `submit_patxanga_move(...)` deve retornar `status = pending_vote`
+- o board permanece inalterado ate a votacao resolver a jogada
+
+Comandos de referencia:
+
+```bash
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_policy_voting_path.sql
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
+
+Validacao confirmada nesta frente:
+
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_policy_voting_path.sql`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+- `git diff --check`
+
+## 1.7 Registro historico da frente de bots e dicionario minimo
+
+Este bloco e mantido como historico operacional anterior. Ele nao substitui a
+validacao especifica da frente 1.6.
 
 Validacao confirmada nesta rodada:
 
@@ -6644,6 +6688,7 @@ typeset -a engine_regression_tests=(
   "sql/tests/test_dictionary_contract.sql"
   "sql/tests/test_dictionary_import_pipeline.sql"
   "sql/tests/test_dictionary_imported_words_engine_path.sql"
+  "sql/tests/test_dictionary_policy_voting_path.sql"
   "sql/tests/test_exchange_tiles.sql"
   "sql/tests/test_pass_turn.sql"
   "sql/tests/test_submit_move_auto.sql"
@@ -8754,6 +8799,154 @@ begin
 
     delete from public.patxanga_dictionary_import_batches
     where source = 'imported_words_engine_test';
+end $$;
+
+## FILE: sql/tests/test_dictionary_policy_voting_path.sql
+
+-- ============================================================
+-- PATXANGA - TEST: lexical policy voting path
+-- Purpose: unrecognized policy-edge words require voting and do not mutate board
+-- ============================================================
+
+do $$
+declare
+    v_user1 uuid := gen_random_uuid();
+    v_user2 uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_current_player_id uuid;
+    v_n_id uuid := gen_random_uuid();
+    v_a1_id uuid := gen_random_uuid();
+    v_s_id uuid := gen_random_uuid();
+    v_a2_id uuid := gen_random_uuid();
+    v_preview_result jsonb;
+    v_submit_result jsonb;
+    v_pending_move_count integer;
+    v_board_center jsonb;
+begin
+    if public.validate_word('NASA', 'pt-BR') is true then
+        raise exception 'Expected policy-edge word NASA not to validate before voting';
+    end if;
+
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_user1,
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    perform public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_user2
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    select current_turn_player_id
+    into v_current_player_id
+    from public.patxanga_matches
+    where id = v_match_id;
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_n_id::text, 'letter', 'N', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_a1_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_s_id::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_a2_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'M', 'points', 2, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_current_player_id;
+
+    v_preview_result := public.preview_patxanga_move(
+        v_match_id,
+        v_current_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_n_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_a1_id::text, 'row', 8, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_s_id::text, 'row', 8, 'col', 10, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_a2_id::text, 'row', 8, 'col', 11, 'declared_letter', null)
+        )
+    );
+
+    if v_preview_result->>'status' <> 'ok' then
+        raise exception 'Expected NASA preview to be structurally ok, got %',
+            v_preview_result;
+    end if;
+
+    if v_preview_result->>'main_word' <> 'NASA' then
+        raise exception 'Expected preview main_word NASA, got %', v_preview_result;
+    end if;
+
+    if coalesce((v_preview_result->>'requires_vote')::boolean, false) is not true then
+        raise exception 'Expected unrecognized NASA preview to require vote, got %',
+            v_preview_result;
+    end if;
+
+    if coalesce((v_preview_result->>'is_dictionary_recognized')::boolean, true) is not false then
+        raise exception 'Expected unrecognized NASA preview not dictionary-recognized, got %',
+            v_preview_result;
+    end if;
+
+    v_submit_result := public.submit_patxanga_move(
+        v_match_id,
+        v_current_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_n_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_a1_id::text, 'row', 8, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_s_id::text, 'row', 8, 'col', 10, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_a2_id::text, 'row', 8, 'col', 11, 'declared_letter', null)
+        )
+    );
+
+    if v_submit_result->>'status' <> 'pending_vote' then
+        raise exception 'Expected NASA submit to enter pending_vote, got %',
+            v_submit_result;
+    end if;
+
+    if v_submit_result->>'main_word' <> 'NASA' then
+        raise exception 'Expected pending vote main_word NASA, got %',
+            v_submit_result;
+    end if;
+
+    select count(*)
+    into v_pending_move_count
+    from public.patxanga_moves
+    where id = (v_submit_result->>'move_id')::uuid
+      and match_id = v_match_id
+      and player_id = v_current_player_id
+      and main_word = 'NASA'
+      and status = 'pending_vote'
+      and is_dictionary_recognized = false
+      and requires_vote = true;
+
+    if v_pending_move_count <> 1 then
+        raise exception 'Expected exactly 1 pending_vote NASA move, got %',
+            v_pending_move_count;
+    end if;
+
+    select board_state->7->7->'tile'
+    into v_board_center
+    from public.patxanga_matches
+    where id = v_match_id;
+
+    if v_board_center <> 'null'::jsonb then
+        raise exception 'Expected board center to remain empty before vote resolution, got %',
+            v_board_center;
+    end if;
+
+    if (
+        select status
+        from public.patxanga_matches
+        where id = v_match_id
+    ) <> 'voting' then
+        raise exception 'Expected match to be in voting status after NASA submit';
+    end if;
+
+    raise notice 'Dictionary policy voting path test passed';
+    raise notice 'preview_result=%', v_preview_result;
+    raise notice 'submit_result=%', v_submit_result;
 end $$;
 
 ## FILE: sql/simulations/bot_simulation_smoke.sql

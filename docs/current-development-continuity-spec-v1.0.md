@@ -285,6 +285,43 @@ zsh scripts/test-libreoffice-dictionary-sample.sh
 git diff --check
 ```
 
+## 1.6 Atualizacao operacional de continuidade - 2026-06-21 voting lexical
+
+Estado desta frente:
+
+- branch de implementacao: `feature/lexical-policy-voting-regression`
+- foco: provar o caminho complementar da politica lexical v1
+- teste novo: `sql/tests/test_dictionary_policy_voting_path.sql`
+- runner `scripts/run-sql-test-suite.sh` inclui o novo teste em
+  `engine_regression` e `all`
+
+Leitura correta:
+
+- palavra fora do dicionario ativo nao deve ser aceita automaticamente
+- `preview_patxanga_move(...)` deve retornar `requires_vote = true`
+- `submit_patxanga_move(...)` deve retornar `status = pending_vote`
+- o board permanece inalterado ate a votacao resolver a jogada
+
+Comandos de referencia:
+
+```bash
+zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_policy_voting_path.sql
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
+
+Validacao confirmada nesta frente:
+
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_policy_voting_path.sql`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+- `git diff --check`
+
+## 1.7 Registro historico da frente de bots e dicionario minimo
+
+Este bloco e mantido como historico operacional anterior. Ele nao substitui a
+validacao especifica da frente 1.6.
+
 Validacao confirmada nesta rodada:
 
 - `zsh scripts/run-bot-simulation.sh smoke`
