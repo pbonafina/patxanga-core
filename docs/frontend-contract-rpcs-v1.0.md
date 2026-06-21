@@ -1,5 +1,5 @@
 # PATXANGA — FRONTEND CONTRACT: RPCs
-Version: 1.0
+Version: 1.1
 Status: ACTIVE OPERATIONAL BASELINE
 Base normativa:
 - Context Snapshot Master v1.6
@@ -30,6 +30,7 @@ Ele não redefine engine, não substitui migrations e não altera a autoridade d
 - `submit_patxanga_move()`
 - `submit_patxanga_vote()`
 - `submit_patxanga_pass_turn()`
+- `submit_patxanga_easy_bot_turn()`
 - `submit_patxanga_exchange_tiles()`
 
 ## 4. Contrato operacional por RPC
@@ -210,6 +211,29 @@ Trocar peças do rack com o bag.
 #### Regra de autoridade do backend
 - backend valida posse das peças e executa a troca
 - frontend não remove peças definitivamente antes da confirmação oficial
+
+### 4.8 `submit_patxanga_easy_bot_turn()`
+
+#### Finalidade
+Executar o turno automatico de um jogador bot `easy`.
+
+#### Parâmetros de entrada
+- `p_match_id uuid`
+- `p_player_id uuid`
+
+#### Saída esperada
+Um dos ramos operacionais abaixo:
+- `bot_action = place_word`, quando o bot encontrou abertura valida no dicionario ativo
+- `bot_action = pass`, quando nao encontrou jogada segura e caiu no fallback de passe
+
+#### Estados relevantes para UI
+- `active`
+
+#### Regra de autoridade do backend
+- frontend apenas dispara a RPC quando o turno atual pertence a um bot
+- a RPC delega jogada real para `submit_patxanga_move()`
+- a RPC delega fallback para `submit_patxanga_pass_turn()`
+- frontend nao monta palavra, nao calcula score e nao avanca turno localmente
 
 ## 5. Regras transversais para UI
 

@@ -474,6 +474,47 @@ Validacao confirmada nesta frente:
 - `cd frontend && npm run build`
 - `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
 
+## 1.9 Atualizacao operacional de continuidade - 2026-06-21 politica easy de bot
+
+Estado desta frente:
+
+- branch de implementacao: `feature/easy-bot-opening-policy`
+- foco: substituir auto-pass puro por politica minima de jogada real
+- migration nova: `supabase/migrations/20260621105000_27_easy_bot_opening_policy.sql`
+- RPC nova: `submit_patxanga_easy_bot_turn(...)`
+- teste SQL novo: `sql/tests/test_easy_bot_turn_policy.sql`
+- Playwright atualizado em `frontend/tests/browser-validation.spec.ts`
+
+Entregue:
+
+- bot `easy` tenta uma abertura horizontal no centro antes de passar
+- a palavra candidata vem de `patxanga_dictionary` filtrada por idioma,
+  `is_active=true`, tamanho 2..7 e letras normais disponiveis no rack
+- a RPC delega a jogada real para `submit_patxanga_move(...)`
+- quando nao ha abertura segura, a RPC delega para `submit_patxanga_pass_turn(...)`
+- a UI passou a chamar `submit_patxanga_easy_bot_turn(...)` no turno do bot
+- o feedback visual diferencia `Bot jogou PALAVRA` de `Bot passou o turno`
+
+Limite explicito:
+
+- a politica so tenta abertura em tabuleiro vazio
+- nao usa curingas nem pecas especiais
+- nao tenta encaixar em pecas ja existentes
+- nao substitui uma futura Edge Function ou runner server-side
+
+Validacao inicial confirmada nesta frente:
+
+- `cd frontend && npm run lint`
+- `cd frontend && npm run build`
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_easy_bot_turn_policy.sql`
+- `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+- `supabase db reset`
+- apos reset: `zsh scripts/run-sql-test-suite.sh all`
+- apos reset: `zsh scripts/run-bot-simulation.sh all`
+- apos reset: `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+
 ## 2. Matriz objetiva de avanco
 
 Percentual global estimado nesta leitura: `75%`
@@ -489,8 +530,8 @@ Regra de leitura:
 | --- | --- | --- | --- |
 | Engine backend server-authoritative | 90% | Core congelado e validado com match lifecycle, submit, pending_vote, pass, exchange e endgame | Tie-break mais sofisticado e qualquer endurecimento final de cobertura que surgir do produto |
 | Fluxos operacionais lobby/convites/retomada/desistencia | 85% | Baseline operacional real implementada e validada | Mais validacao de produto na UI final e possivel refino de ergonomia |
-| Primeira tela jogavel / gameplay frontend | 75% | Rack, preview, slots oficiais, submit/pending_vote por slots e MVP humano contra bot com auto-pass entregues | Decidir convergencia do fluxo oficial, refinar UX e evoluir bot alem de passe |
-| Automacao e regressao | 85% | Build verde, Playwright cobre slots reais e humano contra bot; suite SQL reutilizavel verde | Cobrir bot com primeira jogada real e mais regressao de recomposicao |
+| Primeira tela jogavel / gameplay frontend | 78% | Rack, preview, slots oficiais, submit/pending_vote por slots e MVP humano contra bot com jogada real de abertura do bot entregues | Decidir convergencia do fluxo oficial, refinar UX e evoluir bot para encaixe apos abertura |
+| Automacao e regressao | 87% | Build verde, Playwright cobre slots reais e humano contra bot; suite SQL cobre bot com abertura real e fallback de passe | Cobrir bot apos primeira rodada e mais regressao de recomposicao |
 | Continuidade operacional e rastreabilidade | 85% | Kit de continuidade, processo de bastao, logstep e baseline documental estao fortes | Triar os 2 untracked ambiguos e manter o pacote `current` sempre refreshado nos marcos certos |
 
 Leitura executiva:

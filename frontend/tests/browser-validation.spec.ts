@@ -168,6 +168,9 @@ declare
     v_bot_user_id uuid := gen_random_uuid();
     v_match_id uuid;
     v_bot_player_id uuid;
+    v_tile_s_id uuid := gen_random_uuid();
+    v_tile_o_id uuid := gen_random_uuid();
+    v_tile_l_id uuid := gen_random_uuid();
 begin
     v_match_id := public.create_patxanga_match(
         p_host_user_id := v_human_user_id,
@@ -187,6 +190,19 @@ begin
     );
 
     perform public.start_patxanga_match(v_match_id);
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_tile_s_id::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_tile_o_id::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_tile_l_id::text, 'letter', 'L', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Q', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'X', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Z', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'K', 'points', 7, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_bot_player_id;
 
     update public.patxanga_matches
     set current_turn_player_id = v_bot_player_id,
@@ -363,7 +379,7 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
   });
 
-  test("auto-passes a bot turn in a human versus bot match", async ({ page }) => {
+  test("auto-plays a valid bot opening word in a human versus bot match", async ({ page }) => {
     const scenario = createHumanVsBotScenarioWithBotTurn();
 
     await page.goto("/");
@@ -376,9 +392,12 @@ test.describe("browser validation scenarios", () => {
 
     await expect(page.getByText("bot easy / balanced", { exact: true })).toBeVisible();
     await expect(page.getByTestId("bot-action-message")).toContainText(
-      "Bot passou o turno automaticamente."
+      "Bot jogou SOL."
     );
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+    await expect(page.getByTestId("board-cell-7-7")).toContainText("S");
+    await expect(page.getByTestId("board-cell-7-8")).toContainText("O");
+    await expect(page.getByTestId("board-cell-7-9")).toContainText("L");
   });
 
   test("submits an accepted word through rack slots", async ({ page }) => {

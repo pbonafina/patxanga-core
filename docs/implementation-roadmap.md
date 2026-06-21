@@ -38,7 +38,7 @@ Leitura atual do projeto:
 | Dicionario | Contrato por idioma/fonte/ativo consolidado; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
 | Bots de teste e simulacao | Baseline alta: contrato, runner e sete cenarios deterministicos validados |
-| Bot | MVP humano contra bot criado; bot `easy` passa automaticamente, sem inteligencia de jogada ainda |
+| Bot | MVP humano contra bot criado; bot `easy` tenta abertura valida por dicionario e passa como fallback |
 | Documentacao de jogador | Manual inicial criado em `docs/como-jogar-patxanga.md` |
 
 Diretriz principal:
@@ -451,19 +451,21 @@ Estado atual:
 - `join_patxanga_match()` aceita parametros de bot
 - bootstrap de partida expoe metadados de bot para o frontend
 - UI cria partida humano + bot local
-- bot `easy` passa o turno automaticamente quando for sua vez
-- Playwright cobre criacao humano contra bot e auto-pass deterministico
-- ainda nao existe engine de bot que escolha palavras
+- bot `easy` chama `submit_patxanga_easy_bot_turn(...)` quando for sua vez
+- a politica tenta uma abertura horizontal com palavra reconhecida no dicionario ativo
+- se nao houver abertura segura, o bot passa automaticamente
+- SQL cobre jogada real `SOL` e fallback de passe
+- Playwright cobre criacao humano contra bot e jogada real deterministica do bot
+- ainda nao existe bot que encaixe palavras em tabuleiro ja ocupado
 - nao existe Edge Function de bot
-- ainda nao existe bot jogando palavra propria
 
 Entregas futuras:
 
 | Item | Acao | Criterio de saida |
 |------|------|-------------------|
-| Motor simples | Bot escolhe jogada legal simples ou passa | Turno do bot nao trava partida e bot consegue pontuar |
+| Encaixe simples | Bot tenta palavra conectada ao tabuleiro antes de passar | Bot consegue jogar alem da abertura |
 | Execucao automatica | Edge Function ou rotina equivalente executa o turno | Bot joga sem acao manual |
-| Testes | SQL/Playwright cobrem humano contra bot com jogada real do bot | Fluxo fica regressivo |
+| Testes | SQL/Playwright cobrem humano contra bot apos primeira rodada | Fluxo fica regressivo |
 
 Prioridade:
 

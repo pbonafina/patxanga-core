@@ -286,6 +286,7 @@ trap 'rm -f "$TMP_OUT"' EXIT
     sql/migrations/003_dictionary_import_pipeline.sql \
     sql/rpc/import_dictionary_entries.sql \
     sql/rpc/preview_move.sql \
+    sql/rpc/submit_easy_bot_turn.sql \
     sql/rpc/submit_move.sql \
     sql/rpc/validate_word.sql \
     sql/seeds/001_patxanga_distribution.sql \
@@ -296,6 +297,7 @@ trap 'rm -f "$TMP_OUT"' EXIT
     sql/tests/test_dictionary_import_pipeline.sql \
     sql/tests/test_dictionary_imported_words_engine_path.sql \
     sql/tests/test_dictionary_policy_voting_path.sql \
+    sql/tests/test_easy_bot_turn_policy.sql \
     sql/tests/test_match_bootstrap_bot_metadata.sql \
     sql/simulations/bot_simulation_smoke.sql \
     sql/simulations/bot_simulation_pending_vote.sql \
@@ -310,7 +312,8 @@ trap 'rm -f "$TMP_OUT"' EXIT
     supabase/migrations/20260620215000_23_match_language_dictionary_validation.sql \
     supabase/migrations/20260620220000_24_pt_pt_language_baseline.sql \
     supabase/migrations/20260621090000_25_dictionary_import_pipeline.sql \
-    supabase/migrations/20260621093000_26_match_bootstrap_bot_metadata.sql
+    supabase/migrations/20260621093000_26_match_bootstrap_bot_metadata.sql \
+    supabase/migrations/20260621105000_27_easy_bot_opening_policy.sql
   do
     if [ -f "$file" ]; then
       echo "## FILE: $file"

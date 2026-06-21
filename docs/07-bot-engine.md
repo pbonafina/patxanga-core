@@ -1,7 +1,7 @@
 # PATXANGA - BOT ENGINE
 
-Versao: 0.7
-Status: Baseline de simulacao + MVP humano contra bot com auto-pass
+Versao: 0.8
+Status: Baseline de simulacao + MVP humano contra bot com politica easy de abertura
 
 ---
 
@@ -81,14 +81,18 @@ Ja existe:
   `pending_vote` em ponte com peca existente e rejeicao por voto
 - bootstrap de partida expondo `is_bot`, `bot_level` e `bot_profile`
 - UI de partida rapida humano contra bot
-- acao automatica inicial do bot `easy`: passar o turno quando for a vez dele
-- regressao Playwright para criar humano contra bot e validar auto-pass
+- RPC `submit_patxanga_easy_bot_turn(...)`
+- acao automatica inicial do bot `easy`: tentar abertura valida por dicionario
+  ativo antes de passar
+- fallback de passe quando nao ha palavra segura para abertura
+- regressao SQL para `place_word` real e fallback de passe do bot `easy`
+- regressao Playwright para criar humano contra bot e validar jogada real do bot
 
 Ainda nao existe:
 
 - engine autonoma de bot
 - Edge Function de bot
-- bot que escolha jogada por conta propria
+- bot que encaixe palavras em tabuleiro ja ocupado
 
 ---
 
@@ -143,19 +147,31 @@ e joga no centro.
 
 Uso inicial:
 
-- palavra `DA`
-- posicoes `(8,8)` e `(8,9)`
-- score esperado: 6
+- palavras do dicionario ativo que possam ser formadas com letras normais
+  do rack
+- posicoes iniciando em `(8,8)`, horizontalmente
+- exemplo de regressao: `SOL` em `(8,8)`, `(8,9)` e `(8,10)`
+- score esperado no exemplo: 8
+- RPC de produto inicial: `submit_patxanga_easy_bot_turn(...)`
+
+Limites atuais:
+
+- nao usa curingas nem pecas especiais
+- nao tenta encaixe em tabuleiro ja ocupado
+- nao faz busca combinatoria ampla
+- escolhe a primeira palavra valida por tamanho e ordem alfabetica
 
 ### `pass_turn`
 
-Executa `submit_patxanga_pass_turn(...)` quando for turno do bot.
+Executa `submit_patxanga_pass_turn(...)` quando for turno do bot e a politica
+nao encontrar jogada segura.
 
 Uso inicial:
 
 - validar avancar turno
 - validar replay de passe
 - validar ciclo de pass futuro
+- manter partida humano contra bot sem travar
 
 ### Futuras politicas
 
@@ -214,8 +230,9 @@ Nao faz parte desta fase:
 Excecao entregue no MVP 2026-06-21:
 
 - a UI ja permite criar uma partida humano contra bot local
-- o bot `easy` ainda nao escolhe palavra; ele apenas passa o turno
-  automaticamente
+- o bot `easy` tenta abertura horizontal com palavra reconhecida pelo dicionario
+  ativo
+- se nao houver abertura segura, ele passa automaticamente
 - essa automacao existe para provar o ciclo de produto sem travar partida
   quando o turno chega ao bot
 
@@ -235,9 +252,8 @@ A primeira fase de bots de teste esta iniciada. Criterios ja atendidos:
 
 Proximo criterio de avanco:
 
-- extrair uma politica simples de bot `easy` que tente uma abertura valida
-  antes de passar
-- manter fallback de passe quando nao houver jogada segura
-- cobrir a primeira jogada real do bot por SQL/Playwright
+- permitir uma politica simples de encaixe em tabuleiro ja ocupado
+- decidir se o bot `easy` pode usar curingas ou se isso fica para outro nivel
+- cobrir jogada real do bot apos a primeira rodada por SQL/Playwright
 
 Fim do documento.
