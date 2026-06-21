@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-21 08:40:22
+Generated at: 2026-06-21 08:50:33
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,14 +93,14 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## feature/licensed-dictionary-source-sample
- M docs/current-development-continuity-spec-v1.0.md
- M docs/dictionary-import-pipeline-v1.0.md
- M docs/implementation-roadmap.md
- M generate-room-baton-package.sh
-?? scripts/import-libreoffice-pt-br-sample.sh
-?? scripts/prepare-libreoffice-dictionary-sample.py
-?? scripts/test-libreoffice-dictionary-sample.sh
+## feature/licensed-pt-pt-dictionary-sample
+M  docs/18-room-baton-package-current.md
+M  docs/current-development-continuity-spec-v1.0.md
+M  docs/dictionary-import-pipeline-v1.0.md
+M  docs/implementation-roadmap.md
+M  generate-room-baton-package.sh
+A  scripts/import-libreoffice-pt-pt-sample.sh
+M  scripts/test-libreoffice-dictionary-sample.sh
 ```
 
 ### git remote -v
@@ -111,7 +111,9 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-7b4ea65 (HEAD -> feature/licensed-dictionary-source-sample, origin/develop, origin/HEAD, develop) Merge pull request #6 from pbonafina/feature/dictionary-csv-import-tooling
+bfeacea (HEAD -> feature/licensed-pt-pt-dictionary-sample, origin/develop, origin/HEAD, develop) Merge pull request #7 from pbonafina/feature/licensed-dictionary-source-sample
+159ee49 feat: validate licensed dictionary source sample
+7b4ea65 Merge pull request #6 from pbonafina/feature/dictionary-csv-import-tooling
 86358e3 feat: add dictionary CSV import tooling
 3cc1c70 Merge pull request #5 from pbonafina/feature/dictionary-import-pipeline
 0e38fa8 feat: add audited dictionary import pipeline
@@ -124,8 +126,6 @@ cbb3dd8 (origin/feature/match-language-dictionary-validation, feature/match-lang
 0d3997c Merge pull request #1 from pbonafina/upgrade/next16-audit
 a263bb7 (origin/upgrade/next16-audit, upgrade/next16-audit) docs: refresh baton package after checkpoint
 d1ee0c2 fix(docs): generate baton package atomically
-4d8bff9 docs: refresh room baton package
-cab289b docs: consolidate gameplay and continuity plans
 ```
 
 ### tail -n 60 ../project-log.md
@@ -3477,6 +3477,57 @@ Resultado da primeira validacao local:
   idempotencia da pipeline para essa fonte/amostra
 - o banco local foi resetado depois da validacao para voltar a baseline limpa
 
+## Fonte candidata validada tecnicamente: LibreOffice Hunspell pt-PT
+
+Fonte candidata para a primeira importacao controlada `pt-PT`:
+
+- familia: LibreOffice dictionaries, Hunspell `pt_PT`
+- arquivo bruto: `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_PT/pt_PT.dic`
+- README/licenca: `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_PT/README_pt_PT.txt`
+- LICENSES: `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_PT/LICENSES.txt`
+- pasta upstream: `https://github.com/LibreOffice/dictionaries/tree/master/pt_PT`
+- licenca declarada no README: `GPLv2/LGPLv2.1/MPLv1.1`
+- observacao de licenca: `LICENSES.txt` tambem registra `GPL/BSD` para o corrector ortografico
+- commit upstream verificado: `93d537dc6afb0130de3da75d42c070ac267db957`
+- SHA-256 de `pt_PT.dic`: `e29ba2d7aa8a2ad43e9cb46ac6473064b661545c87002aea90e18899d98d3cc9`
+- SHA-256 de `README_pt_PT.txt`: `36de7d88a406a4947bf646a64145f00827566808988632e3df969aa95776060c`
+- SHA-256 de `LICENSES.txt`: `d2c1cfe2e2dd81c651aec3fda5d1b4b4e7679b9e04f8cdc37586e521837384d1`
+- contagem declarada no `.dic`: `44476`
+
+Status: candidata para validacao tecnica local. A divergencia/ambiguidade entre
+README e `LICENSES.txt` exige revisao humana/legal antes de qualquer decisao de
+produto ou distribuicao.
+
+Preparar a amostra e o SQL sem executar:
+
+```bash
+zsh scripts/import-libreoffice-pt-pt-sample.sh --limit 100
+```
+
+Preparar e executar contra o Supabase local:
+
+```bash
+zsh scripts/import-libreoffice-pt-pt-sample.sh --limit 100 --execute
+```
+
+Se os arquivos ja estiverem baixados em
+`/private/tmp/patxanga-dictionary-sources/libreoffice-pt-pt`, a execucao pode
+reaproveita-los:
+
+```bash
+zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 100
+```
+
+O `source` usado pela amostra e `libreoffice_hunspell_pt_pt_sample`. Nao usar
+`p_deactivate_missing := true` nessa amostra.
+
+Resultado da primeira validacao local:
+
+- `--limit 25` gerou 25 entradas validas a partir do `.dic`
+- primeira execucao inseriu 25 linhas no dicionario local
+- segunda execucao com os mesmos metadados inseriu 0 e atualizou 25, confirmando
+  idempotencia da pipeline para essa fonte/amostra
+
 ## Entrada Canonica
 
 A RPC administrativa recebe um array JSON. Cada item deve ter:
@@ -3593,6 +3644,7 @@ Validacao minima apos mudar a pipeline:
 zsh scripts/test-dictionary-import-tooling.sh
 zsh scripts/test-libreoffice-dictionary-sample.sh
 zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --limit 25 --execute
+zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25 --execute
 supabase db reset
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
 zsh scripts/run-sql-test-suite.sh all
@@ -3638,7 +3690,7 @@ Leitura atual do projeto:
 | Primeira tela jogavel | Existe, mas ainda precisa evoluir de sandbox operacional para produto |
 | Rack e composicao por slots | Implementado como superficie oficial de preparo no frontend |
 | Votacao | Funcional, mas ainda precisa UX de produto |
-| Dicionario | Contrato por idioma/fonte/ativo consolidado; seed PT-BR pequeno para QA; fonte LibreOffice Hunspell pt-BR validada como candidata tecnica de amostra |
+| Dicionario | Contrato por idioma/fonte/ativo consolidado; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
 | Bots de teste e simulacao | Prioridade alta; frente iniciada com contrato, runner e smoke deterministico |
 | Bot | Apenas modelado no banco; ainda nao existe modo jogavel humano contra bot |
@@ -3971,15 +4023,22 @@ Estado atual:
 - `scripts/import-libreoffice-pt-br-sample.sh` baixa a fonte para
   `/private/tmp`, registra metadados, gera SQL auditado e opcionalmente executa
   a primeira importacao controlada local
+- fonte candidata LibreOffice Hunspell `pt_PT` verificada tecnicamente com
+  commit upstream, hashes SHA-256 do `.dic`, README e `LICENSES.txt`
+  registrados em `docs/dictionary-import-pipeline-v1.0.md`
+- `scripts/import-libreoffice-pt-pt-sample.sh` baixa a fonte `pt_PT`, registra
+  metadados, gera SQL auditado e opcionalmente executa importacao controlada
+  local em `pt-PT`
 - `scripts/test-libreoffice-dictionary-sample.sh` cobre o extrator com fixture
-  local, sem rede
+  local e tambem exercita o gerador `pt-PT`, sem rede
 
 Proximos passos:
 
 - transformar a fonte candidata em decisao de produto somente depois de revisao
-  humana/legal da licenca
-- decidir se a importacao ampla de `pt-BR` usara lemas Hunspell, expansao de
-  flexoes ou curadoria propria
+  humana/legal da licenca; isso e especialmente necessario para `pt-PT`, porque
+  README e `LICENSES.txt` registram licencas em formatos diferentes
+- decidir se a importacao ampla de `pt-BR`/`pt-PT` usara lemas Hunspell,
+  expansao de flexoes ou curadoria propria
 - decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
 - substituir a baseline minima `pt-PT` por fonte ampla licenciada e auditada
 - auditar a distribuicao de pecas `pt-PT`; por enquanto ela e uma baseline
@@ -3990,6 +4049,7 @@ Validacao minima:
 ```bash
 zsh scripts/test-dictionary-import-tooling.sh
 zsh scripts/test-libreoffice-dictionary-sample.sh
+zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25 --execute
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
 zsh scripts/run-sql-test-suite.sh all
@@ -4522,6 +4582,60 @@ Validacao confirmada nesta frente:
 - `zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --limit 25 --execute`
 - primeira execucao da amostra: 25 linhas inseridas, 0 puladas
 - segunda execucao da mesma amostra: 0 inseridas, 25 atualizadas
+- `supabase db reset`
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+
+## 1.3 Atualizacao operacional de continuidade - 2026-06-21 pt-PT
+
+Estado desta frente:
+
+- branch de implementacao: `feature/licensed-pt-pt-dictionary-sample`
+- foco: adicionar validacao tecnica equivalente para uma fonte lexical ampla
+  `pt-PT`, sem versionar dump no repositorio
+- fonte candidata: LibreOffice dictionaries Hunspell `pt_PT`
+- README upstream declara `GPLv2/LGPLv2.1/MPLv1.1`
+- `LICENSES.txt` tambem registra `GPL/BSD` para o corrector ortografico
+- decisao de produto exige revisao humana/legal por haver metadados de licenca
+  menos claros que em `pt_BR`
+- commit upstream verificado:
+  `93d537dc6afb0130de3da75d42c070ac267db957`
+- arquivo bruto verificado:
+  `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_PT/pt_PT.dic`
+- README/licenca verificado:
+  `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_PT/README_pt_PT.txt`
+- LICENSES verificado:
+  `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_PT/LICENSES.txt`
+- SHA-256 de `pt_PT.dic`:
+  `e29ba2d7aa8a2ad43e9cb46ac6473064b661545c87002aea90e18899d98d3cc9`
+- SHA-256 de `README_pt_PT.txt`:
+  `36de7d88a406a4947bf646a64145f00827566808988632e3df969aa95776060c`
+- SHA-256 de `LICENSES.txt`:
+  `d2c1cfe2e2dd81c651aec3fda5d1b4b4e7679b9e04f8cdc37586e521837384d1`
+- contagem declarada no `.dic`: `44476`
+
+Arquivos novos desta frente:
+
+- `scripts/import-libreoffice-pt-pt-sample.sh`
+
+Comandos de referencia desta frente:
+
+```bash
+zsh scripts/test-libreoffice-dictionary-sample.sh
+zsh scripts/import-libreoffice-pt-pt-sample.sh --limit 100
+zsh scripts/import-libreoffice-pt-pt-sample.sh --limit 100 --execute
+zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25 --execute
+```
+
+Validacao confirmada nesta frente antes do reset:
+
+- `zsh scripts/test-libreoffice-dictionary-sample.sh`
+- `python3 -m py_compile scripts/prepare-libreoffice-dictionary-sample.py scripts/prepare-dictionary-import.py`
+- `zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25`
+- `zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25 --execute`
+- primeira execucao da amostra `pt-PT`: 25 linhas inseridas, 0 puladas
+- segunda execucao da mesma amostra `pt-PT`: 0 inseridas, 25 atualizadas
 - `supabase db reset`
 - `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql`
 - `zsh scripts/run-sql-test-suite.sh all`
@@ -5745,6 +5859,8 @@ trap 'rm -rf "$tmp_dir"' EXIT
 fixture_dic="$tmp_dir/pt_BR_fixture.dic"
 sample_csv="$tmp_dir/sample.csv"
 import_sql="$tmp_dir/import.sql"
+pt_pt_source_dir="$tmp_dir/pt-pt-source"
+pt_pt_sql="$pt_pt_source_dir/patxanga-libreoffice-pt-pt-sample-3.sql"
 
 cat > "$fixture_dic" <<'DIC'
 9
@@ -5802,6 +5918,47 @@ python3 scripts/prepare-dictionary-import.py \
 grep -q "libreoffice_hunspell_pt_br_sample_test" "$import_sql"
 grep -q "AÇÃO" "$import_sql"
 grep -q '"input_rows":5' "$import_sql"
+
+mkdir -p "$pt_pt_source_dir"
+cat > "$pt_pt_source_dir/pt_PT.dic" <<'DIC'
+6
+,	[CAT=punct1a]
+abacateiro/p	[CAT=nc,G=m,N=s]
+abacate/p	[CAT=nc,G=m,N=s]
+ábaco/p	[CAT=nc,G=m,N=s]
+abaixo-assinado/p	[CAT=nc,G=m,N=s]
+abalar/XYPLv	[CAT=v,T=inf,TR=t]
+DIC
+cat > "$pt_pt_source_dir/README_pt_PT.txt" <<'TXT'
+Regarding license versions:
+     1. GPL Version 2
+     2. LGPL Version 2.1
+     3. MPL Version 1.1
+TXT
+cat > "$pt_pt_source_dir/LICENSES.txt" <<'TXT'
+Spellchecker / Corrector ortografico
+All dictionary files and associated programs are currently covered
+by the GPL and BSD licence
+TXT
+cat > "$pt_pt_source_dir/master-commit.json" <<'JSON'
+{"sha":"fixture-commit-sha"}
+JSON
+
+zsh scripts/import-libreoffice-pt-pt-sample.sh \
+  --skip-download \
+  --source-dir "$pt_pt_source_dir" \
+  --limit 3 \
+  > "$tmp_dir/pt-pt-import.stdout"
+
+grep -q "LibreOffice pt-PT sample prepared" "$tmp_dir/pt-pt-import.stdout"
+grep -q "upstream_commit_sha=fixture-commit-sha" "$tmp_dir/pt-pt-import.stdout"
+grep -q "p_language := 'pt-PT'" "$pt_pt_sql"
+grep -q "libreoffice_hunspell_pt_pt_sample" "$pt_pt_sql"
+grep -q "GPLv2/LGPLv2.1/MPLv1.1" "$pt_pt_sql"
+grep -q "ABACATEIRO" "$pt_pt_sql"
+grep -q "ABACATE" "$pt_pt_sql"
+grep -q "ÁBACO" "$pt_pt_sql"
+grep -q '"license_review_required":true' "$pt_pt_sql"
 
 echo "LibreOffice dictionary sample test passed"
 
@@ -5945,6 +6102,175 @@ select
     deactivated_count
 from public.patxanga_dictionary_import_batches
 where source = 'libreoffice_hunspell_pt_br_sample'
+order by created_at desc
+limit 1;
+SQL
+fi
+
+## FILE: scripts/import-libreoffice-pt-pt-sample.sh
+
+#!/bin/zsh
+set -euo pipefail
+
+repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$repo_dir"
+
+source_dir="${PATXANGA_DICTIONARY_SOURCE_DIR:-/private/tmp/patxanga-dictionary-sources/libreoffice-pt-pt}"
+limit="${PATXANGA_DICTIONARY_SAMPLE_LIMIT:-100}"
+execute=0
+skip_download=0
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --execute)
+      execute=1
+      shift
+      ;;
+    --skip-download)
+      skip_download=1
+      shift
+      ;;
+    --limit)
+      limit="$2"
+      shift 2
+      ;;
+    --source-dir)
+      source_dir="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+mkdir -p "$source_dir"
+
+dic_url="https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_PT/pt_PT.dic"
+readme_url="https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_PT/README_pt_PT.txt"
+licenses_url="https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_PT/LICENSES.txt"
+commit_url="https://api.github.com/repos/LibreOffice/dictionaries/commits/master"
+
+dic_file="$source_dir/pt_PT.dic"
+readme_file="$source_dir/README_pt_PT.txt"
+licenses_file="$source_dir/LICENSES.txt"
+commit_file="$source_dir/master-commit.json"
+sample_csv="$source_dir/patxanga-libreoffice-pt-pt-sample-${limit}.csv"
+metadata_file="$source_dir/patxanga-libreoffice-pt-pt-sample-${limit}.metadata.json"
+sql_file="$source_dir/patxanga-libreoffice-pt-pt-sample-${limit}.sql"
+
+if [ "$skip_download" -eq 0 ]; then
+  curl -L --fail --silent --show-error "$dic_url" -o "$dic_file"
+  curl -L --fail --silent --show-error "$readme_url" -o "$readme_file"
+  curl -L --fail --silent --show-error "$licenses_url" -o "$licenses_file"
+  curl -L --fail --silent --show-error "$commit_url" -o "$commit_file"
+fi
+
+if [ ! -f "$dic_file" ] || [ ! -f "$readme_file" ] || [ ! -f "$licenses_file" ]; then
+  echo "Missing source files in $source_dir. Run without --skip-download first." >&2
+  exit 1
+fi
+
+commit_sha="unknown"
+if [ -f "$commit_file" ]; then
+  commit_sha="$(python3 -c "import json, sys; print(json.load(open(sys.argv[1], encoding='utf-8'))['sha'])" "$commit_file")"
+fi
+
+dic_sha256="$(LC_ALL=C shasum -a 256 "$dic_file" | awk '{print $1}')"
+readme_sha256="$(LC_ALL=C shasum -a 256 "$readme_file" | awk '{print $1}')"
+licenses_sha256="$(LC_ALL=C shasum -a 256 "$licenses_file" | awk '{print $1}')"
+declared_count="$(python3 -c "import sys; print(open(sys.argv[1], encoding='utf-8-sig').readline().strip())" "$dic_file")"
+
+python3 scripts/prepare-libreoffice-dictionary-sample.py \
+  "$dic_file" \
+  --limit "$limit" \
+  --output "$sample_csv"
+
+python3 - "$metadata_file" "$dic_sha256" "$readme_sha256" "$licenses_sha256" "$declared_count" "$limit" "$commit_sha" "$readme_url" "$licenses_url" <<'PY'
+import json
+import sys
+
+(
+    metadata_path,
+    dic_sha256,
+    readme_sha256,
+    licenses_sha256,
+    declared_count,
+    limit,
+    commit_sha,
+    readme_url,
+    licenses_url,
+) = sys.argv[1:]
+
+metadata = {
+    "technical_validation_only": True,
+    "source_family": "LibreOffice dictionaries Hunspell pt_PT",
+    "raw_sha256": dic_sha256,
+    "readme_sha256": readme_sha256,
+    "licenses_sha256": licenses_sha256,
+    "declared_entry_count": int(declared_count),
+    "sample_limit": int(limit),
+    "upstream_commit_sha": commit_sha,
+    "license_review_required": True,
+    "license_notes": (
+        "README_pt_PT.txt declares GPLv2/LGPLv2.1/MPLv1.1; "
+        "LICENSES.txt also notes GPL/BSD for the spellchecker."
+    ),
+    "readme_url": readme_url,
+    "licenses_url": licenses_url,
+    "filter": {
+        "min_length": 3,
+        "max_length": 15,
+        "letters_only": True,
+        "lowercase_source_only": True,
+        "dedupe_like_database": True,
+    },
+}
+
+with open(metadata_path, "w", encoding="utf-8") as metadata_handle:
+    json.dump(metadata, metadata_handle, ensure_ascii=False, separators=(",", ":"))
+PY
+
+python3 scripts/prepare-dictionary-import.py \
+  "$sample_csv" \
+  --mode sql \
+  --language pt-PT \
+  --source libreoffice_hunspell_pt_pt_sample \
+  --license-name "GPLv2/LGPLv2.1/MPLv1.1" \
+  --source-version "$commit_sha" \
+  --license-url "$readme_url" \
+  --source-url "$dic_url" \
+  --imported-by scripts/import-libreoffice-pt-pt-sample.sh \
+  --metadata-json "$(cat "$metadata_file")" \
+  > "$sql_file"
+
+echo "LibreOffice pt-PT sample prepared"
+echo "source_dir=$source_dir"
+echo "upstream_commit_sha=$commit_sha"
+echo "dic_sha256=$dic_sha256"
+echo "readme_sha256=$readme_sha256"
+echo "licenses_sha256=$licenses_sha256"
+echo "sample_csv=$sample_csv"
+echo "metadata_json=$metadata_file"
+echo "import_sql=$sql_file"
+
+if [ "$execute" -eq 1 ]; then
+  container="${SUPABASE_DB_CONTAINER:-supabase_db_patxanga-core}"
+  docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$sql_file"
+  docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d postgres <<'SQL'
+select
+    source,
+    source_version,
+    license_name,
+    total_rows,
+    valid_rows,
+    inserted_count,
+    updated_count,
+    skipped_count,
+    deactivated_count
+from public.patxanga_dictionary_import_batches
+where source = 'libreoffice_hunspell_pt_pt_sample'
 order by created_at desc
 limit 1;
 SQL

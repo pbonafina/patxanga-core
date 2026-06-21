@@ -35,7 +35,7 @@ Leitura atual do projeto:
 | Primeira tela jogavel | Existe, mas ainda precisa evoluir de sandbox operacional para produto |
 | Rack e composicao por slots | Implementado como superficie oficial de preparo no frontend |
 | Votacao | Funcional, mas ainda precisa UX de produto |
-| Dicionario | Contrato por idioma/fonte/ativo consolidado; seed PT-BR pequeno para QA; fonte LibreOffice Hunspell pt-BR validada como candidata tecnica de amostra |
+| Dicionario | Contrato por idioma/fonte/ativo consolidado; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
 | Bots de teste e simulacao | Prioridade alta; frente iniciada com contrato, runner e smoke deterministico |
 | Bot | Apenas modelado no banco; ainda nao existe modo jogavel humano contra bot |
@@ -368,15 +368,22 @@ Estado atual:
 - `scripts/import-libreoffice-pt-br-sample.sh` baixa a fonte para
   `/private/tmp`, registra metadados, gera SQL auditado e opcionalmente executa
   a primeira importacao controlada local
+- fonte candidata LibreOffice Hunspell `pt_PT` verificada tecnicamente com
+  commit upstream, hashes SHA-256 do `.dic`, README e `LICENSES.txt`
+  registrados em `docs/dictionary-import-pipeline-v1.0.md`
+- `scripts/import-libreoffice-pt-pt-sample.sh` baixa a fonte `pt_PT`, registra
+  metadados, gera SQL auditado e opcionalmente executa importacao controlada
+  local em `pt-PT`
 - `scripts/test-libreoffice-dictionary-sample.sh` cobre o extrator com fixture
-  local, sem rede
+  local e tambem exercita o gerador `pt-PT`, sem rede
 
 Proximos passos:
 
 - transformar a fonte candidata em decisao de produto somente depois de revisao
-  humana/legal da licenca
-- decidir se a importacao ampla de `pt-BR` usara lemas Hunspell, expansao de
-  flexoes ou curadoria propria
+  humana/legal da licenca; isso e especialmente necessario para `pt-PT`, porque
+  README e `LICENSES.txt` registram licencas em formatos diferentes
+- decidir se a importacao ampla de `pt-BR`/`pt-PT` usara lemas Hunspell,
+  expansao de flexoes ou curadoria propria
 - decidir politica para flexoes, nomes proprios, siglas, hifen e variantes
 - substituir a baseline minima `pt-PT` por fonte ampla licenciada e auditada
 - auditar a distribuicao de pecas `pt-PT`; por enquanto ela e uma baseline
@@ -387,6 +394,7 @@ Validacao minima:
 ```bash
 zsh scripts/test-dictionary-import-tooling.sh
 zsh scripts/test-libreoffice-dictionary-sample.sh
+zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25 --execute
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql
 zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_contract.sql
 zsh scripts/run-sql-test-suite.sh all

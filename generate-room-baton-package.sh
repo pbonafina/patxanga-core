@@ -277,6 +277,7 @@ trap 'rm -f "$TMP_OUT"' EXIT
     scripts/test-dictionary-import-tooling.sh \
     scripts/test-libreoffice-dictionary-sample.sh \
     scripts/import-libreoffice-pt-br-sample.sh \
+    scripts/import-libreoffice-pt-pt-sample.sh \
     scripts/run-bot-simulation.sh \
     scripts/run-sql-test-suite.sh \
     sql/migrations/002_dictionary.sql \

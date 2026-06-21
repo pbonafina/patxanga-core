@@ -167,6 +167,60 @@ Validacao confirmada nesta frente:
 - `zsh scripts/run-sql-test-suite.sh all`
 - `zsh scripts/run-bot-simulation.sh all`
 
+## 1.3 Atualizacao operacional de continuidade - 2026-06-21 pt-PT
+
+Estado desta frente:
+
+- branch de implementacao: `feature/licensed-pt-pt-dictionary-sample`
+- foco: adicionar validacao tecnica equivalente para uma fonte lexical ampla
+  `pt-PT`, sem versionar dump no repositorio
+- fonte candidata: LibreOffice dictionaries Hunspell `pt_PT`
+- README upstream declara `GPLv2/LGPLv2.1/MPLv1.1`
+- `LICENSES.txt` tambem registra `GPL/BSD` para o corrector ortografico
+- decisao de produto exige revisao humana/legal por haver metadados de licenca
+  menos claros que em `pt_BR`
+- commit upstream verificado:
+  `93d537dc6afb0130de3da75d42c070ac267db957`
+- arquivo bruto verificado:
+  `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_PT/pt_PT.dic`
+- README/licenca verificado:
+  `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_PT/README_pt_PT.txt`
+- LICENSES verificado:
+  `https://raw.githubusercontent.com/LibreOffice/dictionaries/master/pt_PT/LICENSES.txt`
+- SHA-256 de `pt_PT.dic`:
+  `e29ba2d7aa8a2ad43e9cb46ac6473064b661545c87002aea90e18899d98d3cc9`
+- SHA-256 de `README_pt_PT.txt`:
+  `36de7d88a406a4947bf646a64145f00827566808988632e3df969aa95776060c`
+- SHA-256 de `LICENSES.txt`:
+  `d2c1cfe2e2dd81c651aec3fda5d1b4b4e7679b9e04f8cdc37586e521837384d1`
+- contagem declarada no `.dic`: `44476`
+
+Arquivos novos desta frente:
+
+- `scripts/import-libreoffice-pt-pt-sample.sh`
+
+Comandos de referencia desta frente:
+
+```bash
+zsh scripts/test-libreoffice-dictionary-sample.sh
+zsh scripts/import-libreoffice-pt-pt-sample.sh --limit 100
+zsh scripts/import-libreoffice-pt-pt-sample.sh --limit 100 --execute
+zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25 --execute
+```
+
+Validacao confirmada nesta frente antes do reset:
+
+- `zsh scripts/test-libreoffice-dictionary-sample.sh`
+- `python3 -m py_compile scripts/prepare-libreoffice-dictionary-sample.py scripts/prepare-dictionary-import.py`
+- `zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25`
+- `zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25 --execute`
+- primeira execucao da amostra `pt-PT`: 25 linhas inseridas, 0 puladas
+- segunda execucao da mesma amostra `pt-PT`: 0 inseridas, 25 atualizadas
+- `supabase db reset`
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+
 Validacao confirmada nesta rodada:
 
 - `zsh scripts/run-bot-simulation.sh smoke`
