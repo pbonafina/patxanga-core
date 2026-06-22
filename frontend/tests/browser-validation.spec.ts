@@ -788,6 +788,18 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("board-cell-9-9")).toContainText("A");
   });
 
+  test("passes the turn on the current match without making a move", async ({ page }) => {
+    const scenario = createSlotMoveScenario("DA");
+
+    await openPreparedMatch(page, scenario);
+    await expect(page.getByTestId("pass-turn-action")).toBeEnabled();
+
+    await page.getByTestId("pass-turn-action").click();
+
+    await expect(page.getByTestId("turn-action-message")).toContainText("Turno passado com sucesso.");
+    await expect(page.getByText("Aguardar o outro jogador")).toBeVisible();
+  });
+
   test("opens a finished match with endgame summary", async ({ page }) => {
     const scenario = createFinishedEmptyRackScenario();
 
@@ -924,5 +936,27 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("pending-vote-panel")).toHaveCount(0);
     await expect(page.getByTestId("board-cell-7-7")).toContainText("T");
     await expect(page.getByTestId("board-cell-7-8")).toContainText("S");
+  });
+
+  test("exchanges selected rack pieces in the current player's turn", async ({ page }) => {
+    const scenario = createSlotMoveScenario("DA");
+
+    await openPreparedMatch(page, scenario);
+    await expect(page.getByTestId("exchange-turn-toggle")).toBeVisible();
+
+    await page.getByTestId("exchange-turn-toggle").click();
+    await expect(page.getByTestId("exchange-turn-submit")).toBeVisible();
+    await expect(page.getByTestId("exchange-turn-submit")).toBeDisabled();
+
+    await page.getByTestId(`rack-tile-${scenario.tileIds.D}`).click();
+    await page.getByTestId(`rack-tile-${scenario.tileIds.A}`).click();
+
+    await expect(page.getByTestId("exchange-turn-submit")).toContainText("Trocar 2 peça(s)");
+    await expect(page.getByTestId("exchange-turn-submit")).toBeEnabled();
+
+    await page.getByTestId("exchange-turn-submit").click();
+
+    await expect(page.getByTestId("turn-action-message")).toContainText("Troca concluída com 2 peças");
+    await expect(page.getByText("Aguardar o outro jogador")).toBeVisible();
   });
 });

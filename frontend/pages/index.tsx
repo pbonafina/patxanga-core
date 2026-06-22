@@ -466,8 +466,10 @@ export default function HomePage() {
   const [voteResolutionMessage, setVoteResolutionMessage] = useState<string | null>(null);
   const [isSubmittingVote, setIsSubmittingVote] = useState(false);
   const [pendingVoteContext, setPendingVoteContext] = useState<unknown | null>(null);
+  const [turnActionMessage, setTurnActionMessage] = useState<string | null>(null);
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
   const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
+  const [selectedExchangeTileIds, setSelectedExchangeTileIds] = useState<string[]>([]);
   const [selectedRackSlotId, setSelectedRackSlotId] = useState<string | null>(null);
   const [localPlacements, setLocalPlacements] = useState<Record<string, string>>({});
   const [localDeclaredLetters, setLocalDeclaredLetters] = useState<Record<string, string>>({});
@@ -513,6 +515,9 @@ export default function HomePage() {
   const [isStartingCurrentLobby, setIsStartingCurrentLobby] = useState(false);
   const [isForfeitingCurrentMatch, setIsForfeitingCurrentMatch] = useState(false);
   const [isCreatingBotMatch, setIsCreatingBotMatch] = useState(false);
+  const [isSubmittingPassTurn, setIsSubmittingPassTurn] = useState(false);
+  const [isSubmittingExchange, setIsSubmittingExchange] = useState(false);
+  const [isExchangeMode, setIsExchangeMode] = useState(false);
   const [isAutoPlayingBotTurn, setIsAutoPlayingBotTurn] = useState(false);
   const [botActionMessage, setBotActionMessage] = useState<string | null>(null);
   const [botActionError, setBotActionError] = useState<string | null>(null);
@@ -766,6 +771,17 @@ export default function HomePage() {
     resolvedBootstrap.playerId === resolvedBootstrap.currentTurnPlayerId &&
     isActive;
 
+  const isPlayerForfeited = resolvedBootstrap.playerContext?.has_forfeited === true;
+  const canCurrentPlayerTakeTurnAction = isPlayersTurn && !isPlayerForfeited;
+  const canSubmitExchange =
+    isExchangeMode && !isSubmittingExchange && selectedExchangeTileIds.length > 0;
+
+  useEffect(() => {
+    if (!isPlayersTurn || !isActive || isPlayerForfeited || !resolvedBootstrap.matchId) {
+      resetExchangeSelection();
+    }
+  }, [isPlayersTurn, isActive, isPlayerForfeited, resolvedBootstrap.matchId]);
+
   useEffect(() => {
     if (
       !isActive ||
@@ -1017,9 +1033,12 @@ export default function HomePage() {
     setVoteResolutionMessage(null);
     setPendingVoteError(null);
     setBotActionError(null);
+    setTurnActionMessage(null);
     setSelectedTileId(null);
     setSelectedTileIds([]);
+    setSelectedExchangeTileIds([]);
     setSelectedRackSlotId(null);
+    setIsExchangeMode(false);
     setLocalPlacements({});
     setLocalDeclaredLetters({});
     setLocalRackSlotDrafts({});
@@ -1092,6 +1111,11 @@ export default function HomePage() {
     setSelectedTileIds([]);
     setSelectedRackSlotId(null);
     setMovePreview(null);
+  }
+
+  function resetExchangeSelection() {
+    setSelectedExchangeTileIds([]);
+    setIsExchangeMode(false);
   }
 
   function handlePrepareSession(matchId: string, userId: string) {
@@ -1672,6 +1696,7 @@ export default function HomePage() {
     setErrorMessage(null);
     setSubmitResult(null);
     setVoteResolutionMessage(null);
+    setTurnActionMessage(null);
 
     try {
       const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
@@ -1701,16 +1726,9 @@ export default function HomePage() {
       setBootstrapData(refreshedData);
 
       await refreshPendingVoteContext(refreshedData.matchId, playerIdInput, refreshedData.status);
-
-      setSelectedTileId(null);
-      setSelectedTileIds([]);
-      setSelectedRackSlotId(null);
-      setLocalPlacements({});
-      setLocalDeclaredLetters({});
-      setLocalRackSlotDrafts({});
-      setLocalRackSlotTileAssignments({});
-      setLocalRackSlotAssociations({});
-      setMovePreview(null);
+      clearMoveCompositionPreview();
+      resetExchangeSelection();
+      setTurnActionMessage("Jogada enviada com sucesso.");
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Falha ao enviar jogada."
@@ -1720,6 +1738,109 @@ export default function HomePage() {
     }
   }
 
+  async function handlePassTurn() {
+    if (!resolvedBootstrap.matchId || !resolvedBootstrap.playerId) {
+      setErrorMessage("Sessão de partida incompleta para passar o turno.");
+      return;
+    }
+
+    if (!canCurrentPlayerTakeTurnAction) {
+      setErrorMessage("Ação de passagem permitida apenas no seu turno.");
+      return;
+    }
+
+    setIsSubmittingPassTurn(true);
+    setErrorMessage(null);
+    setTurnActionMessage("Passando turno...");
+    setVoteResolutionMessage(null);
+
+    try {
+      const client = (await import("../lib/supabase/client")).getSupabaseBrowserClient();
+      if (!client) {
+        throw new Error("Supabase client not configured in frontend environment.");
+      }
+
+      const { data, error } = await client.rpc("submit_patxanga_pass_turn", {
+        p_match_id: resolvedBootstrap.matchId,
+        p_player_id: resolvedBootstrap.playerId,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setSubmitResult(data ?? null);
+      await refreshMatchStateAfterTurnAction();
+      clearMoveCompositionPreview();
+      setTurnActionMessage("Turno passado com sucesso.");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Falha ao passar o turno."
+      );
+    } finally {
+      setIsSubmittingPassTurn(false);
+    }
+  }
+
+  async function handleSubmitExchange() {
+    if (!resolvedBootstrap.matchId || !resolvedBootstrap.playerId) {
+      setErrorMessage("Sessão de partida incompleta para trocar peças.");
+      return;
+    }
+
+    if (!canCurrentPlayerTakeTurnAction) {
+      setErrorMessage("Ação de troca permitida apenas no seu turno.");
+      return;
+    }
+
+    if (!isExchangeMode) {
+      setErrorMessage("Abra o modo de troca antes de trocar peças.");
+      return;
+    }
+
+    const exchangeTileIds = Array.from(new Set(selectedExchangeTileIds)).filter((id) => id);
+
+    if (exchangeTileIds.length === 0) {
+      setErrorMessage("Selecione pelo menos uma peça para trocar.");
+      return;
+    }
+
+    setIsSubmittingExchange(true);
+    setErrorMessage(null);
+    setTurnActionMessage(`Trocando ${exchangeTileIds.length} peça(s)...`);
+    setVoteResolutionMessage(null);
+
+    try {
+      const client = (await import("../lib/supabase/client")).getSupabaseBrowserClient();
+      if (!client) {
+        throw new Error("Supabase client not configured in frontend environment.");
+      }
+
+      const { data, error } = await client.rpc("submit_patxanga_exchange_tiles", {
+        p_match_id: resolvedBootstrap.matchId,
+        p_player_id: resolvedBootstrap.playerId,
+        p_tile_ids: exchangeTileIds,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setSubmitResult(data ?? null);
+      await refreshMatchStateAfterTurnAction();
+      clearMoveCompositionPreview();
+      resetExchangeSelection();
+      setTurnActionMessage(
+        `Troca concluída com ${exchangeTileIds.length} peça${exchangeTileIds.length === 1 ? "" : "s"}.`
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Falha ao trocar peças."
+      );
+    } finally {
+      setIsSubmittingExchange(false);
+    }
+  }
 
   async function refreshPendingVoteContext(matchId: string, userId: string, status: string) {
     if (status !== "voting") {
@@ -1750,6 +1871,21 @@ export default function HomePage() {
 
     setPendingVoteContext(data ?? null);
     setPendingVoteError(null);
+  }
+
+  async function refreshMatchStateAfterTurnAction() {
+    if (!resolvedBootstrap.matchId) {
+      return;
+    }
+
+    const refreshedData = await loadMatchBootstrap({
+      matchId: resolvedBootstrap.matchId,
+      playerId: playerIdInput,
+    });
+
+    setBootstrapData(refreshedData);
+    await refreshPendingVoteContext(refreshedData.matchId, playerIdInput, refreshedData.status);
+    resetExchangeSelection();
   }
 
   async function handleSubmitVote(voteReject: boolean) {
@@ -1810,6 +1946,10 @@ export default function HomePage() {
   }
 
   function handlePlaceTile(cellKey: string, typedCell: BoardCell) {
+    if (isExchangeMode) {
+      return;
+    }
+
     if (selectedRackSlotId) {
       setLocalRackSlotAssociations((current) => {
         const next = { ...current };
@@ -1916,6 +2056,17 @@ export default function HomePage() {
   }
 
   function handleToggleTile(tileId: string) {
+    if (isExchangeMode) {
+      setSelectedTileId(null);
+      setSelectedRackSlotId(null);
+      setSelectedExchangeTileIds((current) =>
+        current.includes(tileId)
+          ? current.filter((id) => id !== tileId)
+          : [...current, tileId]
+      );
+      return;
+    }
+
     if (selectedRackSlotId) {
       handleAssignTileToRackSlot(selectedRackSlotId, tileId);
       return;
@@ -2616,7 +2767,7 @@ export default function HomePage() {
             Use este painel para decisões formais da mesa. As jogadas ficam na área principal abaixo.
           </p>
 
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
             {isWaiting && resolvedBootstrap.playerId && !resolvedBootstrap.playerContext?.has_forfeited ? (
               <button
                 type="button"
@@ -2644,7 +2795,98 @@ export default function HomePage() {
                 {isForfeitingCurrentMatch ? "Registrando desistência..." : "Desistir da partida"}
               </button>
             ) : null}
+
+            {isActive && !isFinished && resolvedBootstrap.playerId ? (
+              <button
+                type="button"
+                onClick={handlePassTurn}
+                disabled={!canCurrentPlayerTakeTurnAction || isSubmittingPassTurn || isSubmittingExchange}
+                data-testid="pass-turn-action"
+                style={{
+                  padding: "10px 14px",
+                  cursor:
+                    !canCurrentPlayerTakeTurnAction || isSubmittingPassTurn || isSubmittingExchange || isLoading
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                {isSubmittingPassTurn ? "Passando..." : "Passar turno"}
+              </button>
+            ) : null}
+
+            {isActive && !isFinished && resolvedBootstrap.playerId ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (isExchangeMode) {
+                    setIsExchangeMode(false);
+                    setSelectedExchangeTileIds([]);
+                  } else {
+                    setIsExchangeMode(true);
+                    setErrorMessage(null);
+                    setTurnActionMessage(null);
+                    setIsSubmittingExchange(false);
+                    setSelectedTileId(null);
+                    clearMoveCompositionPreview();
+                  }
+                }}
+                disabled={
+                  !canCurrentPlayerTakeTurnAction ||
+                  isSubmittingExchange ||
+                  isSubmittingPassTurn ||
+                  isLoading
+                }
+                data-testid="exchange-turn-toggle"
+                style={{
+                  padding: "10px 14px",
+                  cursor:
+                    !canCurrentPlayerTakeTurnAction ||
+                    isSubmittingExchange ||
+                    isSubmittingPassTurn ||
+                    isLoading
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                {isExchangeMode ? "Cancelar troca" : "Trocar peças"}
+              </button>
+            ) : null}
+
+            {isExchangeMode ? (
+              <button
+                type="button"
+                data-testid="exchange-turn-submit"
+                onClick={handleSubmitExchange}
+                disabled={!canSubmitExchange || isSubmittingExchange}
+                style={{
+                  padding: "10px 14px",
+                  cursor: !canSubmitExchange || isSubmittingExchange ? "not-allowed" : "pointer",
+                }}
+              >
+                {isSubmittingExchange
+                  ? "Trocando..."
+                  : `Trocar ${selectedExchangeTileIds.length} peça(s)`}
+              </button>
+            ) : null}
           </div>
+
+          {isActive && resolvedBootstrap.playerId && !canCurrentPlayerTakeTurnAction ? (
+            <p style={{ marginTop: 12, color: "#92400e" }}>
+              Aguarde o seu turno para executar ações de mesa.
+            </p>
+          ) : null}
+
+          {isExchangeMode ? (
+            <p style={{ marginTop: 8, color: "#1d4ed8", fontSize: 14 }}>
+              Selecione pelo menos uma peça do seu rack e confirme para trocar.
+            </p>
+          ) : null}
+
+          {turnActionMessage ? (
+            <p data-testid="turn-action-message" style={{ marginTop: 10, color: "#166534" }}>
+              <strong>Ação da mesa:</strong> {turnActionMessage}
+            </p>
+          ) : null}
 
           {resolvedBootstrap.playerContext?.has_forfeited ? (
             <p style={{ marginTop: 12, color: "#92400e" }}>
@@ -2673,7 +2915,7 @@ export default function HomePage() {
         compositionPlacementsByCell={compositionPlacementsByCell}
         pendingVoteTilesByCell={pendingVoteTilesByCell}
         selectedTileId={selectedTileId}
-        selectedTileIds={selectedTileIds}
+        selectedTileIds={isExchangeMode ? selectedExchangeTileIds : selectedTileIds}
         selectedRackSlotId={selectedRackSlotId}
         previewTileIds={previewTileIds}
         playerRackState={orderedPlayerRackState}
@@ -2750,7 +2992,7 @@ export default function HomePage() {
       {isActive ? (
       <RackSection
         rackTiles={orderedPlayerRackState}
-        selectedTileIds={selectedTileIds}
+        selectedTileIds={isExchangeMode ? selectedExchangeTileIds : selectedTileIds}
         activeSlotId={selectedRackSlotId}
         slotAssociationLabels={rackSlotAssociationLabels}
         previewTileIds={previewTileIds}
