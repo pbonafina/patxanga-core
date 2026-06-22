@@ -775,6 +775,15 @@ export default function HomePage() {
   const canCurrentPlayerTakeTurnAction = isPlayersTurn && !isPlayerForfeited;
   const canSubmitExchange =
     isExchangeMode && !isSubmittingExchange && selectedExchangeTileIds.length > 0;
+  const turnActionBlockReason = !isActive
+    ? "A partida precisa estar ativa para executar ações de mesa."
+    : isPlayerForfeited
+      ? "Jogador desistente nao executa ações de mesa."
+      : currentTurnPlayerSummary?.is_bot
+        ? `Aguarde o turno automático de ${currentTurnPlayerSummary.display_name}.`
+        : currentTurnPlayerSummary?.display_name
+          ? `Aguarde ${currentTurnPlayerSummary.display_name} jogar.`
+          : "Aguarde o seu turno para executar ações de mesa.";
 
   useEffect(() => {
     if (!isPlayersTurn || !isActive || isPlayerForfeited || !resolvedBootstrap.matchId) {
@@ -2875,14 +2884,16 @@ export default function HomePage() {
           </div>
 
           {isActive && resolvedBootstrap.playerId && !canCurrentPlayerTakeTurnAction ? (
-            <p style={{ marginTop: 12, color: "#92400e" }}>
-              Aguarde o seu turno para executar ações de mesa.
+            <p data-testid="turn-action-block-reason" style={{ marginTop: 12, color: "#92400e" }}>
+              {turnActionBlockReason}
             </p>
           ) : null}
 
           {isExchangeMode ? (
             <p style={{ marginTop: 8, color: "#1d4ed8", fontSize: 14 }}>
-              Selecione pelo menos uma peça do seu rack e confirme para trocar.
+              {selectedExchangeTileIds.length > 0
+                ? `${selectedExchangeTileIds.length} peça${selectedExchangeTileIds.length === 1 ? "" : "s"} selecionada${selectedExchangeTileIds.length === 1 ? "" : "s"} para troca.`
+                : "Selecione pelo menos uma peça do seu rack e confirme para trocar."}
             </p>
           ) : null}
 

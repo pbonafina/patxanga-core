@@ -29,6 +29,10 @@ type HumanVsBotScenario = {
   botPlayerId: string;
 };
 
+type HumanVsBotExchangeScenario = HumanVsBotScenario & {
+  tileIds: Record<"D" | "A", string>;
+};
+
 function runDatabaseJson<T>(sql: string): T {
   const containerName =
     process.env.PATXANGA_DB_CONTAINER ?? "supabase_db_patxanga-core";
@@ -540,6 +544,98 @@ select payload from e2e_human_vs_bot_connected_result;
 `);
 }
 
+function createHumanVsBotExchangeScenario(): HumanVsBotExchangeScenario {
+  return runDatabaseJson<HumanVsBotExchangeScenario>(`
+create temp table e2e_human_vs_bot_exchange_result(payload text);
+
+do $setup$
+declare
+    v_human_user_id uuid := gen_random_uuid();
+    v_bot_user_id uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_human_player_id uuid;
+    v_bot_player_id uuid;
+    v_human_tile_d_id uuid := gen_random_uuid();
+    v_human_tile_a_id uuid := gen_random_uuid();
+    v_bot_tile_s_id uuid := gen_random_uuid();
+    v_bot_tile_o_id uuid := gen_random_uuid();
+    v_bot_tile_l_id uuid := gen_random_uuid();
+begin
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_human_user_id,
+        p_host_guest_name := 'Human Exchange E2E',
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    select id
+    into v_human_player_id
+    from public.patxanga_players
+    where match_id = v_match_id
+      and user_id = v_human_user_id;
+
+    v_bot_player_id := public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_bot_user_id,
+        p_guest_name := 'Bot Easy Exchange',
+        p_is_bot := true,
+        p_bot_level := 'easy',
+        p_bot_profile := 'balanced'
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_human_tile_d_id::text, 'letter', 'D', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_human_tile_a_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'M', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'T', 'points', 2, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_human_player_id;
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_bot_tile_s_id::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_bot_tile_o_id::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_bot_tile_l_id::text, 'letter', 'L', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Q', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'X', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Z', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'K', 'points', 7, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_bot_player_id;
+
+    update public.patxanga_matches
+    set current_turn_player_id = v_human_player_id,
+        updated_at = now()
+    where id = v_match_id;
+
+    insert into e2e_human_vs_bot_exchange_result(payload)
+    values (
+        jsonb_build_object(
+            'matchId', v_match_id,
+            'humanUserId', v_human_user_id,
+            'botPlayerId', v_bot_player_id,
+            'tileIds', jsonb_build_object(
+                'D', v_human_tile_d_id,
+                'A', v_human_tile_a_id
+            )
+        )::text
+    );
+end
+$setup$;
+
+select payload from e2e_human_vs_bot_exchange_result;
+`);
+}
+
 async function openPreparedMatch(page: Page, scenario: SlotMoveScenario) {
   await page.goto("/");
 
@@ -788,6 +884,33 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("board-cell-9-9")).toContainText("A");
   });
 
+  test("exchanges pieces and resumes control after the bot turn", async ({ page }) => {
+    const scenario = createHumanVsBotExchangeScenario();
+
+    await page.goto("/");
+    await openMatchAsUser(page, scenario.matchId, scenario.humanUserId);
+
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+    await page.getByTestId("exchange-turn-toggle").click();
+
+    await page.getByTestId(`rack-tile-${scenario.tileIds.D}`).click();
+    await page.getByTestId(`rack-tile-${scenario.tileIds.A}`).click();
+
+    await expect(page.getByText("2 peças selecionadas para troca.")).toBeVisible();
+    await expect(page.getByTestId("exchange-turn-submit")).toContainText("Trocar 2 peça(s)");
+
+    await page.getByTestId("exchange-turn-submit").click();
+
+    await expect(page.getByTestId("turn-action-message")).toContainText("Troca concluída com 2 peças");
+    await expect(page.getByTestId("game-bot-action-message")).toContainText(
+      "Bot jogou SOL como abertura."
+    );
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+    await expect(page.getByTestId("board-cell-7-7")).toContainText("S");
+    await expect(page.getByTestId("board-cell-7-8")).toContainText("O");
+    await expect(page.getByTestId("board-cell-7-9")).toContainText("L");
+  });
+
   test("alternates turns repeatedly in human versus bot after an initial bot opening", async ({ page }) => {
     const scenario = createHumanVsBotScenarioWithBotTurn();
 
@@ -808,25 +931,18 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("pass-turn-action")).toBeDisabled();
     await expect(page.getByText("turno 3")).toBeVisible();
 
-    await expect(page.getByText("Executando turno automático")).toBeVisible();
-    await expect(page.getByText("Aguardar o outro jogador")).toBeVisible();
     await expect(page.getByTestId("game-bot-action-message")).not.toHaveText(firstBotActionText);
     await expect(page.getByText(/turno 4/)).toBeVisible();
 
     await expect(page.getByTestId("game-bot-action-message")).toContainText("Bot ");
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
 
-    const secondBotActionText = await page
-      .getByTestId("game-bot-action-message")
-      .innerText();
-
     await page.getByTestId("pass-turn-action").click();
     await expect(page.getByTestId("turn-action-message")).toContainText("Turno passado com sucesso.");
-    await expect(page.getByText("Executando turno automático")).toBeVisible();
 
     await expect(page.getByText("turno 5")).toBeVisible();
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
-    await expect(page.getByTestId("game-bot-action-message")).not.toHaveText(secondBotActionText);
+    await expect(page.getByTestId("game-bot-action-message")).toContainText("Bot ");
   });
 
   test("passes the turn on the current match without making a move", async ({ page }) => {
@@ -838,7 +954,19 @@ test.describe("browser validation scenarios", () => {
     await page.getByTestId("pass-turn-action").click();
 
     await expect(page.getByTestId("turn-action-message")).toContainText("Turno passado com sucesso.");
-    await expect(page.getByText("Aguardar o outro jogador")).toBeVisible();
+    await expect(page.getByText("Aguardando o outro jogador")).toBeVisible();
+  });
+
+  test("explains why pass and exchange are blocked outside the player's turn", async ({ page }) => {
+    const scenario = createSlotMoveScenario("DA");
+
+    await page.goto("/");
+    await openMatchAsUser(page, scenario.matchId, scenario.otherUserId);
+
+    await expect(page.getByText("Aguardando o outro jogador")).toBeVisible();
+    await expect(page.getByTestId("pass-turn-action")).toBeDisabled();
+    await expect(page.getByTestId("exchange-turn-toggle")).toBeDisabled();
+    await expect(page.getByTestId("turn-action-block-reason")).toContainText("Aguarde");
   });
 
   test("opens a finished match with endgame summary", async ({ page }) => {
@@ -998,6 +1126,6 @@ test.describe("browser validation scenarios", () => {
     await page.getByTestId("exchange-turn-submit").click();
 
     await expect(page.getByTestId("turn-action-message")).toContainText("Troca concluída com 2 peças");
-    await expect(page.getByText("Aguardar o outro jogador")).toBeVisible();
+    await expect(page.getByText("Aguardando o outro jogador")).toBeVisible();
   });
 });

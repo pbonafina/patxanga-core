@@ -813,6 +813,38 @@ Leitura correta:
 - dicionario amplo pode avancar em paralelo controlado, mas nao deve bloquear a
   maturacao da partida jogavel
 
+## 1.19 Atualizacao operacional de continuidade - 2026-06-22 tres frentes em sequencia
+
+Estado desta frente:
+
+- foco: executar tres frentes em sequencia antes de novo commit
+- frentes cobertas: acoes de turno/UX, humano contra bot em alternancia real e
+  dicionario `pt-PT` no caminho de bootstrap
+- arquivos principais: `frontend/pages/index.tsx`,
+  `frontend/tests/browser-validation.spec.ts`,
+  `sql/tests/test_get_match_bootstrap.sql`
+
+Implementado nesta tranche:
+
+- painel de acoes da partida passou a explicar o bloqueio fora do turno com o
+  jogador responsavel ou turno automatico de bot
+- modo de troca passou a exibir quantas pecas estao selecionadas antes da
+  confirmacao
+- Playwright passou a cobrir bloqueio operacional de `pass` e `exchange` fora
+  do turno do jogador
+- Playwright passou a cobrir troca de pecas em humano contra bot seguida de
+  jogada automatica do bot e retorno do turno ao humano
+- teste SQL de bootstrap passou a importar uma fixture `pt-PT` auditavel e
+  validar `dictionary_summary` com idioma, volume e fonte ativa
+
+Validacao planejada para fechamento desta tranche:
+
+- `cd frontend && npm run build`
+- `cd frontend && npm run lint`
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_get_match_bootstrap.sql`
+- `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+- `git diff --check`
+
 ## 2. Matriz objetiva de avanco
 
 Percentual global estimado nesta leitura: `75%`

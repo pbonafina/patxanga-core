@@ -172,6 +172,27 @@ zsh scripts/run-sql-test-suite.sh all
 3. Frente C: fortalecer humano contra bot usando as acoes de turno ja maduras.
 4. Frente D: expandir dicionario em paralelo controlado, sem travar gameplay.
 
+## 6.1 Atualizacao de execucao - tres frentes em sequencia
+
+Tranche executada sobre `develop` apos os commits iniciais de `pass`,
+`exchange` e alternancia humano contra bot.
+
+Entregas adicionadas:
+
+- Frente B: painel de acoes informa motivo de bloqueio fora do turno e o modo
+  de troca mostra a contagem de pecas selecionadas
+- Frente C: cenario browser cobre troca humana contra bot, jogada automatica do
+  bot e retorno do controle ao humano
+- Frente D: teste SQL de bootstrap cobre `dictionary_summary` em partida
+  `pt-PT` com fixture importada pela RPC administrativa
+
+Leitura de produto:
+
+- partida humano contra bot ficou mais demonstravel porque `pass` e `exchange`
+  agora alimentam a alternancia real sem intervencao manual no banco
+- a expansao `pt-PT` segue controlada por fonte e fixture local, sem importar
+  dump amplo nem escolher licenca de produto automaticamente
+
 ## 7. Politica de commits
 
 - cada tranche grande pode atravessar mais de uma frente, desde que tenha
