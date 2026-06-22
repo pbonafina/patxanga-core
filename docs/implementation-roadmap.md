@@ -32,7 +32,7 @@ Leitura atual do projeto:
 |--------|--------|
 | Backend server-authoritative | Maduro e validado para partida sincrona, submit, voting, pass, exchange, forfeit e endgame |
 | Lobby, convite e retomada | Baseline operacional implementada e validada |
-| Primeira tela jogavel | Existe, mas ainda precisa evoluir de sandbox operacional para produto |
+| Primeira tela jogavel | Tranche de produto iniciada: hero, mesa jogavel, placar, guia de acao e rack com linguagem menos tecnica |
 | Rack e composicao por slots | Implementado como superficie oficial de preparo no frontend |
 | Votacao | Funcional, mas ainda precisa UX de produto |
 | Dicionario | Contrato por idioma/fonte/ativo consolidado; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
@@ -131,6 +131,16 @@ Decisoes pendentes:
 
 - manter fluxo direto peca -> board em paralelo com slots
 - ou convergir para um unico fluxo oficial de montagem
+
+Atualizacao de execucao - 2026-06-22:
+
+- topo da pagina passou a ter entrada visual de produto e status do ambiente
+- `GamePlayScreen` passou a concentrar mesa, placar, turno, guia de acao e
+  feedback de bot
+- placar mostra pontuacao, jogador local, turno atual, bot/humano e desistente
+- rack teve linguagem reduzida para instrucoes de jogador; detalhe tecnico de
+  `declared_letter` fica no debug
+- tabuleiro ganhou rolagem horizontal local para telas menores
 
 Validacao minima:
 

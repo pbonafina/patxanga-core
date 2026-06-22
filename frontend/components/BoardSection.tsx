@@ -109,7 +109,15 @@ export function BoardSection({
   }
 
   return (
-    <section style={{ marginTop: 0, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
+    <section
+      style={{
+        marginTop: 0,
+        padding: 16,
+        border: "1px solid #ccc",
+        borderRadius: 8,
+        overflowX: "auto",
+      }}
+    >
       <div
         style={{
           display: "grid",
@@ -117,6 +125,7 @@ export function BoardSection({
           gap: 2,
           alignItems: "center",
           justifyContent: "start",
+          minWidth: 598,
         }}
       >
         {boardState.flatMap((row, rowIndex) =>

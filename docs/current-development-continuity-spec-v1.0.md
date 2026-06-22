@@ -596,6 +596,43 @@ Validacao confirmada no fechamento da tranche:
 - `zsh scripts/run-sql-test-suite.sh all`
 - `zsh scripts/run-bot-simulation.sh all`
 
+## 1.13 Atualizacao operacional de continuidade - 2026-06-22 tranche UX jogavel
+
+Estado desta frente:
+
+- foco: iniciar a virada da tela jogavel de sandbox operacional para produto
+  demonstravel
+- arquivos principais: `frontend/pages/index.tsx`,
+  `frontend/components/GamePlayScreen.tsx`,
+  `frontend/components/RackSection.tsx`,
+  `frontend/components/BoardSection.tsx`
+
+Implementado nesta tranche:
+
+- topo da pagina reformulado como entrada visual de produto
+- status do ambiente e botao de debug ficaram acessiveis sem depender de painel
+  tecnico escondido
+- `GamePlayScreen` passou a exibir mesa com placar, turno, jogador local,
+  jogador atual, estado bot/humano e desistente
+- feedback de bot tambem aparece dentro da mesa jogavel
+- guia de acao mostra o que fazer no estado atual: jogar, aguardar, votar ou
+  revisar resultado
+- rack teve linguagem de jogador, mantendo explicacao de `declared_letter`
+  apenas em modo debug
+- tabuleiro passou a usar rolagem horizontal local para telas pequenas
+- paineis duplicados de waiting/finished fora da mesa foram removidos
+
+Validacao confirmada:
+
+- `cd frontend && npm run build`
+- `cd frontend && npm run lint`
+- `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+
+Observacao:
+
+- nao houve mudanca backend nesta tranche, portanto SQL completo nao foi
+  repetido neste fechamento
+
 ## 2. Matriz objetiva de avanco
 
 Percentual global estimado nesta leitura: `75%`

@@ -29,11 +29,14 @@ type GamePlayScreenProps = {
   playersSummary: Array<{
     player_id: string;
     display_name: string;
+    score: number;
+    has_forfeited: boolean;
     is_bot?: boolean;
     bot_level?: string | null;
     bot_profile?: string | null;
   }>;
   currentTurnPlayerId: string | null;
+  turnNumber: number;
 
   boardState: unknown[];
   compositionPlacementsByCell: Record<
@@ -66,6 +69,9 @@ type GamePlayScreenProps = {
   isSubmittingVote: boolean;
   voteResult: unknown | null;
   showDebug: boolean;
+  botActionMessage: string | null;
+  botActionError: string | null;
+  isAutoPlayingBotTurn: boolean;
 
   buildCellKey: (rowIndex: number, colIndex: number) => string;
   renderCellLabel: (cell: BoardCell) => string;
@@ -85,6 +91,7 @@ type GamePlayScreenProps = {
   onSubmitMove: () => void;
   onApprove: () => void;
   onReject: () => void;
+  onToggleDebug: () => void;
 };
 
 function getSlotShortLabel(slotId: string): string {
@@ -108,6 +115,7 @@ export function GamePlayScreen({
   viewerPlayerId,
   playersSummary,
   currentTurnPlayerId,
+  turnNumber,
 
   boardState,
   compositionPlacementsByCell,
@@ -132,6 +140,9 @@ export function GamePlayScreen({
   isSubmittingVote,
   voteResult,
   showDebug,
+  botActionMessage,
+  botActionError,
+  isAutoPlayingBotTurn,
 
   buildCellKey,
   renderCellLabel,
@@ -147,12 +158,16 @@ export function GamePlayScreen({
   onSubmitMove,
   onApprove,
   onReject,
+  onToggleDebug,
 }: GamePlayScreenProps) {
   const gameplayEnabled = isActive || isVoting;
 
   const currentTurnPlayer =
     playersSummary.find((player) => player.player_id === currentTurnPlayerId) ?? null;
   const currentTurnPlayerName = currentTurnPlayer?.display_name ?? "aguardando definição";
+  const viewerPlayer =
+    playersSummary.find((player) => player.player_id === viewerPlayerId) ?? null;
+  const scoreLeader = [...playersSummary].sort((left, right) => right.score - left.score)[0] ?? null;
 
   const totalPlayers = playersSummary.length;
   const placedTileCount = placedTilesPreview.length;
@@ -162,6 +177,21 @@ export function GamePlayScreen({
     viewerPlayerId === currentTurnPlayerId &&
     isActive;
   const selectedGroupCount = selectedTileIds.length;
+  const actionHint = isActive
+    ? isPlayersTurn
+      ? placedTileCount > 0
+        ? "Revise a palavra e confirme a jogada."
+        : "Monte uma palavra usando o rack e o tabuleiro."
+      : currentTurnPlayer?.is_bot
+        ? "O bot joga automaticamente quando chegar a vez dele."
+        : "Aguarde o outro jogador."
+    : isVoting
+      ? canCurrentViewerVote
+        ? "Vote para aceitar ou rejeitar a palavra proposta."
+        : "A mesa aguarda os votos dos demais jogadores."
+      : isFinished
+        ? "Veja o resultado final da partida."
+        : "Inicie a partida quando todos estiverem prontos.";
 
   const statusTone = isActive
     ? isPlayersTurn
@@ -177,13 +207,58 @@ export function GamePlayScreen({
     <section
       style={{
         marginTop: 24,
-        padding: 20,
-        border: "1px solid #d6d6d6",
-        borderRadius: 16,
-        background: "linear-gradient(180deg, #ffffff 0%, #fafaf9 100%)",
-        boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
+        padding: 22,
+        border: "1px solid #d7d0bf",
+        borderRadius: 24,
+        background:
+          "radial-gradient(circle at top left, rgba(250, 204, 21, 0.16), transparent 32%), linear-gradient(135deg, #fffaf0 0%, #f5efe3 46%, #edf4ec 100%)",
+        boxShadow: "0 18px 46px rgba(61, 46, 24, 0.14)",
       }}
     >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
+          marginBottom: 16,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: 1.4,
+              textTransform: "uppercase",
+              color: "#6b5f3f",
+            }}
+          >
+            Mesa Patxanga
+          </div>
+          <div style={{ marginTop: 4, fontSize: 28, fontWeight: 900, color: "#1f2933" }}>
+            Partida em foco
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onToggleDebug}
+          style={{
+            padding: "9px 13px",
+            borderRadius: 999,
+            border: "1px solid #c7bfae",
+            background: showDebug ? "#1f2937" : "rgba(255, 255, 255, 0.72)",
+            color: showDebug ? "#ffffff" : "#374151",
+            cursor: "pointer",
+            fontWeight: 700,
+          }}
+        >
+          {showDebug ? "Ocultar debug" : "Mostrar debug"}
+        </button>
+      </div>
+
       <div
         style={{
           display: "flex",
@@ -198,10 +273,11 @@ export function GamePlayScreen({
           style={{
             flex: "1 1 320px",
             minWidth: 280,
-            padding: 14,
-            borderRadius: 14,
+            padding: 16,
+            borderRadius: 18,
             border: `1px solid ${statusTone.border}`,
             background: statusTone.background,
+            boxShadow: "0 8px 20px rgba(15, 23, 42, 0.08)",
           }}
         >
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: statusTone.color }}>
@@ -213,20 +289,24 @@ export function GamePlayScreen({
           <div style={{ marginTop: 8, fontSize: 14, color: "#374151" }}>
             Turno atual: <strong>{currentTurnPlayerName}</strong>
           </div>
+          <div style={{ marginTop: 8, fontSize: 14, color: "#374151" }}>
+            Próxima ação: <strong>{actionHint}</strong>
+          </div>
         </div>
 
         <div
           style={{
-            flex: "0 1 320px",
-            minWidth: 260,
-            padding: 14,
-            borderRadius: 14,
-            border: "1px solid #e5e7eb",
-            background: "#ffffff",
+            flex: "1 1 360px",
+            minWidth: 300,
+            padding: 16,
+            borderRadius: 18,
+            border: "1px solid rgba(120, 113, 108, 0.22)",
+            background: "rgba(255, 255, 255, 0.78)",
+            boxShadow: "0 8px 20px rgba(15, 23, 42, 0.06)",
           }}
         >
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#6b7280" }}>
-            Mesa
+            Placar e mesa
           </div>
 
           <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -292,36 +372,101 @@ export function GamePlayScreen({
                   color: "#92400e",
                 }}
               >
-                votação pendente
+              votação pendente
               </span>
             ) : null}
+
+            <span
+              style={{
+                padding: "6px 10px",
+                borderRadius: 999,
+                background: "#fff7ed",
+                fontSize: 13,
+                color: "#9a3412",
+              }}
+            >
+              turno {turnNumber}
+            </span>
           </div>
 
           {playersSummary.length > 0 ? (
-            <div style={{ marginTop: 12, display: "grid", gap: 6 }}>
+            <div style={{ marginTop: 14, display: "grid", gap: 8 }}>
               {playersSummary.map((player) => (
                 <div
                   key={player.player_id}
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
+                    alignItems: "center",
                     gap: 8,
+                    padding: "10px 12px",
+                    borderRadius: 14,
+                    border:
+                      player.player_id === currentTurnPlayerId
+                        ? "1px solid #93c5fd"
+                        : "1px solid #e5e7eb",
+                    background:
+                      player.player_id === currentTurnPlayerId
+                        ? "#eff6ff"
+                        : "rgba(255, 255, 255, 0.84)",
                     fontSize: 13,
                     color: "#374151",
                   }}
                 >
-                  <span>{player.display_name}</span>
-                  <strong>
-                    {player.is_bot
-                      ? `bot ${player.bot_level ?? "sem nivel"} / ${player.bot_profile ?? "sem perfil"}`
-                      : "humano"}
-                  </strong>
+                  <div>
+                    <div style={{ fontWeight: 800, color: "#111827" }}>
+                      {player.display_name}
+                      {player.player_id === viewerPlayer?.player_id ? " · você" : ""}
+                    </div>
+                    <div style={{ marginTop: 3, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <span>
+                        {player.is_bot
+                          ? `bot ${player.bot_level ?? "sem nivel"} / ${player.bot_profile ?? "sem perfil"}`
+                          : "humano"}
+                      </span>
+                      {player.player_id === currentTurnPlayerId ? <strong>no turno</strong> : null}
+                      {player.has_forfeited ? <strong>desistente</strong> : null}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>
+                      {player.score}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#6b7280" }}>pontos</div>
+                  </div>
                 </div>
               ))}
             </div>
           ) : null}
+
+          {scoreLeader ? (
+            <div style={{ marginTop: 10, fontSize: 13, color: "#4b5563" }}>
+              Líder atual: <strong>{scoreLeader.display_name}</strong> com{" "}
+              <strong>{scoreLeader.score}</strong> ponto{scoreLeader.score === 1 ? "" : "s"}.
+            </div>
+          ) : null}
         </div>
       </div>
+
+      {botActionMessage || botActionError || isAutoPlayingBotTurn ? (
+        <div
+          style={{
+            marginBottom: 18,
+            padding: 14,
+            borderRadius: 16,
+            border: botActionError ? "1px solid #fca5a5" : "1px solid #bbf7d0",
+            background: botActionError ? "#fff1f2" : "#f0fdf4",
+            color: botActionError ? "#991b1b" : "#166534",
+            fontWeight: 700,
+          }}
+        >
+          {botActionError
+            ? `Erro do bot: ${botActionError}`
+            : isAutoPlayingBotTurn
+              ? "Bot executando turno automático..."
+              : botActionMessage}
+        </div>
+      ) : null}
 
       {isWaiting ? (
         <div
@@ -369,6 +514,36 @@ export function GamePlayScreen({
 
       {gameplayEnabled ? (
         <>
+          <div
+            style={{
+              marginBottom: 16,
+              padding: 14,
+              borderRadius: 18,
+              border: "1px solid rgba(120, 113, 108, 0.22)",
+              background: "rgba(255, 255, 255, 0.72)",
+              display: "grid",
+              gap: 10,
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 1, textTransform: "uppercase", color: "#6b5f3f" }}>
+              Agora na mesa
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>
+              {actionHint}
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ padding: "6px 10px", borderRadius: 999, background: "#fef3c7", color: "#713f12", fontSize: 13, fontWeight: 700 }}>
+                1. escolha peças
+              </span>
+              <span style={{ padding: "6px 10px", borderRadius: 999, background: "#ecfdf5", color: "#166534", fontSize: 13, fontWeight: 700 }}>
+                2. marque casas
+              </span>
+              <span style={{ padding: "6px 10px", borderRadius: 999, background: "#eff6ff", color: "#1d4ed8", fontSize: 13, fontWeight: 700 }}>
+                3. confirme no backend
+              </span>
+            </div>
+          </div>
+
           <div
             style={{
               display: "flex",

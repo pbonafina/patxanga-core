@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-22 13:29:05
+Generated at: 2026-06-22 13:51:23
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,17 +93,13 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## develop...origin/develop
- M docs/07-bot-engine.md
+## develop...origin/develop [ahead 1]
  M docs/current-development-continuity-spec-v1.0.md
- M docs/frontend-contract-rpcs-v1.0.md
  M docs/implementation-roadmap.md
- M docs/testing-program-v1.0.md
- M frontend/tests/browser-validation.spec.ts
- M sql/rpc/submit_easy_bot_turn.sql
- M sql/rpc/validate_move_alignment.sql
- M sql/tests/test_easy_bot_turn_policy.sql
-?? supabase/migrations/20260622090000_28_easy_bot_connected_policy.sql
+ M frontend/components/BoardSection.tsx
+ M frontend/components/GamePlayScreen.tsx
+ M frontend/components/RackSection.tsx
+ M frontend/pages/index.tsx
 ```
 
 ### git remote -v
@@ -114,7 +110,8 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-7cfd46d (HEAD -> develop, origin/develop, origin/HEAD) Merge pull request #15 from pbonafina/docs/test-program
+49b5625 (HEAD -> develop) feat: add easy bot connected move policy
+7cfd46d (origin/develop, origin/HEAD) Merge pull request #15 from pbonafina/docs/test-program
 57a7369 (origin/docs/test-program) docs: add testing program
 7248b54 Merge pull request #14 from pbonafina/feature/easy-bot-opening-policy
 d449253 (origin/feature/easy-bot-opening-policy) feat: add easy bot opening policy
@@ -128,7 +125,6 @@ ece4650 Merge pull request #10 from pbonafina/feature/offline-lexical-policy-bou
 c727200 test: cover offline lexical policy boundaries
 f6c18f1 Merge pull request #9 from pbonafina/feature/lexical-policy-imported-words-regression
 a8222ee test: add lexical policy imported word regression
-1476a40 Merge pull request #8 from pbonafina/feature/licensed-pt-pt-dictionary-sample
 ```
 
 ### tail -n 60 ../project-log.md
@@ -4394,7 +4390,7 @@ Leitura atual do projeto:
 |--------|--------|
 | Backend server-authoritative | Maduro e validado para partida sincrona, submit, voting, pass, exchange, forfeit e endgame |
 | Lobby, convite e retomada | Baseline operacional implementada e validada |
-| Primeira tela jogavel | Existe, mas ainda precisa evoluir de sandbox operacional para produto |
+| Primeira tela jogavel | Tranche de produto iniciada: hero, mesa jogavel, placar, guia de acao e rack com linguagem menos tecnica |
 | Rack e composicao por slots | Implementado como superficie oficial de preparo no frontend |
 | Votacao | Funcional, mas ainda precisa UX de produto |
 | Dicionario | Contrato por idioma/fonte/ativo consolidado; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
@@ -4493,6 +4489,16 @@ Decisoes pendentes:
 
 - manter fluxo direto peca -> board em paralelo com slots
 - ou convergir para um unico fluxo oficial de montagem
+
+Atualizacao de execucao - 2026-06-22:
+
+- topo da pagina passou a ter entrada visual de produto e status do ambiente
+- `GamePlayScreen` passou a concentrar mesa, placar, turno, guia de acao e
+  feedback de bot
+- placar mostra pontuacao, jogador local, turno atual, bot/humano e desistente
+- rack teve linguagem reduzida para instrucoes de jogador; detalhe tecnico de
+  `declared_letter` fica no debug
+- tabuleiro ganhou rolagem horizontal local para telas menores
 
 Validacao minima:
 
@@ -5784,6 +5790,43 @@ Validacao confirmada no fechamento da tranche:
 - `cd frontend && npm run build`
 - `zsh scripts/run-sql-test-suite.sh all`
 - `zsh scripts/run-bot-simulation.sh all`
+
+## 1.13 Atualizacao operacional de continuidade - 2026-06-22 tranche UX jogavel
+
+Estado desta frente:
+
+- foco: iniciar a virada da tela jogavel de sandbox operacional para produto
+  demonstravel
+- arquivos principais: `frontend/pages/index.tsx`,
+  `frontend/components/GamePlayScreen.tsx`,
+  `frontend/components/RackSection.tsx`,
+  `frontend/components/BoardSection.tsx`
+
+Implementado nesta tranche:
+
+- topo da pagina reformulado como entrada visual de produto
+- status do ambiente e botao de debug ficaram acessiveis sem depender de painel
+  tecnico escondido
+- `GamePlayScreen` passou a exibir mesa com placar, turno, jogador local,
+  jogador atual, estado bot/humano e desistente
+- feedback de bot tambem aparece dentro da mesa jogavel
+- guia de acao mostra o que fazer no estado atual: jogar, aguardar, votar ou
+  revisar resultado
+- rack teve linguagem de jogador, mantendo explicacao de `declared_letter`
+  apenas em modo debug
+- tabuleiro passou a usar rolagem horizontal local para telas pequenas
+- paineis duplicados de waiting/finished fora da mesa foram removidos
+
+Validacao confirmada:
+
+- `cd frontend && npm run build`
+- `cd frontend && npm run lint`
+- `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+
+Observacao:
+
+- nao houve mudanca backend nesta tranche, portanto SQL completo nao foi
+  repetido neste fechamento
 
 ## 2. Matriz objetiva de avanco
 

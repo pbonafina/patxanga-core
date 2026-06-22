@@ -306,10 +306,10 @@ export function RackSection({
                 : "Você pode reorganizar as peças enquanto aguarda sua vez."}
             </div>
             <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
-              Arraste para reorganizar no rack. Para jogar, selecione a peça e clique na casa desejada ou vincule a peça a um slot antes de associá-lo ao tabuleiro.
+              Selecione uma peça e clique no tabuleiro para preparar a jogada.
             </div>
             <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
-              Solte uma peça sobre um slot para reorganizar a folga local dentro do rack. Clique numa peça e depois num slot para transformar esse slot em composição oficial.
+              Use os slots para montar a palavra com calma antes de confirmar.
             </div>
             {selectedCount > 0 ? (
               <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
@@ -379,11 +379,14 @@ export function RackSection({
         </div>
       </div>
 
-      <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 12, color: "#6b7280", alignSelf: "center" }}>
-          A letra digitada no slot continua local por padrão, mas vira `declared_letter` oficial quando o slot tiver peça especial vinculada e associação ativa no board.
+      {showDebug ? (
+        <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 12, color: "#6b7280", alignSelf: "center" }}>
+            A letra digitada no slot continua local por padrão, mas vira `declared_letter`
+            oficial quando o slot tiver peça especial vinculada e associação ativa no board.
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {rackTiles.length === 0 ? (
         <div
@@ -775,7 +778,7 @@ export function RackSection({
                 ? "Arraste qualquer peça destacada para mover o grupo dentro do rack."
                 : activeSlotId
                   ? "Clique numa peça para vinculá-la ao slot ativo ou clique no tabuleiro para associar esse slot a uma casa."
-                  : "Arraste peças e slots livremente. Solte a peça sobre um slot para reorganizar a folga local ou clique num slot para compor uma jogada oficial."}
+                  : "Arraste peças para reorganizar. Clique em peça, slot e tabuleiro para compor uma jogada."}
             </div>
 
             <button

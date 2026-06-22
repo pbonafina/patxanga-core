@@ -1916,22 +1916,127 @@ export default function HomePage() {
   }
 
   return (
-    <main style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: 1100, margin: "0 auto" }}>
-      <h1>Patxanga</h1>
-      <p>Interface local da partida conectada ao backend da aplicação.</p>
+    <main
+      style={{
+        minHeight: "100vh",
+        padding: 24,
+        fontFamily: '"Avenir Next", "Trebuchet MS", sans-serif',
+        maxWidth: 1280,
+        margin: "0 auto",
+        color: "#1f2933",
+      }}
+    >
+      <section
+        style={{
+          padding: 24,
+          borderRadius: 28,
+          background:
+            "radial-gradient(circle at 18% 20%, rgba(250, 204, 21, 0.22), transparent 30%), radial-gradient(circle at 82% 12%, rgba(20, 184, 166, 0.18), transparent 28%), linear-gradient(135deg, #2b2118 0%, #5b3b24 45%, #14342f 100%)",
+          color: "#fff7ed",
+          boxShadow: "0 22px 60px rgba(43, 33, 24, 0.28)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 18,
+            flexWrap: "wrap",
+            alignItems: "flex-end",
+          }}
+        >
+          <div style={{ maxWidth: 720 }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 900,
+                letterSpacing: 1.8,
+                textTransform: "uppercase",
+                color: "#fde68a",
+              }}
+            >
+              Palavra, mesa e disputa
+            </div>
+            <h1 style={{ margin: "8px 0 0", fontSize: 54, lineHeight: 0.95 }}>
+              Patxanga
+            </h1>
+            <p style={{ margin: "14px 0 0", maxWidth: 620, fontSize: 18, lineHeight: 1.5 }}>
+              Mesa local conectada ao backend real, com jogo humano, votação de palavras e bot
+              demonstrável para acelerar desenvolvimento.
+            </p>
+          </div>
 
-      <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-        <h2>Conexão</h2>
-        <p><strong>Modo atual:</strong> {isConfigured ? "conectado ao backend real" : "modo local de fallback"}</p>
-        <p>
-          Nesta etapa, o segundo campo ainda usa temporariamente o <strong>user_id</strong> da sessão
-          para localizar o jogador correto da partida.
-        </p>
+          <div
+            style={{
+              minWidth: 260,
+              padding: 16,
+              borderRadius: 20,
+              background: "rgba(255, 255, 255, 0.12)",
+              border: "1px solid rgba(255, 255, 255, 0.22)",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", color: "#fde68a" }}>
+              Ambiente
+            </div>
+            <div style={{ marginTop: 8, fontSize: 17, fontWeight: 900 }}>
+              {isConfigured ? "Backend real conectado" : "Modo local de fallback"}
+            </div>
+            <div style={{ marginTop: 8, fontSize: 13, color: "#ffedd5", lineHeight: 1.45 }}>
+              A sessão ainda usa <strong>user_id</strong> para localizar o jogador correto da
+              partida.
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowDebug((current) => !current)}
+              style={{
+                marginTop: 14,
+                padding: "9px 13px",
+                borderRadius: 999,
+                border: "1px solid rgba(255, 255, 255, 0.32)",
+                background: showDebug ? "#fef3c7" : "rgba(255, 255, 255, 0.16)",
+                color: showDebug ? "#422006" : "#fff7ed",
+                cursor: "pointer",
+                fontWeight: 800,
+              }}
+            >
+              {showDebug ? "Debug visível" : "Mostrar debug"}
+            </button>
+          </div>
+        </div>
       </section>
 
-      <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-        <h2>Partida local rápida</h2>
-        <p>Gera uma partida de teste local e permite alternar entre sessões sem copiar IDs manualmente.</p>
+      <section
+        style={{
+          marginTop: 24,
+          padding: 20,
+          border: "1px solid #d7d0bf",
+          borderRadius: 22,
+          background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+          boxShadow: "0 12px 30px rgba(15, 23, 42, 0.08)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <h2 style={{ marginTop: 0 }}>Partida local rápida</h2>
+            <p style={{ marginBottom: 0, color: "#4b5563" }}>
+              Crie uma mesa em segundos para jogar, demonstrar o bot ou alternar entre sessões.
+            </p>
+          </div>
+          <div
+            style={{
+              alignSelf: "flex-start",
+              padding: "6px 10px",
+              borderRadius: 999,
+              background: isConfigured ? "#dcfce7" : "#fee2e2",
+              color: isConfigured ? "#166534" : "#991b1b",
+              fontSize: 13,
+              fontWeight: 800,
+            }}
+          >
+            {isConfigured ? "pronto para criar" : "backend indisponível"}
+          </div>
+        </div>
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
           <button
@@ -2374,8 +2479,20 @@ export default function HomePage() {
       </section>
 
       {resolvedBootstrap.matchId ? (
-        <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-          <h2>Ações da partida atual</h2>
+        <section
+          style={{
+            marginTop: 24,
+            padding: 18,
+            border: "1px solid #d7d0bf",
+            borderRadius: 20,
+            background: "linear-gradient(135deg, #fffaf0 0%, #ffffff 100%)",
+            boxShadow: "0 10px 26px rgba(61, 46, 24, 0.08)",
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>Ações da partida atual</h2>
+          <p style={{ marginTop: -4, color: "#4b5563" }}>
+            Use este painel para decisões formais da mesa. As jogadas ficam na área principal abaixo.
+          </p>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
             {isWaiting && resolvedBootstrap.playerId && !resolvedBootstrap.playerContext?.has_forfeited ? (
@@ -2426,6 +2543,7 @@ export default function HomePage() {
         viewerPlayerId={resolvedBootstrap.playerId}
         playersSummary={resolvedBootstrap.playersSummary}
         currentTurnPlayerId={resolvedBootstrap.currentTurnPlayerId}
+        turnNumber={resolvedBootstrap.turnNumber}
         boardState={resolvedBootstrap.boardState}
         compositionPlacementsByCell={compositionPlacementsByCell}
         pendingVoteTilesByCell={pendingVoteTilesByCell}
@@ -2447,6 +2565,9 @@ export default function HomePage() {
         isSubmittingVote={isSubmittingVote}
         voteResult={voteResult}
         showDebug={showDebug}
+        botActionMessage={botActionMessage}
+        botActionError={botActionError}
+        isAutoPlayingBotTurn={isAutoPlayingBotTurn}
         buildCellKey={buildCellKey}
         renderCellLabel={renderCellLabel}
         renderCellBackground={renderCellBackground}
@@ -2460,6 +2581,7 @@ export default function HomePage() {
         onSubmitMove={handleSubmitMove}
         onApprove={() => handleSubmitVote(false)}
         onReject={() => handleSubmitVote(true)}
+        onToggleDebug={() => setShowDebug((current) => !current)}
       />
 
       {showDebug ? (
@@ -2529,29 +2651,6 @@ export default function HomePage() {
       ) : null}
 
         </>
-      ) : null}
-
-      {isWaiting ? (
-        <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-          <h2>Lobby / aguardando início</h2>
-          <p>Esta partida ainda não começou.</p>
-          <p>Assim que a partida entrar em modo ativo, o board e o rack jogável aparecerão aqui.</p>
-        </section>
-      ) : null}
-
-      {isFinished ? (
-        <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-          <h2>{isCancelled ? "Partida cancelada" : "Partida encerrada"}</h2>
-          <p>
-            {isCancelled
-              ? "Esta partida foi cancelada, incluindo o caso de desistência total."
-              : "Esta partida já foi concluída."}
-          </p>
-          {!isCancelled ? (
-            <p><strong>Vencedor:</strong> {resolvedBootstrap.winnerPlayerId || "(não disponível)"}</p>
-          ) : null}
-          <p><strong>Encerrada em:</strong> {resolvedBootstrap.finishedAt || "(não disponível)"}</p>
-        </section>
       ) : null}
 
     </main>
