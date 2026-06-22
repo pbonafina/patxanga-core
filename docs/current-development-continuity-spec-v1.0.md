@@ -786,6 +786,33 @@ Validacao planejada para fechamento desta tranche:
 - `zsh scripts/test-libreoffice-dictionary-sample.sh`
 - `git diff --check`
 
+## 1.18 Atualizacao operacional de continuidade - 2026-06-22 frentes abertas
+
+Estado desta frente:
+
+- foco: abrir as quatro frentes necessarias para os proximos desenvolvimentos
+- baseline remota sincronizada: `git push` levou `develop` ate `64df773`
+- novo documento operacional criado:
+  `docs/development-fronts-2026-06-22.md`
+- indice documental atualizado em `docs/00-index.md`
+- roadmap aponta explicitamente para as frentes abertas
+
+Frentes abertas:
+
+- baseline remota e continuidade
+- acoes de turno no frontend: `pass`, `exchange`, feedback e bloqueios
+- humano contra bot demonstravel em partida longa
+- dicionario amplo e controlado por fonte, licenca e pipeline auditavel
+
+Leitura correta:
+
+- a proxima tranche funcional deve comecar pela frente de acoes de turno no
+  frontend, porque ela destrava partidas reais mais longas
+- humano contra bot longo deve reaproveitar essa base, evitando workaround de
+  banco ou estado paralelo
+- dicionario amplo pode avancar em paralelo controlado, mas nao deve bloquear a
+  maturacao da partida jogavel
+
 ## 2. Matriz objetiva de avanco
 
 Percentual global estimado nesta leitura: `75%`

@@ -4,6 +4,7 @@
 
 - `docs/como-jogar-patxanga.md` - manual inicial de como jogar Patxanga.
 - `docs/implementation-roadmap.md` - roadmap consolidado de implementacao.
+- `docs/development-fronts-2026-06-22.md` - frentes operacionais abertas para a proxima tranche.
 - `docs/01-product-vision.md` - visao de produto e diferenciais do jogo.
 - `docs/10-letter-distribution.md` - distribuicao oficial de pecas.
 - `docs/11-board-layout.md` - layout oficial do tabuleiro.

@@ -96,6 +96,17 @@ Atualizacao de execucao - 2026-06-22 cinco frentes:
 - testes SQL cobrem `dictionary_summary`, `end_summary` nulo em partida ativa e
   `end_summary.reason = empty_rack` em partida finalizada
 
+Frentes abertas apos esta baseline:
+
+- baseline remota e continuidade
+- acoes de turno no frontend: `pass`, `exchange`, feedback e bloqueios
+- humano contra bot demonstravel em partida longa
+- dicionario amplo e controlado por fonte, licenca e pipeline auditavel
+
+Documento operacional:
+
+- `docs/development-fronts-2026-06-22.md`
+
 ---
 
 ## 4. Fase 0 - Higiene de baseline

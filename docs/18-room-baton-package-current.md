@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-22 16:05:14
+Generated at: 2026-06-22 16:14:25
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,21 +93,11 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## develop...origin/develop [ahead 5]
+## develop...origin/develop
+ M docs/00-index.md
  M docs/current-development-continuity-spec-v1.0.md
- M docs/frontend-contract-rpcs-v1.0.md
  M docs/implementation-roadmap.md
- M frontend/components/GamePlayScreen.tsx
- M frontend/hooks/useMatchBootstrap.ts
- M frontend/lib/backend/matchBootstrap.mock.ts
- M frontend/lib/backend/matchBootstrap.real.ts
- M frontend/pages/index.tsx
- M frontend/tests/browser-validation.spec.ts
- M frontend/types/match.ts
- M sql/rpc/get_match_bootstrap.sql
- M sql/tests/test_get_match_bootstrap.sql
- M sql/tests/test_match_end_empty_rack.sql
-?? supabase/migrations/20260622170000_30_bootstrap_demo_end_dictionary_contract.sql
+?? docs/development-fronts-2026-06-22.md
 ```
 
 ### git remote -v
@@ -118,12 +108,13 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-f28f1fb (HEAD -> develop) feat: surface match language and bot strategy
+64df773 (HEAD -> develop, origin/develop, origin/HEAD) feat: add demo endgame dictionary contract
+f28f1fb feat: surface match language and bot strategy
 88054d0 feat: improve match state UX and long human flow
 7a8e4b6 feat: complete pending vote player flow
 20a59c1 feat: improve playable game experience
 49b5625 feat: add easy bot connected move policy
-7cfd46d (origin/develop, origin/HEAD) Merge pull request #15 from pbonafina/docs/test-program
+7cfd46d Merge pull request #15 from pbonafina/docs/test-program
 57a7369 (origin/docs/test-program) docs: add testing program
 7248b54 Merge pull request #14 from pbonafina/feature/easy-bot-opening-policy
 d449253 (origin/feature/easy-bot-opening-policy) feat: add easy bot opening policy
@@ -132,7 +123,6 @@ ebf032e (origin/feature/human-vs-bot-pass-mvp) feat: add human vs bot pass mvp
 fa4702d Merge pull request #12 from pbonafina/feature/slot-submit-playwright-regression
 f4ada51 test: cover slot submit browser flows
 2d415d9 Merge pull request #11 from pbonafina/feature/lexical-policy-voting-regression
-b71e1b0 test: cover lexical policy voting path
 ```
 
 ### tail -n 60 ../project-log.md
@@ -266,6 +256,7 @@ SQL
 
 - `docs/como-jogar-patxanga.md` - manual inicial de como jogar Patxanga.
 - `docs/implementation-roadmap.md` - roadmap consolidado de implementacao.
+- `docs/development-fronts-2026-06-22.md` - frentes operacionais abertas para a proxima tranche.
 - `docs/01-product-vision.md` - visao de produto e diferenciais do jogo.
 - `docs/10-letter-distribution.md` - distribuicao oficial de pecas.
 - `docs/11-board-layout.md` - layout oficial do tabuleiro.
@@ -4512,6 +4503,17 @@ Atualizacao de execucao - 2026-06-22 cinco frentes:
 - testes SQL cobrem `dictionary_summary`, `end_summary` nulo em partida ativa e
   `end_summary.reason = empty_rack` em partida finalizada
 
+Frentes abertas apos esta baseline:
+
+- baseline remota e continuidade
+- acoes de turno no frontend: `pass`, `exchange`, feedback e bloqueios
+- humano contra bot demonstravel em partida longa
+- dicionario amplo e controlado por fonte, licenca e pipeline auditavel
+
+Documento operacional:
+
+- `docs/development-fronts-2026-06-22.md`
+
 ---
 
 ## 4. Fase 0 - Higiene de baseline
@@ -6102,6 +6104,33 @@ Validacao planejada para fechamento desta tranche:
 - `zsh scripts/test-dictionary-import-tooling.sh`
 - `zsh scripts/test-libreoffice-dictionary-sample.sh`
 - `git diff --check`
+
+## 1.18 Atualizacao operacional de continuidade - 2026-06-22 frentes abertas
+
+Estado desta frente:
+
+- foco: abrir as quatro frentes necessarias para os proximos desenvolvimentos
+- baseline remota sincronizada: `git push` levou `develop` ate `64df773`
+- novo documento operacional criado:
+  `docs/development-fronts-2026-06-22.md`
+- indice documental atualizado em `docs/00-index.md`
+- roadmap aponta explicitamente para as frentes abertas
+
+Frentes abertas:
+
+- baseline remota e continuidade
+- acoes de turno no frontend: `pass`, `exchange`, feedback e bloqueios
+- humano contra bot demonstravel em partida longa
+- dicionario amplo e controlado por fonte, licenca e pipeline auditavel
+
+Leitura correta:
+
+- a proxima tranche funcional deve comecar pela frente de acoes de turno no
+  frontend, porque ela destrava partidas reais mais longas
+- humano contra bot longo deve reaproveitar essa base, evitando workaround de
+  banco ou estado paralelo
+- dicionario amplo pode avancar em paralelo controlado, mas nao deve bloquear a
+  maturacao da partida jogavel
 
 ## 2. Matriz objetiva de avanco
 
