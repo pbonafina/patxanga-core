@@ -797,6 +797,7 @@ test.describe("browser validation scenarios", () => {
       "Bot jogou SOL como abertura."
     );
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+    await expect(page.getByText(/turno 2/)).toBeVisible();
 
     const firstBotActionText = await page
       .getByTestId("game-bot-action-message")
@@ -804,13 +805,28 @@ test.describe("browser validation scenarios", () => {
 
     await page.getByTestId("pass-turn-action").click();
     await expect(page.getByTestId("turn-action-message")).toContainText("Turno passado com sucesso.");
+    await expect(page.getByTestId("pass-turn-action")).toBeDisabled();
+    await expect(page.getByText("turno 3")).toBeVisible();
 
     await expect(page.getByText("Executando turno automático")).toBeVisible();
     await expect(page.getByText("Aguardar o outro jogador")).toBeVisible();
     await expect(page.getByTestId("game-bot-action-message")).not.toHaveText(firstBotActionText);
+    await expect(page.getByText(/turno 4/)).toBeVisible();
 
     await expect(page.getByTestId("game-bot-action-message")).toContainText("Bot ");
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+
+    const secondBotActionText = await page
+      .getByTestId("game-bot-action-message")
+      .innerText();
+
+    await page.getByTestId("pass-turn-action").click();
+    await expect(page.getByTestId("turn-action-message")).toContainText("Turno passado com sucesso.");
+    await expect(page.getByText("Executando turno automático")).toBeVisible();
+
+    await expect(page.getByText("turno 5")).toBeVisible();
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+    await expect(page.getByTestId("game-bot-action-message")).not.toHaveText(secondBotActionText);
   });
 
   test("passes the turn on the current match without making a move", async ({ page }) => {
