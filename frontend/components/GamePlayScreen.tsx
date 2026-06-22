@@ -43,6 +43,15 @@ type TurnActionSummary = {
   nextPlayerName: string;
 };
 
+type MatchTimelineItem = {
+  id: string;
+  turnNumber: number;
+  actorName: string;
+  label: string;
+  detail: string;
+  tone: "info" | "success" | "warning" | "error";
+};
+
 type GamePlayScreenProps = {
   stateLabel: string;
   matchLanguage: string;
@@ -87,6 +96,7 @@ type GamePlayScreenProps = {
   rackSlotAssociationLabels: Record<string, string>;
 
   placedTilesPreview: unknown[];
+  localComposedWord: string | null;
   moveCompositionWarning: string | null;
   canSubmitMove: boolean;
   isSubmittingMove: boolean;
@@ -104,6 +114,7 @@ type GamePlayScreenProps = {
   botActionError: string | null;
   botActionHistory: BotActionHistoryItem[];
   lastTurnActionSummary: TurnActionSummary | null;
+  matchTimeline: MatchTimelineItem[];
   isAutoPlayingBotTurn: boolean;
 
   buildCellKey: (rowIndex: number, colIndex: number) => string;
@@ -198,6 +209,7 @@ export function GamePlayScreen({
   rackSlotAssociationLabels,
 
   placedTilesPreview,
+  localComposedWord,
   moveCompositionWarning,
   canSubmitMove,
   isSubmittingMove,
@@ -215,6 +227,7 @@ export function GamePlayScreen({
   botActionError,
   botActionHistory,
   lastTurnActionSummary,
+  matchTimeline,
   isAutoPlayingBotTurn,
 
   buildCellKey,
@@ -518,6 +531,34 @@ export function GamePlayScreen({
             {" · sem fallback automático entre idiomas"}
           </div>
 
+          <div
+            data-testid="dictionary-import-commands"
+            style={{
+              marginTop: 10,
+              padding: "10px 12px",
+              borderRadius: 12,
+              border: "1px solid #fed7aa",
+              background: "#fff7ed",
+              color: "#9a3412",
+              fontSize: 12,
+              lineHeight: 1.45,
+            }}
+          >
+            <div style={{ fontWeight: 900, textTransform: "uppercase", letterSpacing: 0.6 }}>
+              Importação operacional limitada
+            </div>
+            <div style={{ marginTop: 6 }}>
+              Fonte: amostras Hunspell LibreOffice, licença documentada no repositório, hash
+              validado pelos scripts de importação.
+            </div>
+            <code style={{ display: "block", marginTop: 6 }}>
+              zsh scripts/import-libreoffice-pt-br-sample.sh --limit 100 --execute
+            </code>
+            <code style={{ display: "block", marginTop: 3 }}>
+              zsh scripts/import-libreoffice-pt-pt-sample.sh --limit 100 --execute
+            </code>
+          </div>
+
           {placedTileCount > 0 || associatedSlotCount > 0 ? (
             <div
               data-testid="move-composition-summary"
@@ -623,6 +664,78 @@ export function GamePlayScreen({
             <span>rack {lastTurnActionSummary.beforeRackCount} → {lastTurnActionSummary.afterRackCount}</span>
             <span>placar {lastTurnActionSummary.beforeScore} → {lastTurnActionSummary.afterScore}</span>
             <span>próximo: {lastTurnActionSummary.nextPlayerName}</span>
+          </div>
+        </div>
+      ) : null}
+
+      <div
+        data-testid="bot-product-state"
+        style={{
+          marginBottom: 18,
+          padding: 14,
+          borderRadius: 16,
+          border: "1px solid #d1fae5",
+          background: "#f8fffb",
+          color: "#14532d",
+        }}
+      >
+        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.8, textTransform: "uppercase" }}>
+          Estado humano x bot
+        </div>
+        <div style={{ marginTop: 8, fontSize: 14, fontWeight: 800 }}>
+          {isAutoPlayingBotTurn
+            ? "Bot pensando e executando via RPC oficial."
+            : botActionHistory.length > 0
+              ? `Bot com ${botActionHistory.length} ação${botActionHistory.length === 1 ? "" : "ões"} recente${botActionHistory.length === 1 ? "" : "s"} nesta sessão.`
+              : "Bot pronto para agir automaticamente quando o turno chegar."}
+        </div>
+      </div>
+
+      {matchTimeline.length > 0 ? (
+        <div
+          data-testid="match-action-timeline"
+          style={{
+            marginBottom: 18,
+            padding: 14,
+            borderRadius: 16,
+            border: "1px solid #e5e7eb",
+            background: "#ffffff",
+            color: "#1f2937",
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.8, textTransform: "uppercase" }}>
+            Timeline recente da partida
+          </div>
+          <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
+            {matchTimeline.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: 12,
+                  border:
+                    item.tone === "error"
+                      ? "1px solid #fecaca"
+                      : item.tone === "warning"
+                        ? "1px solid #fde68a"
+                        : item.tone === "success"
+                          ? "1px solid #bbf7d0"
+                          : "1px solid #dbeafe",
+                  background:
+                    item.tone === "error"
+                      ? "#fff1f2"
+                      : item.tone === "warning"
+                        ? "#fffbeb"
+                        : item.tone === "success"
+                          ? "#ecfdf5"
+                          : "#eff6ff",
+                  fontSize: 13,
+                }}
+              >
+                <strong>Turno {item.turnNumber} · {item.actorName} · {item.label}</strong>
+                <div style={{ marginTop: 3 }}>{item.detail}</div>
+              </div>
+            ))}
           </div>
         </div>
       ) : null}
@@ -926,6 +1039,23 @@ export function GamePlayScreen({
                   <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#6b7280" }}>
                     Preview do backend
                   </div>
+                  {localComposedWord ? (
+                    <div
+                      data-testid="local-composed-word"
+                      style={{
+                        marginTop: 6,
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        background: "#ffffff",
+                        border: "1px solid #dbeafe",
+                        color: "#1e3a8a",
+                        fontSize: 15,
+                        fontWeight: 900,
+                      }}
+                    >
+                      Palavra montada localmente: {localComposedWord}
+                    </div>
+                  ) : null}
                   <div style={{ marginTop: 6, fontSize: 14, color: "#1f2937" }}>
                     {isLoadingMovePreview
                       ? "Calculando pontuacao estimada..."
@@ -959,6 +1089,23 @@ export function GamePlayScreen({
                       >
                         {movePreview.requires_vote ? "vai para votacao" : "dicionario reconhece"}
                       </span>
+                    </div>
+                  ) : null}
+                  {movePreview?.status === "ok" && movePreview.requires_vote ? (
+                    <div
+                      data-testid="dictionary-vote-diagnostic"
+                      style={{
+                        marginTop: 8,
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        background: "#ffffff",
+                        border: "1px solid #fcd34d",
+                        color: "#92400e",
+                        fontSize: 13,
+                        fontWeight: 800,
+                      }}
+                    >
+                      Palavra fora do léxico ativo; a jogada seguirá para votação da mesa.
                     </div>
                   ) : null}
                 </div>

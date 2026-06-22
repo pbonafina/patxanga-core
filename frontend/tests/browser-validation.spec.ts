@@ -727,6 +727,7 @@ select payload from e2e_human_vs_bot_exchange_result;
 
 async function openPreparedMatch(page: Page, scenario: SlotMoveScenario) {
   await page.goto("/");
+  await openAdvancedTools(page);
 
   await page.getByLabel("match_id", { exact: true }).fill(scenario.matchId);
   await page
@@ -735,6 +736,15 @@ async function openPreparedMatch(page: Page, scenario: SlotMoveScenario) {
   await page.getByRole("button", { name: "Abrir partida" }).click();
 
   await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+}
+
+async function openAdvancedTools(page: Page) {
+  if (await page.getByRole("heading", { name: "Abrir partida" }).isVisible().catch(() => false)) {
+    return;
+  }
+
+  await page.getByTestId("advanced-tools-toggle").click();
+  await expect(page.getByRole("heading", { name: "Abrir partida" })).toBeVisible();
 }
 
 async function placeTileThroughSlot(
@@ -763,6 +773,8 @@ async function placeTileThroughSlot(
 }
 
 async function openMatchAsUser(page: Page, matchId: string, userId: string) {
+  await openAdvancedTools(page);
+
   await page.getByLabel("match_id", { exact: true }).fill(matchId);
   await page
     .getByLabel("user_id da sessao (temporario neste bootstrap real)")
@@ -780,8 +792,12 @@ async function submitUnrecognizedTsToPendingVote(
   await placeTileThroughSlot(page, scenario.tileIds.S, 2, 7, 8);
 
   await expect(page.getByText("2 peças em preparo")).toBeVisible();
+  await expect(page.getByTestId("local-composed-word")).toContainText("TS");
   await expect(page.getByText("Palavra principal: TS")).toBeVisible();
   await expect(page.getByText("vai para votacao")).toBeVisible();
+  await expect(page.getByTestId("dictionary-vote-diagnostic")).toContainText(
+    "Palavra fora do léxico ativo"
+  );
 
   await page.getByRole("button", { name: "Confirmar jogada" }).click();
 
@@ -813,6 +829,10 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("primary-product-actions")).toContainText("Jogar agora");
     await expect(page.getByTestId("primary-product-actions")).toContainText("Treinar contra bot");
     await expect(page.getByTestId("primary-product-actions")).toContainText("Retomar mesa");
+    await expect(page.getByTestId("advanced-tools-toggle")).toContainText(
+      "Mostrar ferramentas avançadas"
+    );
+    await openAdvancedTools(page);
     await expect(
       page.getByRole("heading", { name: "Cenarios de validacao browser" })
     ).toBeVisible();
@@ -1012,6 +1032,9 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("dictionary-operational-card")).toContainText(
       "sem fallback automático"
     );
+    await expect(page.getByTestId("dictionary-import-commands")).toContainText(
+      "import-libreoffice-pt-pt-sample.sh"
+    );
   });
 
   test("creates a human versus bot quick match", async ({ page }) => {
@@ -1028,6 +1051,7 @@ test.describe("browser validation scenarios", () => {
     const scenario = createHumanVsBotScenarioWithBotTurn();
 
     await page.goto("/");
+    await openAdvancedTools(page);
 
     await page.getByLabel("match_id", { exact: true }).fill(scenario.matchId);
     await page
@@ -1051,6 +1075,8 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("game-bot-action-history")).toContainText(
       "Bot jogou SOL como abertura."
     );
+    await expect(page.getByTestId("bot-product-state")).toContainText("Bot com");
+    await expect(page.getByTestId("match-action-timeline")).toContainText("Bot jogou");
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
     await expect(page.getByTestId("board-cell-7-7")).toContainText("S");
     await expect(page.getByTestId("board-cell-7-8")).toContainText("O");
@@ -1061,6 +1087,7 @@ test.describe("browser validation scenarios", () => {
     const scenario = createHumanVsBotScenarioWithConnectedBotTurn();
 
     await page.goto("/");
+    await openAdvancedTools(page);
 
     await page.getByLabel("match_id", { exact: true }).fill(scenario.matchId);
     await page

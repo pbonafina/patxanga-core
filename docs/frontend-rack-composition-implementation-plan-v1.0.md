@@ -192,6 +192,17 @@ Saida entregue:
 - badges do board e resumo de composicao sao atualizados sem limpar o slot todo
 - Playwright cobre esse comportamento antes de limpar a jogada completa
 
+### Etapa 10 — leitura local da palavra e diagnostico de votacao
+Status:
+- implementada
+
+Saida entregue:
+- a palavra composta localmente e exibida antes do preview do backend
+- o preview continua sendo a fonte oficial de pontuacao e votacao
+- palavras fora do lexico ativo mostram diagnostico explicito antes do submit
+- Playwright cobre a leitura local e o diagnostico de votacao em palavra nao
+  reconhecida
+
 ## 8. Fora de escopo atual
 
 Nao entra nesta baseline:

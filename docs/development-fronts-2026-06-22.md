@@ -325,6 +325,50 @@ zsh scripts/test-libreoffice-dictionary-sample.sh
 Resultado browser: `19 passed`.
 Resultado SQL/bot/dicionario: suites completas verdes apos `supabase db reset`.
 
+## 6.5 Atualizacao de execucao - cinco tranches de produto e operacao
+
+Tranche executada sobre a UI jogavel, sem migration nova.
+
+Frentes atravessadas:
+
+1. jogada real mais confortavel
+2. historico curto da partida
+3. humano contra bot com leitura de estado mais longa
+4. home com ferramentas tecnicas recolhidas
+5. dicionario operacional com comandos e diagnostico
+
+Entregas adicionadas:
+
+- a tela jogavel mostra a palavra montada localmente antes do preview do
+  backend
+- jogadas que exigem votacao mostram diagnostico explicito de palavra fora do
+  lexico ativo
+- foi criado timeline recente da partida para jogada, passe, troca, voto e bot
+- o bot ganhou cartao de estado de produto, alem do historico tecnico recente
+- os paineis de UUID, cenarios browser e alternador foram recolhidos em
+  ferramentas avancadas na home
+- o dicionario operacional mostra comandos locais de importacao limitada para
+  amostras `pt-BR` e `pt-PT`
+- Playwright passou a abrir ferramentas avancadas quando usa fluxo manual e
+  cobre os novos elementos principais
+
+Validacao confirmada nesta tranche:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+zsh scripts/test-dictionary-import-tooling.sh
+zsh scripts/test-libreoffice-dictionary-sample.sh
+```
+
+Resultado browser: `19 passed`.
+Resultado SQL/bot/dicionario: suites completas verdes apos `supabase db reset`.
+
 ## 7. Politica de commits
 
 - cada tranche grande pode atravessar mais de uma frente, desde que tenha

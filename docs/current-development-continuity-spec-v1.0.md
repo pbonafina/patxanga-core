@@ -1238,6 +1238,36 @@ Leitura correta:
   `p_placed_tiles`
 - ferramentas de validacao continuam disponiveis na home
 
+## 7.7 Checkpoint atual - cinco tranches de produto e operacao
+
+Estado atualizado:
+
+- a UI jogavel agora mostra a palavra montada localmente antes do backend
+- o preview de palavra fora do lexico ativo mostra diagnostico de votacao
+- a partida tem timeline curta para jogada, passe, troca, voto e bot
+- o bot tem cartao de estado de produto e historico recente validado
+- a home recolheu UUIDs, cenarios browser e alternador em ferramentas
+  avancadas
+- o dicionario operacional mostra comandos de importacao limitada `pt-BR` e
+  `pt-PT`
+
+Validacao frontend confirmada:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+zsh scripts/test-dictionary-import-tooling.sh
+zsh scripts/test-libreoffice-dictionary-sample.sh
+```
+
+Resultado browser: `19 passed`.
+Resultado SQL/bot/dicionario: suites completas verdes apos `supabase db reset`.
+
 ## 8. Ordem segura de retomada a partir daqui
 
 Ao retomar esta frente em outra sala:

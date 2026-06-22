@@ -121,6 +121,17 @@ type TurnActionSummary = {
   nextPlayerName: string;
 };
 
+type MatchTimelineTone = "info" | "success" | "warning" | "error";
+
+type MatchTimelineItem = {
+  id: string;
+  turnNumber: number;
+  actorName: string;
+  label: string;
+  detail: string;
+  tone: MatchTimelineTone;
+};
+
 const DEFAULT_RACK_SLOT_IDS = ["__slot__:1", "__slot__:2", "__slot__:3"] as const;
 const INSERTION_TARGET_PREFIX = "__insert__:";
 const DECLARED_LETTER_SPECIAL_TYPES = new Set([
@@ -507,6 +518,7 @@ export default function HomePage() {
     Record<string, string>
   >({});
   const [showDebug, setShowDebug] = useState(false);
+  const [showAdvancedTools, setShowAdvancedTools] = useState(false);
   const [quickMatchSession, setQuickMatchSession] = useState<{
     matchId: string;
     hostUserId: string;
@@ -551,6 +563,7 @@ export default function HomePage() {
   const [botActionHistory, setBotActionHistory] = useState<BotActionHistoryItem[]>([]);
   const [lastTurnActionSummary, setLastTurnActionSummary] =
     useState<TurnActionSummary | null>(null);
+  const [matchTimeline, setMatchTimeline] = useState<MatchTimelineItem[]>([]);
   const botAutoActionKeyRef = useRef<string | null>(null);
   const botAutoActionInFlightRef = useRef(false);
 
@@ -647,6 +660,16 @@ export default function HomePage() {
     };
   }
 
+  function appendMatchTimelineItem(item: Omit<MatchTimelineItem, "id">) {
+    setMatchTimeline((current) => [
+      {
+        ...item,
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      },
+      ...current,
+    ].slice(0, 8));
+  }
+
   const moveCompositionPlacements = useMemo(() => {
     if (!resolvedBootstrap.playerContext) {
       return [] as MoveCompositionPlacement[];
@@ -737,6 +760,20 @@ export default function HomePage() {
     () => moveCompositionPlacements.map((placement) => placement.tileId),
     [moveCompositionPlacements]
   );
+
+  const localComposedWord = useMemo(() => {
+    if (moveCompositionPlacements.length === 0) {
+      return null;
+    }
+
+    const letters = moveCompositionPlacements.map((placement) => {
+      const tile = rackTilesById.get(placement.tileId);
+      const letter = placement.declaredLetter ?? tile?.letter ?? "?";
+      return letter.toUpperCase();
+    });
+
+    return letters.join("");
+  }, [moveCompositionPlacements, rackTilesById]);
 
   const moveCompositionIssues = useMemo(() => {
     return moveCompositionPlacements
@@ -901,6 +938,13 @@ export default function HomePage() {
       setBotActionMessage(
         `${currentTurnPlayerSummary?.display_name ?? "Bot"} esta tentando uma jogada.`
       );
+      appendMatchTimelineItem({
+        turnNumber: resolvedBootstrap.turnNumber,
+        actorName: currentTurnPlayerSummary?.display_name ?? "Bot",
+        label: "Bot pensando",
+        detail: "Tentando uma jogada automatica no backend.",
+        tone: "info",
+      });
       setBotActionHistory((current) => [
         {
           id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -953,6 +997,13 @@ export default function HomePage() {
 
         const nextMessage = formatBotTurnMessage(botTurnResult);
         setBotActionMessage(nextMessage);
+        appendMatchTimelineItem({
+          turnNumber: resolvedBootstrap.turnNumber,
+          actorName: currentTurnPlayerSummary?.display_name ?? "Bot",
+          label: botTurnResult?.bot_action === "place_word" ? "Bot jogou" : "Bot passou",
+          detail: nextMessage,
+          tone: "success",
+        });
         setBotActionHistory((current) => [
           {
             id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -972,6 +1023,13 @@ export default function HomePage() {
 
           setBotActionError(nextError);
           setBotActionMessage(null);
+          appendMatchTimelineItem({
+            turnNumber: resolvedBootstrap.turnNumber,
+            actorName: currentTurnPlayerSummary?.display_name ?? "Bot",
+            label: "Falha do bot",
+            detail: nextError,
+            tone: "error",
+          });
           setBotActionHistory((current) => [
             {
               id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -1156,6 +1214,7 @@ export default function HomePage() {
     setBotActionMessage(null);
     setBotActionHistory([]);
     setLastTurnActionSummary(null);
+    setMatchTimeline([]);
     setIsAutoPlayingBotTurn(false);
     setTurnActionMessage(null);
     setSelectedTileId(null);
@@ -1846,6 +1905,11 @@ export default function HomePage() {
       rackCount: currentRackCount,
       score: currentPlayerScore,
     };
+    const actorName =
+      resolvedBootstrap.playersSummary.find(
+        (player) => player.player_id === resolvedBootstrap.playerId
+      )?.display_name ?? "Jogador";
+    const preparedWord = localComposedWord ?? movePreview?.main_word ?? "palavra preparada";
 
     try {
       const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
@@ -1880,6 +1944,13 @@ export default function HomePage() {
       setLastTurnActionSummary(
         buildTurnActionSummary("Jogada enviada", before, refreshedData)
       );
+      appendMatchTimelineItem({
+        turnNumber: before.turnNumber,
+        actorName,
+        label: "Jogada enviada",
+        detail: `Jogada ${preparedWord} enviada para validação.`,
+        tone: refreshedData.status === "voting" ? "warning" : "success",
+      });
       setTurnActionMessage("Jogada enviada com sucesso.");
     } catch (error) {
       setErrorMessage(
@@ -1911,6 +1982,10 @@ export default function HomePage() {
       rackCount: currentRackCount,
       score: currentPlayerScore,
     };
+    const actorName =
+      resolvedBootstrap.playersSummary.find(
+        (player) => player.player_id === resolvedBootstrap.playerId
+      )?.display_name ?? "Jogador";
 
     try {
       const client = (await import("../lib/supabase/client")).getSupabaseBrowserClient();
@@ -1934,6 +2009,15 @@ export default function HomePage() {
         setLastTurnActionSummary(
           buildTurnActionSummary("Turno passado", before, refreshedData)
         );
+        appendMatchTimelineItem({
+          turnNumber: before.turnNumber,
+          actorName,
+          label: "Turno passado",
+          detail: `Próximo turno de ${refreshedData.playersSummary.find(
+            (player) => player.player_id === refreshedData.currentTurnPlayerId
+          )?.display_name ?? "outro jogador"}.`,
+          tone: "info",
+        });
       }
       setTurnActionMessage("Turno passado com sucesso.");
     } catch (error) {
@@ -1978,6 +2062,10 @@ export default function HomePage() {
       rackCount: currentRackCount,
       score: currentPlayerScore,
     };
+    const actorName =
+      resolvedBootstrap.playersSummary.find(
+        (player) => player.player_id === resolvedBootstrap.playerId
+      )?.display_name ?? "Jogador";
 
     try {
       const client = (await import("../lib/supabase/client")).getSupabaseBrowserClient();
@@ -2007,6 +2095,13 @@ export default function HomePage() {
             refreshedData
           )
         );
+        appendMatchTimelineItem({
+          turnNumber: before.turnNumber,
+          actorName,
+          label: "Troca de peças",
+          detail: `${exchangeTileIds.length} peça${exchangeTileIds.length === 1 ? "" : "s"} enviada${exchangeTileIds.length === 1 ? "" : "s"} para troca.`,
+          tone: "info",
+        });
       }
       setTurnActionMessage(
         `Troca concluída com ${exchangeTileIds.length} peça${exchangeTileIds.length === 1 ? "" : "s"}.`
@@ -2102,7 +2197,8 @@ export default function HomePage() {
       }
 
       setVoteResult(data ?? null);
-      setVoteResolutionMessage(formatVoteResolutionMessage(data));
+      const nextVoteResolutionMessage = formatVoteResolutionMessage(data);
+      setVoteResolutionMessage(nextVoteResolutionMessage);
 
       const refreshedData = await loadMatchBootstrap({
         matchId: matchIdInput,
@@ -2115,6 +2211,17 @@ export default function HomePage() {
         playerIdInput,
         refreshedData.status
       );
+      appendMatchTimelineItem({
+        turnNumber: resolvedBootstrap.turnNumber,
+        actorName:
+          pendingVoteRequestPlayer.display_name ??
+          (voteReject ? "Votante rejeitou" : "Votante aceitou"),
+        label: voteReject ? "Voto para rejeitar" : "Voto para aceitar",
+        detail:
+          nextVoteResolutionMessage ??
+          `Voto registrado para ${pendingVoteMove.main_word ?? "palavra pendente"}.`,
+        tone: voteReject ? "warning" : "success",
+      });
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Falha ao enviar voto."
@@ -2656,6 +2763,37 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section
+        style={{
+          marginTop: 24,
+          padding: 18,
+          border: "1px solid #d7d0bf",
+          borderRadius: 20,
+          background: "#fffaf0",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <h2 style={{ margin: 0 }}>Ferramentas avançadas</h2>
+            <p style={{ margin: "6px 0 0", color: "#4b5563" }}>
+              UUIDs, cenários browser e alternador de sessão ficam recolhidos para manter o fluxo
+              principal jogável.
+            </p>
+          </div>
+          <button
+            type="button"
+            data-testid="advanced-tools-toggle"
+            onClick={() => setShowAdvancedTools((current) => !current)}
+            style={{ padding: "10px 14px", cursor: "pointer", alignSelf: "flex-start" }}
+          >
+            {showAdvancedTools ? "Ocultar ferramentas avançadas" : "Mostrar ferramentas avançadas"}
+          </button>
+        </div>
+      </section>
+
+      {showAdvancedTools ? (
+        <>
+
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
         <h2>Cenarios de validacao browser</h2>
         <p>
@@ -3056,6 +3194,9 @@ export default function HomePage() {
         </div>
       </section>
 
+        </>
+      ) : null}
+
       {resolvedBootstrap.matchId ? (
         <section
           style={{
@@ -3229,6 +3370,7 @@ export default function HomePage() {
         rackSlotAssociations={localRackSlotAssociations}
         rackSlotAssociationLabels={rackSlotAssociationLabels}
         placedTilesPreview={placedTilesPreview}
+        localComposedWord={localComposedWord}
         moveCompositionWarning={moveCompositionWarning}
         canSubmitMove={
           placedTilesPreview.length > 0 &&
@@ -3249,6 +3391,7 @@ export default function HomePage() {
         botActionError={botActionError}
         botActionHistory={botActionHistory}
         lastTurnActionSummary={lastTurnActionSummary}
+        matchTimeline={matchTimeline}
         isAutoPlayingBotTurn={isAutoPlayingBotTurn}
         buildCellKey={buildCellKey}
         renderCellLabel={renderCellLabel}
