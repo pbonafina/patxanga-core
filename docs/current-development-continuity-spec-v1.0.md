@@ -1268,6 +1268,58 @@ zsh scripts/test-libreoffice-dictionary-sample.sh
 Resultado browser: `19 passed`.
 Resultado SQL/bot/dicionario: suites completas verdes apos `supabase db reset`.
 
+## 7.8 Checkpoint atual - alpha online em seis tranches
+
+Estado apos a sequencia:
+
+- frontend tem login/cadastro/logout com Supabase Auth
+- identidade de produto usa `session.user.id`
+- quick match autenticado cria host por wrapper seguro
+- lobby por convite aparece no fluxo comum da home
+- central de mesas lista convites e partidas retomaveis fora do modo avancado
+- backend tem wrappers autenticados para lobby, convites, retomada, bootstrap,
+  preview, submit, pass, exchange e vote
+- teste multi-humano cobre 4 jogadores com passes e 3 jogadores com quorum de
+  votacao
+- `turn_order` de jogadores passou a usar constraint unica deferrable para
+  permitir embaralhamento seguro em `start_patxanga_match`
+- deploy alpha tem plano em `docs/09-deployment-plan.md`
+- operacao alpha/beta tem runbook em `docs/operational-runbook-alpha-v1.0.md`
+- frontend expoe `/api/health` sem vazar segredo
+- validacao SQL completa encontrou falta de `CASA` no baseline efetivo `pt-PT`;
+  a migracao `20260622203000_33_repair_pt_pt_core_seed_casa.sql` repara a seed
+  de modo idempotente
+
+Commits relevantes desta sequencia:
+
+- `feat(frontend): add authenticated product session`
+- `feat(auth): add authenticated product entrypoints`
+- `feat(frontend): surface invite lobby product flow`
+- `fix(sql): harden multi-human turn flows`
+- `docs(deploy): prepare alpha publication package`
+- `feat(ops): add alpha operational health baseline`
+
+Validacao final consolidada:
+
+```bash
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+zsh scripts/test-dictionary-import-tooling.sh
+zsh scripts/test-libreoffice-dictionary-sample.sh
+zsh scripts/preflight-alpha-deploy.sh
+cd frontend
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+```
+
+Resultado browser: `21 passed`.
+Resultado SQL/bot/dicionario/preflight: verde apos `supabase db reset`.
+
+Limite externo:
+
+- publicacao real ainda exige credenciais e configuracao fora do repositorio:
+  Supabase hosted, provedor frontend, dominio, SMTP e variaveis de ambiente.
+
 ## 8. Ordem segura de retomada a partir daqui
 
 Ao retomar esta frente em outra sala:

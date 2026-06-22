@@ -369,6 +369,58 @@ zsh scripts/test-libreoffice-dictionary-sample.sh
 Resultado browser: `19 passed`.
 Resultado SQL/bot/dicionario: suites completas verdes apos `supabase db reset`.
 
+## 6.6 Atualizacao de execucao - seis tranches para alpha online
+
+Tranches executadas em sequencia com commits intermediarios:
+
+1. sessao autenticada no frontend com Supabase Auth
+2. entrypoints autenticados `my_*` usando `auth.uid()`
+3. lobby por convite e central de mesas visiveis no produto
+4. robustez multi-humano para 3-4 jogadores e correcao de `turn_order`
+5. pacote de publicacao alpha com preflight e plano de deploy
+6. baseline operacional com `/api/health` e runbook alpha/beta
+
+Pontos importantes:
+
+- o fluxo comum agora usa conta autenticada
+- ferramentas avancadas continuam disponiveis para testes e debug por UUID
+- RPCs legadas ainda existem; os wrappers autenticados sao o caminho de
+  producao a ser ampliado
+- a validacao final encontrou ausencia de `CASA` no baseline efetivo `pt-PT`;
+  a migracao `20260622203000_33_repair_pt_pt_core_seed_casa.sql` repara o seed
+  de forma idempotente
+- publicacao real segue dependente de credenciais externas de Supabase hosted,
+  provedor de frontend e dominio
+
+Validacoes executadas ao longo das tranches:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+supabase db reset
+zsh scripts/run-sql-test-suite.sh lobby_ops
+zsh scripts/run-sql-test-suite.sh engine_regression
+zsh scripts/preflight-alpha-deploy.sh
+```
+
+Validacao final consolidada:
+
+```bash
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+zsh scripts/test-dictionary-import-tooling.sh
+zsh scripts/test-libreoffice-dictionary-sample.sh
+zsh scripts/preflight-alpha-deploy.sh
+cd frontend
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+```
+
+Resultado browser atual: `21 passed`.
+Resultado SQL/bot/dicionario/preflight: verde apos `supabase db reset`.
+
 ## 7. Politica de commits
 
 - cada tranche grande pode atravessar mais de uma frente, desde que tenha
