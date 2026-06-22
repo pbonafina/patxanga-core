@@ -903,6 +903,9 @@ export default function HomePage() {
     Boolean(resolvedBootstrap.currentTurnPlayerId) &&
     resolvedBootstrap.playerId === resolvedBootstrap.currentTurnPlayerId &&
     isActive;
+  const shouldUseAuthenticatedGameplayEntrypoints =
+    Boolean(authenticatedUserId) &&
+    resolvedBootstrap.playerContext?.user_id === authenticatedUserId;
 
   const isPlayerForfeited = resolvedBootstrap.playerContext?.has_forfeited === true;
   const canCurrentPlayerTakeTurnAction = isPlayersTurn && !isPlayerForfeited;
@@ -1154,11 +1157,16 @@ export default function HomePage() {
           throw new Error("Supabase client indisponivel no frontend.");
         }
 
-        const { data, error } = await client.rpc("preview_patxanga_move", {
-          p_match_id: resolvedBootstrap.matchId,
-          p_player_id: resolvedBootstrap.playerId,
-          p_placed_tiles: placedTilesPreview,
-        });
+        const { data, error } = shouldUseAuthenticatedGameplayEntrypoints
+          ? await client.rpc("preview_patxanga_my_move", {
+              p_match_id: resolvedBootstrap.matchId,
+              p_placed_tiles: placedTilesPreview,
+            })
+          : await client.rpc("preview_patxanga_move", {
+              p_match_id: resolvedBootstrap.matchId,
+              p_player_id: resolvedBootstrap.playerId,
+              p_placed_tiles: placedTilesPreview,
+            });
 
         if (cancelled) {
           return;
@@ -1201,6 +1209,7 @@ export default function HomePage() {
     placedTilesPreview,
     resolvedBootstrap.matchId,
     resolvedBootstrap.playerId,
+    shouldUseAuthenticatedGameplayEntrypoints,
   ]);
 
   useEffect(() => {
@@ -1607,13 +1616,20 @@ export default function HomePage() {
       const hostUserId = authenticatedUserId ?? crypto.randomUUID();
       const guestUserId = crypto.randomUUID();
 
-      const { data: matchId, error: createError } = await client.rpc("create_patxanga_match", {
-        p_host_user_id: hostUserId,
-        p_host_guest_name: authenticatedDisplayName ?? "Host Local",
-        p_language: quickMatchLanguage,
-        p_match_mode: "synchronous",
-        p_max_players: 2,
-      });
+      const { data: matchId, error: createError } = authenticatedUserId
+        ? await client.rpc("create_patxanga_my_match", {
+            p_host_guest_name: authenticatedDisplayName ?? "Host Local",
+            p_language: quickMatchLanguage,
+            p_match_mode: "synchronous",
+            p_max_players: 2,
+          })
+        : await client.rpc("create_patxanga_match", {
+            p_host_user_id: hostUserId,
+            p_host_guest_name: "Host Local",
+            p_language: quickMatchLanguage,
+            p_match_mode: "synchronous",
+            p_max_players: 2,
+          });
 
       if (createError) {
         throw new Error(createError.message);
@@ -1677,13 +1693,20 @@ export default function HomePage() {
       const hostUserId = authenticatedUserId ?? crypto.randomUUID();
       const botUserId = crypto.randomUUID();
 
-      const { data: matchId, error: createError } = await client.rpc("create_patxanga_match", {
-        p_host_user_id: hostUserId,
-        p_host_guest_name: authenticatedDisplayName ?? "Humano Local",
-        p_language: quickMatchLanguage,
-        p_match_mode: "synchronous",
-        p_max_players: 2,
-      });
+      const { data: matchId, error: createError } = authenticatedUserId
+        ? await client.rpc("create_patxanga_my_match", {
+            p_host_guest_name: authenticatedDisplayName ?? "Humano Local",
+            p_language: quickMatchLanguage,
+            p_match_mode: "synchronous",
+            p_max_players: 2,
+          })
+        : await client.rpc("create_patxanga_match", {
+            p_host_user_id: hostUserId,
+            p_host_guest_name: "Humano Local",
+            p_language: quickMatchLanguage,
+            p_match_mode: "synchronous",
+            p_max_players: 2,
+          });
 
       if (createError) {
         throw new Error(createError.message);
@@ -2061,11 +2084,16 @@ export default function HomePage() {
         throw new Error("Supabase client not configured in frontend environment.");
       }
 
-      const { data, error } = await client.rpc("submit_patxanga_move", {
-        p_match_id: resolvedBootstrap.matchId,
-        p_player_id: resolvedBootstrap.playerId,
-        p_placed_tiles: placedTilesPreview,
-      });
+      const { data, error } = shouldUseAuthenticatedGameplayEntrypoints
+        ? await client.rpc("submit_patxanga_my_move", {
+            p_match_id: resolvedBootstrap.matchId,
+            p_placed_tiles: placedTilesPreview,
+          })
+        : await client.rpc("submit_patxanga_move", {
+            p_match_id: resolvedBootstrap.matchId,
+            p_player_id: resolvedBootstrap.playerId,
+            p_placed_tiles: placedTilesPreview,
+          });
 
       if (error) {
         throw new Error(error.message);
@@ -2135,10 +2163,14 @@ export default function HomePage() {
         throw new Error("Supabase client not configured in frontend environment.");
       }
 
-      const { data, error } = await client.rpc("submit_patxanga_pass_turn", {
-        p_match_id: resolvedBootstrap.matchId,
-        p_player_id: resolvedBootstrap.playerId,
-      });
+      const { data, error } = shouldUseAuthenticatedGameplayEntrypoints
+        ? await client.rpc("submit_patxanga_my_pass_turn", {
+            p_match_id: resolvedBootstrap.matchId,
+          })
+        : await client.rpc("submit_patxanga_pass_turn", {
+            p_match_id: resolvedBootstrap.matchId,
+            p_player_id: resolvedBootstrap.playerId,
+          });
 
       if (error) {
         throw new Error(error.message);
@@ -2215,11 +2247,16 @@ export default function HomePage() {
         throw new Error("Supabase client not configured in frontend environment.");
       }
 
-      const { data, error } = await client.rpc("submit_patxanga_exchange_tiles", {
-        p_match_id: resolvedBootstrap.matchId,
-        p_player_id: resolvedBootstrap.playerId,
-        p_tile_ids: exchangeTileIds,
-      });
+      const { data, error } = shouldUseAuthenticatedGameplayEntrypoints
+        ? await client.rpc("submit_patxanga_my_exchange_tiles", {
+            p_match_id: resolvedBootstrap.matchId,
+            p_tile_ids: exchangeTileIds,
+          })
+        : await client.rpc("submit_patxanga_exchange_tiles", {
+            p_match_id: resolvedBootstrap.matchId,
+            p_player_id: resolvedBootstrap.playerId,
+            p_tile_ids: exchangeTileIds,
+          });
 
       if (error) {
         throw new Error(error.message);
@@ -2328,11 +2365,16 @@ export default function HomePage() {
         throw new Error("Supabase client indisponivel no frontend.");
       }
 
-      const { data, error } = await client.rpc("submit_patxanga_vote", {
-        p_move_id: pendingVoteMove.move_id,
-        p_voter_player_id: pendingVoteRequestPlayer.player_id,
-        p_vote_reject: voteReject,
-      });
+      const { data, error } = shouldUseAuthenticatedGameplayEntrypoints
+        ? await client.rpc("submit_patxanga_my_vote", {
+            p_move_id: pendingVoteMove.move_id,
+            p_vote_reject: voteReject,
+          })
+        : await client.rpc("submit_patxanga_vote", {
+            p_move_id: pendingVoteMove.move_id,
+            p_voter_player_id: pendingVoteRequestPlayer.player_id,
+            p_vote_reject: voteReject,
+          });
 
       if (error) {
         throw new Error(error.message);

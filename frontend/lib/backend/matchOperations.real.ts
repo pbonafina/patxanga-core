@@ -109,6 +109,22 @@ function requireClient() {
   return client;
 }
 
+async function getAuthenticatedUserId() {
+  const client = requireClient();
+  const { data } = await client.auth.getSession();
+  return data.session?.user.id ?? null;
+}
+
+async function shouldUseAuthenticatedEntrypoint(expectedUserId?: string | null) {
+  const authenticatedUserId = await getAuthenticatedUserId();
+
+  if (!authenticatedUserId) {
+    return false;
+  }
+
+  return !expectedUserId || authenticatedUserId === expectedUserId.trim();
+}
+
 function mapPendingInvite(invite: RpcPendingInvite): PendingInvite {
   return {
     inviteId: invite.invite_id,
@@ -208,9 +224,12 @@ function mapForfeitMatchResult(result: RpcForfeitMatchResult): ForfeitMatchResul
 export const realMatchOperationsService: MatchOperationsService = {
   async listPendingInvites(userId) {
     const client = requireClient();
-    const { data, error } = await client.rpc("list_patxanga_user_pending_invites", {
-      p_user_id: userId.trim(),
-    });
+    const useAuthenticatedEntrypoint = await shouldUseAuthenticatedEntrypoint(userId);
+    const { data, error } = useAuthenticatedEntrypoint
+      ? await client.rpc("list_patxanga_my_pending_invites")
+      : await client.rpc("list_patxanga_user_pending_invites", {
+          p_user_id: userId.trim(),
+        });
 
     if (error) {
       throw new Error(error.message);
@@ -221,9 +240,12 @@ export const realMatchOperationsService: MatchOperationsService = {
 
   async listResumableMatches(userId) {
     const client = requireClient();
-    const { data, error } = await client.rpc("list_patxanga_user_resumable_matches", {
-      p_user_id: userId.trim(),
-    });
+    const useAuthenticatedEntrypoint = await shouldUseAuthenticatedEntrypoint(userId);
+    const { data, error } = useAuthenticatedEntrypoint
+      ? await client.rpc("list_patxanga_my_resumable_matches")
+      : await client.rpc("list_patxanga_user_resumable_matches", {
+          p_user_id: userId.trim(),
+        });
 
     if (error) {
       throw new Error(error.message);
@@ -234,10 +256,15 @@ export const realMatchOperationsService: MatchOperationsService = {
 
   async acceptInvite(params: InviteActionParams) {
     const client = requireClient();
-    const { data, error } = await client.rpc("accept_patxanga_invite", {
-      p_invite_id: params.inviteId.trim(),
-      p_user_id: params.userId.trim(),
-    });
+    const useAuthenticatedEntrypoint = await shouldUseAuthenticatedEntrypoint(params.userId);
+    const { data, error } = useAuthenticatedEntrypoint
+      ? await client.rpc("accept_patxanga_my_invite", {
+          p_invite_id: params.inviteId.trim(),
+        })
+      : await client.rpc("accept_patxanga_invite", {
+          p_invite_id: params.inviteId.trim(),
+          p_user_id: params.userId.trim(),
+        });
 
     if (error) {
       throw new Error(error.message);
@@ -252,10 +279,15 @@ export const realMatchOperationsService: MatchOperationsService = {
 
   async declineInvite(params: InviteActionParams) {
     const client = requireClient();
-    const { data, error } = await client.rpc("decline_patxanga_invite", {
-      p_invite_id: params.inviteId.trim(),
-      p_user_id: params.userId.trim(),
-    });
+    const useAuthenticatedEntrypoint = await shouldUseAuthenticatedEntrypoint(params.userId);
+    const { data, error } = useAuthenticatedEntrypoint
+      ? await client.rpc("decline_patxanga_my_invite", {
+          p_invite_id: params.inviteId.trim(),
+        })
+      : await client.rpc("decline_patxanga_invite", {
+          p_invite_id: params.inviteId.trim(),
+          p_user_id: params.userId.trim(),
+        });
 
     if (error) {
       throw new Error(error.message);
@@ -270,10 +302,15 @@ export const realMatchOperationsService: MatchOperationsService = {
 
   async resumeMatch(params: ResumeMatchParams) {
     const client = requireClient();
-    const { data, error } = await client.rpc("resume_patxanga_match", {
-      p_match_id: params.matchId.trim(),
-      p_user_id: params.userId.trim(),
-    });
+    const useAuthenticatedEntrypoint = await shouldUseAuthenticatedEntrypoint(params.userId);
+    const { data, error } = useAuthenticatedEntrypoint
+      ? await client.rpc("resume_patxanga_my_match", {
+          p_match_id: params.matchId.trim(),
+        })
+      : await client.rpc("resume_patxanga_match", {
+          p_match_id: params.matchId.trim(),
+          p_user_id: params.userId.trim(),
+        });
 
     if (error) {
       throw new Error(error.message);
@@ -284,10 +321,15 @@ export const realMatchOperationsService: MatchOperationsService = {
 
   async startMatchFromLobby(params: StartMatchFromLobbyParams) {
     const client = requireClient();
-    const { data, error } = await client.rpc("start_patxanga_match_from_lobby", {
-      p_match_id: params.matchId.trim(),
-      p_host_player_id: params.hostPlayerId.trim(),
-    });
+    const useAuthenticatedEntrypoint = await shouldUseAuthenticatedEntrypoint();
+    const { data, error } = useAuthenticatedEntrypoint
+      ? await client.rpc("start_patxanga_my_match_from_lobby", {
+          p_match_id: params.matchId.trim(),
+        })
+      : await client.rpc("start_patxanga_match_from_lobby", {
+          p_match_id: params.matchId.trim(),
+          p_host_player_id: params.hostPlayerId.trim(),
+        });
 
     if (error) {
       throw new Error(error.message);

@@ -14,6 +14,7 @@ typeset -a lobby_ops_tests=(
   "sql/tests/test_list_pending_invites.sql"
   "sql/tests/test_list_resumable_matches.sql"
   "sql/tests/test_match_bootstrap_bot_metadata.sql"
+  "sql/tests/test_authenticated_product_entrypoints.sql"
 )
 
 typeset -a engine_regression_tests=(
