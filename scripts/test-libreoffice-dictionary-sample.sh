@@ -14,6 +14,9 @@ boundary_dic="$tmp_dir/policy_boundary_fixture.dic"
 boundary_csv="$tmp_dir/policy_boundary.csv"
 pt_pt_source_dir="$tmp_dir/pt-pt-source"
 pt_pt_sql="$pt_pt_source_dir/patxanga-libreoffice-pt-pt-sample-3.sql"
+pt_pt_report="$pt_pt_source_dir/patxanga-libreoffice-pt-pt-sample-3.report.json"
+pt_pt_full_sql="$pt_pt_source_dir/patxanga-libreoffice-pt-pt-full-4.sql"
+pt_pt_full_report="$pt_pt_source_dir/patxanga-libreoffice-pt-pt-full-4.report.json"
 
 cat > "$fixture_dic" <<'DIC'
 9
@@ -148,5 +151,20 @@ grep -q "ABACATEIRO" "$pt_pt_sql"
 grep -q "ABACATE" "$pt_pt_sql"
 grep -q "ÁBACO" "$pt_pt_sql"
 grep -q '"license_review_required":true' "$pt_pt_sql"
+grep -q '"import_mode": "sample"' "$pt_pt_report"
+grep -q '"selected_entry_count": 3' "$pt_pt_report"
+
+zsh scripts/import-libreoffice-pt-pt-sample.sh \
+  --skip-download \
+  --source-dir "$pt_pt_source_dir" \
+  --full \
+  --limit 4 \
+  > "$tmp_dir/pt-pt-full-import.stdout"
+
+grep -q "import_mode=full" "$tmp_dir/pt-pt-full-import.stdout"
+grep -q "source=libreoffice_hunspell_pt_pt_full" "$tmp_dir/pt-pt-full-import.stdout"
+grep -q "libreoffice_hunspell_pt_pt_full" "$pt_pt_full_sql"
+grep -q '"import_mode": "full"' "$pt_pt_full_report"
+grep -q '"selected_entry_count": 4' "$pt_pt_full_report"
 
 echo "LibreOffice dictionary sample test passed"

@@ -79,6 +79,18 @@ O `source` usado pela amostra e `libreoffice_hunspell_pt_br_sample`. Nao usar
 `p_deactivate_missing := true` nessa amostra, porque ela nao representa uma
 substituicao completa da fonte.
 
+Modo de lote amplo controlado:
+
+```bash
+zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --full --limit 10000
+zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --full --limit 10000 --execute
+```
+
+O modo `--full` usa `source = libreoffice_hunspell_pt_br_full` e gera, alem do
+CSV e SQL, um arquivo `.report.json` com idioma, fonte, modo de importacao,
+contagem declarada, limite selecionado e quantidade efetivamente selecionada.
+Sem `--execute`, a operacao continua sendo dry-run local.
+
 Resultado da primeira validacao local:
 
 - `--limit 25` gerou 25 entradas validas a partir do `.dic`
@@ -130,6 +142,17 @@ zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 100
 
 O `source` usado pela amostra e `libreoffice_hunspell_pt_pt_sample`. Nao usar
 `p_deactivate_missing := true` nessa amostra.
+
+Modo de lote amplo controlado:
+
+```bash
+zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --full --limit 10000
+zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --full --limit 10000 --execute
+```
+
+O modo `--full` usa `source = libreoffice_hunspell_pt_pt_full` e tambem gera
+`.report.json`. Para `pt-PT`, o relatorio preserva `license_review_required` por
+causa da ambiguidade documental ja registrada entre README e `LICENSES.txt`.
 
 Resultado da primeira validacao local:
 
