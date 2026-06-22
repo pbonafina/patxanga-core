@@ -82,13 +82,15 @@ Ja existe:
 - bootstrap de partida expondo `is_bot`, `bot_level` e `bot_profile`
 - UI de partida rapida humano contra bot
 - RPC `submit_patxanga_easy_bot_turn(...)`
+- RPC de leitura `find_patxanga_easy_bot_candidate_moves(...)` para listar
+  candidatos de abertura/encaixe sem mutar a partida
 - acao automatica inicial do bot `easy`: tentar abertura valida por dicionario
   ativo antes de passar
 - acao automatica conectada do bot `easy`: tentar uma palavra reconhecida que
   encaixe em peca ja existente no board antes de passar
 - fallback de passe quando nao ha palavra segura para abertura
 - regressao SQL para `place_word` real, encaixe conectado e fallback de passe
-  do bot `easy`
+  do bot `easy`, incluindo catalogo de candidatos antes da submissao oficial
 - regressao Playwright para criar humano contra bot, validar abertura real e
   validar encaixe conectado do bot
 

@@ -14,6 +14,7 @@ declare
     v_tile_o_id uuid := gen_random_uuid();
     v_tile_l_id uuid := gen_random_uuid();
     v_result jsonb;
+    v_candidates jsonb;
     v_accepted_move_count integer;
     v_current_turn_player_id uuid;
 
@@ -29,12 +30,14 @@ declare
     v_connected_tile_a_id uuid := gen_random_uuid();
     v_connected_human_result jsonb;
     v_connected_bot_result jsonb;
+    v_connected_candidates jsonb;
     v_connected_move_count integer;
 
     v_fallback_human_user_id uuid := gen_random_uuid();
     v_fallback_bot_user_id uuid := gen_random_uuid();
     v_fallback_match_id uuid;
     v_fallback_bot_player_id uuid;
+    v_fallback_candidates jsonb;
     v_fallback_result jsonb;
     v_pass_move_count integer;
 begin
@@ -80,6 +83,24 @@ begin
     set current_turn_player_id = v_bot_player_id,
         updated_at = now()
     where id = v_match_id;
+
+    v_candidates := public.find_patxanga_easy_bot_candidate_moves(
+        v_match_id,
+        v_bot_player_id,
+        5
+    );
+
+    if jsonb_array_length(v_candidates) = 0 then
+        raise exception 'Expected easy bot opening candidates, got %', v_candidates;
+    end if;
+
+    if v_candidates->0->>'main_word' <> 'SOL' then
+        raise exception 'Expected first opening candidate SOL, got %', v_candidates;
+    end if;
+
+    if v_candidates->0->>'bot_strategy' <> 'easy_opening_dictionary_word' then
+        raise exception 'Expected opening candidate strategy, got %', v_candidates;
+    end if;
 
     v_result := public.submit_patxanga_easy_bot_turn(
         v_match_id,
@@ -210,6 +231,27 @@ begin
         updated_at = now()
     where id = v_connected_bot_player_id;
 
+    v_connected_candidates := public.find_patxanga_easy_bot_candidate_moves(
+        v_connected_match_id,
+        v_connected_bot_player_id,
+        5
+    );
+
+    if jsonb_array_length(v_connected_candidates) = 0 then
+        raise exception 'Expected connected bot candidates, got %',
+            v_connected_candidates;
+    end if;
+
+    if v_connected_candidates->0->>'main_word' <> 'LUA' then
+        raise exception 'Expected first connected candidate LUA, got %',
+            v_connected_candidates;
+    end if;
+
+    if v_connected_candidates->0->>'bot_strategy' <> 'easy_connected_dictionary_word' then
+        raise exception 'Expected connected candidate strategy, got %',
+            v_connected_candidates;
+    end if;
+
     v_connected_bot_result := public.submit_patxanga_easy_bot_turn(
         v_connected_match_id,
         v_connected_bot_player_id
@@ -303,6 +345,17 @@ begin
         updated_at = now()
     where id = v_fallback_match_id;
 
+    v_fallback_candidates := public.find_patxanga_easy_bot_candidate_moves(
+        v_fallback_match_id,
+        v_fallback_bot_player_id,
+        5
+    );
+
+    if jsonb_array_length(v_fallback_candidates) <> 0 then
+        raise exception 'Expected no fallback candidates, got %',
+            v_fallback_candidates;
+    end if;
+
     v_fallback_result := public.submit_patxanga_easy_bot_turn(
         v_fallback_match_id,
         v_fallback_bot_player_id
@@ -337,6 +390,9 @@ begin
     end if;
 
     raise notice 'Easy bot turn policy test passed';
+    raise notice 'opening_candidates=%', v_candidates;
+    raise notice 'connected_candidates=%', v_connected_candidates;
+    raise notice 'fallback_candidates=%', v_fallback_candidates;
     raise notice 'opening_result=%', v_result;
     raise notice 'connected_result=%', v_connected_bot_result;
     raise notice 'fallback_result=%', v_fallback_result;
