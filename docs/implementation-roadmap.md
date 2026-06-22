@@ -1,6 +1,6 @@
 # PATXANGA - ROADMAP CONSOLIDADO DE IMPLEMENTACAO
 
-Versao: 0.1
+Versao: 0.2
 Status: Plano consolidado ativo
 Base: planos, contratos e continuidade existentes no repositorio
 
@@ -38,7 +38,7 @@ Leitura atual do projeto:
 | Dicionario | Contrato por idioma/fonte/ativo consolidado; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
 | Bots de teste e simulacao | Baseline alta: contrato, runner e sete cenarios deterministicos validados |
-| Bot | MVP humano contra bot criado; bot `easy` tenta abertura valida por dicionario e passa como fallback |
+| Bot | MVP humano contra bot criado; bot `easy` tenta abertura valida e encaixe simples conectado antes do fallback de passe |
 | Documentacao de jogador | Manual inicial criado em `docs/como-jogar-patxanga.md` |
 
 Diretriz principal:
@@ -63,6 +63,27 @@ Diretriz principal:
 10. Todo marco funcional deve ter validacao automatizada ou justificativa clara.
 11. Bot de teste/simulacao deve ser tratado primeiro como ferramenta de QA, nao como modo final de produto.
 12. Dicionario grande so deve entrar depois de contrato, fonte e licenca claros.
+13. A cadencia operacional deve favorecer tranches maiores de desenvolvimento,
+    com testes agrupados no fechamento de bloco em vez de suites completas a
+    cada microalteracao.
+
+---
+
+## 3.1 Cadencia operacional de desenvolvimento
+
+Diretriz ativa desde 2026-06-22:
+
+- priorizar desenvolvimento continuo em blocos funcionais maiores
+- evitar interromper a implementacao para rodadas completas de teste enquanto
+  ainda houver alteracoes planejadas na mesma tranche
+- usar testes pontuais apenas para isolar risco ou confirmar uma decisao tecnica
+- executar a bateria conjunta no fechamento da tranche, antes de commit, PR ou
+  merge
+- manter `supabase db reset` como validacao de fechamento quando houver
+  migration, nao como reflexo automatico a cada edicao
+
+Uma tranche tipica deve buscar entregar comportamento observavel de ponta a
+ponta, documentacao essencial e testes agrupados de aceite.
 
 ---
 
@@ -453,19 +474,20 @@ Estado atual:
 - UI cria partida humano + bot local
 - bot `easy` chama `submit_patxanga_easy_bot_turn(...)` quando for sua vez
 - a politica tenta uma abertura horizontal com palavra reconhecida no dicionario ativo
-- se nao houver abertura segura, o bot passa automaticamente
-- SQL cobre jogada real `SOL` e fallback de passe
-- Playwright cobre criacao humano contra bot e jogada real deterministica do bot
-- ainda nao existe bot que encaixe palavras em tabuleiro ja ocupado
+- a politica tenta tambem encaixe simples conectado em board ja ocupado antes de passar
+- se nao houver abertura ou encaixe seguro, o bot passa automaticamente
+- SQL cobre jogada real `SOL`, encaixe conectado `LUA` e fallback de passe
+- Playwright cobre criacao humano contra bot, abertura deterministica e encaixe
+  conectado deterministico
 - nao existe Edge Function de bot
 
 Entregas futuras:
 
 | Item | Acao | Criterio de saida |
 |------|------|-------------------|
-| Encaixe simples | Bot tenta palavra conectada ao tabuleiro antes de passar | Bot consegue jogar alem da abertura |
+| Encaixe simples | Ampliar repertorio e cobertura de encaixes seguros | Bot consegue jogar alem da abertura |
 | Execucao automatica | Edge Function ou rotina equivalente executa o turno | Bot joga sem acao manual |
-| Testes | SQL/Playwright cobrem humano contra bot apos primeira rodada | Fluxo fica regressivo |
+| Testes | Ampliar casos alem de `LUA` deterministico | Fluxo fica regressivo |
 
 Prioridade:
 

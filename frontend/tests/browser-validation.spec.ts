@@ -224,6 +224,109 @@ select payload from e2e_human_vs_bot_result;
 `);
 }
 
+function createHumanVsBotScenarioWithConnectedBotTurn(): HumanVsBotScenario {
+  return runDatabaseJson<HumanVsBotScenario>(`
+create temp table e2e_human_vs_bot_connected_result(payload text);
+
+do $setup$
+declare
+    v_human_user_id uuid := gen_random_uuid();
+    v_bot_user_id uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_human_player_id uuid;
+    v_bot_player_id uuid;
+    v_tile_s_id uuid := gen_random_uuid();
+    v_tile_o_id uuid := gen_random_uuid();
+    v_tile_l_id uuid := gen_random_uuid();
+    v_tile_u_id uuid := gen_random_uuid();
+    v_tile_a_id uuid := gen_random_uuid();
+    v_opening_result jsonb;
+begin
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_human_user_id,
+        p_host_guest_name := 'Human Connected E2E',
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    select id
+    into v_human_player_id
+    from public.patxanga_players
+    where match_id = v_match_id
+      and user_id = v_human_user_id;
+
+    v_bot_player_id := public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_bot_user_id,
+        p_guest_name := 'Bot Easy Connected',
+        p_is_bot := true,
+        p_bot_level := 'easy',
+        p_bot_profile := 'balanced'
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_tile_s_id::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_tile_o_id::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_tile_l_id::text, 'letter', 'L', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Q', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'X', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Z', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'K', 'points', 7, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_human_player_id;
+
+    update public.patxanga_matches
+    set current_turn_player_id = v_human_player_id,
+        updated_at = now()
+    where id = v_match_id;
+
+    v_opening_result := public.submit_patxanga_move(
+        v_match_id,
+        v_human_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_tile_s_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_tile_o_id::text, 'row', 8, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_tile_l_id::text, 'row', 8, 'col', 10, 'declared_letter', null)
+        )
+    );
+
+    if v_opening_result->>'status' <> 'success' then
+        raise exception 'Expected setup opening success, got %', v_opening_result;
+    end if;
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_tile_u_id::text, 'letter', 'U', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_tile_a_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Q', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'X', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Z', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'K', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Y', 'points', 7, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_bot_player_id;
+
+    insert into e2e_human_vs_bot_connected_result(payload)
+    values (
+        jsonb_build_object(
+            'matchId', v_match_id,
+            'humanUserId', v_human_user_id,
+            'botPlayerId', v_bot_player_id
+        )::text
+    );
+end
+$setup$;
+
+select payload from e2e_human_vs_bot_connected_result;
+`);
+}
+
 async function openPreparedMatch(page: Page, scenario: SlotMoveScenario) {
   await page.goto("/");
 
@@ -398,6 +501,27 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("board-cell-7-7")).toContainText("S");
     await expect(page.getByTestId("board-cell-7-8")).toContainText("O");
     await expect(page.getByTestId("board-cell-7-9")).toContainText("L");
+  });
+
+  test("auto-plays a connected bot word after the opening", async ({ page }) => {
+    const scenario = createHumanVsBotScenarioWithConnectedBotTurn();
+
+    await page.goto("/");
+
+    await page.getByLabel("match_id", { exact: true }).fill(scenario.matchId);
+    await page
+      .getByLabel("user_id da sessao (temporario neste bootstrap real)")
+      .fill(scenario.humanUserId);
+    await page.getByRole("button", { name: "Abrir partida" }).click();
+
+    await expect(page.getByText("bot easy / balanced", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("bot-action-message")).toContainText(
+      "Bot jogou LUA."
+    );
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+    await expect(page.getByTestId("board-cell-7-9")).toContainText("L");
+    await expect(page.getByTestId("board-cell-8-9")).toContainText("U");
+    await expect(page.getByTestId("board-cell-9-9")).toContainText("A");
   });
 
   test("submits an accepted word through rack slots", async ({ page }) => {

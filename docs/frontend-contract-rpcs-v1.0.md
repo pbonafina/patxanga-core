@@ -223,8 +223,16 @@ Executar o turno automatico de um jogador bot `easy`.
 
 #### Saída esperada
 Um dos ramos operacionais abaixo:
-- `bot_action = place_word`, quando o bot encontrou abertura valida no dicionario ativo
+- `bot_action = place_word`, quando o bot encontrou abertura valida ou encaixe
+  simples conectado no dicionario ativo
 - `bot_action = pass`, quando nao encontrou jogada segura e caiu no fallback de passe
+
+Campos adicionais esperados em `place_word`:
+- `bot_strategy = easy_opening_dictionary_word` para abertura em board vazio
+- `bot_strategy = easy_connected_dictionary_word` para encaixe simples em board
+  ja ocupado
+- `main_word` com a palavra jogada
+- `placed_tiles` com apenas as pecas novas enviadas ao backend
 
 #### Estados relevantes para UI
 - `active`

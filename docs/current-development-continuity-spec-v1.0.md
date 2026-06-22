@@ -539,6 +539,63 @@ Validacao inicial confirmada nesta frente:
 - `zsh scripts/run-sql-test-suite.sh sql/tests/test_get_match_bootstrap.sql sql/tests/test_get_pending_vote_context.sql sql/tests/test_preview_move.sql sql/tests/test_submit_move_bridge_existing_board_tile.sql sql/tests/test_hydrate_placed_tiles_declared_letter.sql`
 - `zsh scripts/run-sql-test-suite.sh all`
 
+## 1.11 Atualizacao operacional de continuidade - 2026-06-22 cadencia de desenvolvimento
+
+Decisao de processo:
+
+- proximas frentes devem ser executadas em tranches maiores de desenvolvimento
+- durante a tranche, evitar rodar suite completa a cada microalteracao
+- usar testes pontuais apenas quando houver risco localizado ou necessidade de
+  diagnostico
+- agrupar `lint`, `build`, Playwright, SQL e simulacoes no checkpoint de
+  fechamento da tranche
+- manter `supabase db reset` para fechamento de tranche com migration ou antes
+  de merge, nao como passo repetido apos cada edicao
+
+Impacto pratico:
+
+- maior volume de implementacao por ciclo
+- menos interrupcoes por teste intermediario
+- nenhum marco funcional deve ser aceito sem validacao automatizada pertinente
+  no final do bloco
+
+## 1.12 Atualizacao operacional de continuidade - 2026-06-22 tranche bot conectado
+
+Estado desta frente:
+
+- foco: permitir que o bot `easy` faca uma jogada simples conectada ao board
+  apos a abertura
+- migration nova: `supabase/migrations/20260622090000_28_easy_bot_connected_policy.sql`
+- RPC espelho atualizada: `sql/rpc/submit_easy_bot_turn.sql`
+- teste SQL ampliado: `sql/tests/test_easy_bot_turn_policy.sql`
+- Playwright ampliado em `frontend/tests/browser-validation.spec.ts`
+
+Implementado nesta tranche:
+
+- se o board esta vazio, a politica de abertura existente continua valendo
+- se o board ja tem pecas, o bot busca uma palavra ativa no dicionario que use
+  uma letra existente como ancora
+- a busca e deterministica, limitada a letras normais do rack, sem curingas e
+  sem criar adjacencias perpendiculares novas
+- jogadas verticais com apenas uma peca nova ficam fora desta tranche, porque o
+  extrator atual assume direcao horizontal quando recebe uma unica peca nova
+- fallback continua sendo `submit_patxanga_pass_turn(...)`
+
+Cobertura adicionada e validada:
+
+- SQL prepara `SOL` no board e valida bot jogando `LUA` conectado ao `L`
+- Playwright prepara o mesmo estado e espera a UI exibir `Bot jogou LUA.`
+
+Validacao confirmada no fechamento da tranche:
+
+- aplicar a nova migration no banco local
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_easy_bot_turn_policy.sql`
+- `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+- `cd frontend && npm run lint`
+- `cd frontend && npm run build`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+
 ## 2. Matriz objetiva de avanco
 
 Percentual global estimado nesta leitura: `75%`

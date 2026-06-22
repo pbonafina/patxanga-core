@@ -1,6 +1,6 @@
 -- ============================================================
 -- PATXANGA - TEST: easy bot turn policy
--- Purpose: bot tries a valid opening word before pass fallback
+-- Purpose: bot tries a valid opening word, a connected word, then pass fallback
 -- ============================================================
 
 do $$
@@ -16,6 +16,20 @@ declare
     v_result jsonb;
     v_accepted_move_count integer;
     v_current_turn_player_id uuid;
+
+    v_connected_human_user_id uuid := gen_random_uuid();
+    v_connected_bot_user_id uuid := gen_random_uuid();
+    v_connected_match_id uuid;
+    v_connected_human_player_id uuid;
+    v_connected_bot_player_id uuid;
+    v_connected_tile_s_id uuid := gen_random_uuid();
+    v_connected_tile_o_id uuid := gen_random_uuid();
+    v_connected_tile_l_id uuid := gen_random_uuid();
+    v_connected_tile_u_id uuid := gen_random_uuid();
+    v_connected_tile_a_id uuid := gen_random_uuid();
+    v_connected_human_result jsonb;
+    v_connected_bot_result jsonb;
+    v_connected_move_count integer;
 
     v_fallback_human_user_id uuid := gen_random_uuid();
     v_fallback_bot_user_id uuid := gen_random_uuid();
@@ -125,6 +139,133 @@ begin
             v_current_turn_player_id;
     end if;
 
+    v_connected_match_id := public.create_patxanga_match(
+        p_host_user_id := v_connected_human_user_id,
+        p_host_guest_name := 'Human Connected SQL',
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    select id
+    into v_connected_human_player_id
+    from public.patxanga_players
+    where match_id = v_connected_match_id
+      and user_id = v_connected_human_user_id;
+
+    v_connected_bot_player_id := public.join_patxanga_match(
+        p_match_id := v_connected_match_id,
+        p_user_id := v_connected_bot_user_id,
+        p_guest_name := 'Bot Connected',
+        p_is_bot := true,
+        p_bot_level := 'easy',
+        p_bot_profile := 'balanced'
+    );
+
+    perform public.start_patxanga_match(v_connected_match_id);
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_connected_tile_s_id::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_connected_tile_o_id::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_connected_tile_l_id::text, 'letter', 'L', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Q', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'X', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Z', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'K', 'points', 7, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_connected_human_player_id;
+
+    update public.patxanga_matches
+    set current_turn_player_id = v_connected_human_player_id,
+        updated_at = now()
+    where id = v_connected_match_id;
+
+    v_connected_human_result := public.submit_patxanga_move(
+        v_connected_match_id,
+        v_connected_human_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_connected_tile_s_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_connected_tile_o_id::text, 'row', 8, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_connected_tile_l_id::text, 'row', 8, 'col', 10, 'declared_letter', null)
+        )
+    );
+
+    if v_connected_human_result->>'status' <> 'success' then
+        raise exception 'Expected connected setup opening success, got %',
+            v_connected_human_result;
+    end if;
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_connected_tile_u_id::text, 'letter', 'U', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_connected_tile_a_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Q', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'X', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Z', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'K', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Y', 'points', 7, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_connected_bot_player_id;
+
+    v_connected_bot_result := public.submit_patxanga_easy_bot_turn(
+        v_connected_match_id,
+        v_connected_bot_player_id
+    );
+
+    if v_connected_bot_result->>'status' <> 'success' then
+        raise exception 'Expected connected bot turn success, got %',
+            v_connected_bot_result;
+    end if;
+
+    if v_connected_bot_result->>'bot_action' <> 'place_word' then
+        raise exception 'Expected connected bot to place a word, got %',
+            v_connected_bot_result;
+    end if;
+
+    if v_connected_bot_result->>'bot_strategy' <> 'easy_connected_dictionary_word' then
+        raise exception 'Expected connected bot strategy, got %',
+            v_connected_bot_result;
+    end if;
+
+    if v_connected_bot_result->>'main_word' <> 'LUA' then
+        raise exception 'Expected connected bot word LUA, got %',
+            v_connected_bot_result;
+    end if;
+
+    if v_connected_bot_result->>'direction' <> 'V' then
+        raise exception 'Expected connected bot direction V, got %',
+            v_connected_bot_result;
+    end if;
+
+    if (select board_state #>> '{7,9,tile,letter}' from public.patxanga_matches where id = v_connected_match_id) <> 'L' then
+        raise exception 'Expected L anchor to remain on board';
+    end if;
+
+    if (select board_state #>> '{8,9,tile,letter}' from public.patxanga_matches where id = v_connected_match_id) <> 'U' then
+        raise exception 'Expected U below L after connected bot move';
+    end if;
+
+    if (select board_state #>> '{9,9,tile,letter}' from public.patxanga_matches where id = v_connected_match_id) <> 'A' then
+        raise exception 'Expected A below U after connected bot move';
+    end if;
+
+    select count(*)
+    into v_connected_move_count
+    from public.patxanga_moves
+    where match_id = v_connected_match_id
+      and player_id = v_connected_bot_player_id
+      and move_type = 'place_word'
+      and status = 'accepted'
+      and main_word = 'LUA';
+
+    if v_connected_move_count <> 1 then
+        raise exception 'Expected exactly 1 accepted LUA bot move, got %',
+            v_connected_move_count;
+    end if;
+
     v_fallback_match_id := public.create_patxanga_match(
         p_host_user_id := v_fallback_human_user_id,
         p_host_guest_name := 'Human Fallback SQL',
@@ -197,5 +338,6 @@ begin
 
     raise notice 'Easy bot turn policy test passed';
     raise notice 'opening_result=%', v_result;
+    raise notice 'connected_result=%', v_connected_bot_result;
     raise notice 'fallback_result=%', v_fallback_result;
 end $$;

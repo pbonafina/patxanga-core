@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-21 17:00:54
+Generated at: 2026-06-22 13:29:05
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,12 +93,17 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## docs/test-program
- M docs/00-index.md
+## develop...origin/develop
+ M docs/07-bot-engine.md
  M docs/current-development-continuity-spec-v1.0.md
- M generate-room-baton-package.sh
- M scripts/run-sql-test-suite.sh
-?? docs/testing-program-v1.0.md
+ M docs/frontend-contract-rpcs-v1.0.md
+ M docs/implementation-roadmap.md
+ M docs/testing-program-v1.0.md
+ M frontend/tests/browser-validation.spec.ts
+ M sql/rpc/submit_easy_bot_turn.sql
+ M sql/rpc/validate_move_alignment.sql
+ M sql/tests/test_easy_bot_turn_policy.sql
+?? supabase/migrations/20260622090000_28_easy_bot_connected_policy.sql
 ```
 
 ### git remote -v
@@ -109,7 +114,9 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-7248b54 (HEAD -> docs/test-program, origin/develop, origin/HEAD, develop) Merge pull request #14 from pbonafina/feature/easy-bot-opening-policy
+7cfd46d (HEAD -> develop, origin/develop, origin/HEAD) Merge pull request #15 from pbonafina/docs/test-program
+57a7369 (origin/docs/test-program) docs: add testing program
+7248b54 Merge pull request #14 from pbonafina/feature/easy-bot-opening-policy
 d449253 (origin/feature/easy-bot-opening-policy) feat: add easy bot opening policy
 1899fce Merge pull request #13 from pbonafina/feature/human-vs-bot-pass-mvp
 ebf032e (origin/feature/human-vs-bot-pass-mvp) feat: add human vs bot pass mvp
@@ -122,8 +129,6 @@ c727200 test: cover offline lexical policy boundaries
 f6c18f1 Merge pull request #9 from pbonafina/feature/lexical-policy-imported-words-regression
 a8222ee test: add lexical policy imported word regression
 1476a40 Merge pull request #8 from pbonafina/feature/licensed-pt-pt-dictionary-sample
-6927487 feat: add pt-PT dictionary source sample
-bfeacea Merge pull request #7 from pbonafina/feature/licensed-dictionary-source-sample
 ```
 
 ### tail -n 60 ../project-log.md
@@ -180,12 +185,7 @@ Depois fazer hard refresh com Cmd + Shift + R.
 ### Registro de rodada
 ```bash
 cd ~/patxanga-bootstrap/patxanga-core
-printf "
-### rodada browser %s
-match_id=COLE_AQUI
-user_id=COLE_AQUI
-objetivo=COLE_AQUI
-" "$(date "+%Y-%m-%d %H:%M:%S")" >> tmp/browser-validation-notes.txt
+printf "\n### rodada browser %s\nmatch_id=COLE_AQUI\nuser_id=COLE_AQUI\nobjetivo=COLE_AQUI\n" "$(date "+%Y-%m-%d %H:%M:%S")" >> tmp/browser-validation-notes.txt
 tail -n 20 tmp/browser-validation-notes.txt
 ```
 
@@ -2586,8 +2586,16 @@ Executar o turno automatico de um jogador bot `easy`.
 
 #### Saída esperada
 Um dos ramos operacionais abaixo:
-- `bot_action = place_word`, quando o bot encontrou abertura valida no dicionario ativo
+- `bot_action = place_word`, quando o bot encontrou abertura valida ou encaixe
+  simples conectado no dicionario ativo
 - `bot_action = pass`, quando nao encontrou jogada segura e caiu no fallback de passe
+
+Campos adicionais esperados em `place_word`:
+- `bot_strategy = easy_opening_dictionary_word` para abertura em board vazio
+- `bot_strategy = easy_connected_dictionary_word` para encaixe simples em board
+  ja ocupado
+- `main_word` com a palavra jogada
+- `placed_tiles` com apenas as pecas novas enviadas ao backend
 
 #### Estados relevantes para UI
 - `active`
@@ -3839,7 +3847,7 @@ zsh scripts/run-bot-simulation.sh all
 
 # PATXANGA - PROGRAMACAO DE TESTES
 
-Versao: 1.0
+Versao: 1.1
 Status: BASELINE OPERACIONAL
 
 ---
@@ -3868,9 +3876,24 @@ obrigatorio para evitar regressao silenciosa em:
 Nenhuma frente funcional deve ser considerada pronta sem pelo menos uma
 validacao automatizada pertinente.
 
+A cadencia padrao de desenvolvimento a partir de 2026-06-22 passa a ser por
+tranches maiores:
+
+- implementar blocos funcionais completos antes de interromper para bateria
+  ampla de testes
+- durante a tranche, rodar apenas checks pontuais quando uma mudanca tocar uma
+  area de alto risco ou quando uma falha precisar ser isolada
+- agrupar `lint`, `build`, Playwright, SQL e simulacoes de bot no checkpoint de
+  fechamento da tranche
+- evitar repetir a suite completa apos cada microajuste quando ainda houver
+  desenvolvimento planejado no mesmo bloco
+
+Esta cadencia reduz interrupcoes, mas nao altera o criterio de aceite: uma
+tranche funcional so fica pronta depois da validacao automatizada pertinente.
+
 Quando houver migration nova, o teste local da funcao alterada nao basta:
-`supabase db reset` deve passar para provar que a cadeia completa de migrations
-recria o banco do zero.
+`supabase db reset` deve passar no fechamento da tranche ou antes do merge para
+provar que a cadeia completa de migrations recria o banco do zero.
 
 Quando houver mudanca visual/interacional, build verde nao basta:
 Playwright deve passar e, se o ajuste depender de julgamento visual, deve haver
@@ -3879,6 +3902,57 @@ rodada manual de browser seguindo `docs/frontend-browser-validation-procedure-v1
 ---
 
 ## 3. Inventario de testes automatizados
+
+### 3.0 Perfis de execucao por tranche
+
+Durante desenvolvimento ativo:
+
+```bash
+git status --short --branch
+```
+
+Usar testes pontuais somente quando necessario, por exemplo:
+
+- teste SQL especifico da RPC alterada
+- Playwright de um fluxo alterado
+- `npm run build` apos mudanca de tipos ou contrato de frontend
+- simulacao de bot especifica apos alterar politica de bot
+
+No fechamento de tranche frontend:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+```
+
+No fechamento de tranche backend/SQL/bot:
+
+```bash
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
+
+No fechamento de tranche com migration:
+
+```bash
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
+
+No fechamento de tranche mista:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+cd ..
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
 
 ### 3.1 Frontend estatico
 
@@ -3919,6 +3993,7 @@ Cobre hoje:
 - composicao oficial de jogada por slots
 - criacao de partida humano contra bot
 - bot `easy` jogando abertura real `SOL`
+- bot `easy` jogando encaixe conectado real `LUA`
 - submit aceito por slots
 - palavra nao reconhecida indo para `pending_vote`
 
@@ -4287,7 +4362,7 @@ Fim do documento.
 
 # PATXANGA - ROADMAP CONSOLIDADO DE IMPLEMENTACAO
 
-Versao: 0.1
+Versao: 0.2
 Status: Plano consolidado ativo
 Base: planos, contratos e continuidade existentes no repositorio
 
@@ -4325,7 +4400,7 @@ Leitura atual do projeto:
 | Dicionario | Contrato por idioma/fonte/ativo consolidado; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
 | Bots de teste e simulacao | Baseline alta: contrato, runner e sete cenarios deterministicos validados |
-| Bot | MVP humano contra bot criado; bot `easy` tenta abertura valida por dicionario e passa como fallback |
+| Bot | MVP humano contra bot criado; bot `easy` tenta abertura valida e encaixe simples conectado antes do fallback de passe |
 | Documentacao de jogador | Manual inicial criado em `docs/como-jogar-patxanga.md` |
 
 Diretriz principal:
@@ -4350,6 +4425,27 @@ Diretriz principal:
 10. Todo marco funcional deve ter validacao automatizada ou justificativa clara.
 11. Bot de teste/simulacao deve ser tratado primeiro como ferramenta de QA, nao como modo final de produto.
 12. Dicionario grande so deve entrar depois de contrato, fonte e licenca claros.
+13. A cadencia operacional deve favorecer tranches maiores de desenvolvimento,
+    com testes agrupados no fechamento de bloco em vez de suites completas a
+    cada microalteracao.
+
+---
+
+## 3.1 Cadencia operacional de desenvolvimento
+
+Diretriz ativa desde 2026-06-22:
+
+- priorizar desenvolvimento continuo em blocos funcionais maiores
+- evitar interromper a implementacao para rodadas completas de teste enquanto
+  ainda houver alteracoes planejadas na mesma tranche
+- usar testes pontuais apenas para isolar risco ou confirmar uma decisao tecnica
+- executar a bateria conjunta no fechamento da tranche, antes de commit, PR ou
+  merge
+- manter `supabase db reset` como validacao de fechamento quando houver
+  migration, nao como reflexo automatico a cada edicao
+
+Uma tranche tipica deve buscar entregar comportamento observavel de ponta a
+ponta, documentacao essencial e testes agrupados de aceite.
 
 ---
 
@@ -4740,19 +4836,20 @@ Estado atual:
 - UI cria partida humano + bot local
 - bot `easy` chama `submit_patxanga_easy_bot_turn(...)` quando for sua vez
 - a politica tenta uma abertura horizontal com palavra reconhecida no dicionario ativo
-- se nao houver abertura segura, o bot passa automaticamente
-- SQL cobre jogada real `SOL` e fallback de passe
-- Playwright cobre criacao humano contra bot e jogada real deterministica do bot
-- ainda nao existe bot que encaixe palavras em tabuleiro ja ocupado
+- a politica tenta tambem encaixe simples conectado em board ja ocupado antes de passar
+- se nao houver abertura ou encaixe seguro, o bot passa automaticamente
+- SQL cobre jogada real `SOL`, encaixe conectado `LUA` e fallback de passe
+- Playwright cobre criacao humano contra bot, abertura deterministica e encaixe
+  conectado deterministico
 - nao existe Edge Function de bot
 
 Entregas futuras:
 
 | Item | Acao | Criterio de saida |
 |------|------|-------------------|
-| Encaixe simples | Bot tenta palavra conectada ao tabuleiro antes de passar | Bot consegue jogar alem da abertura |
+| Encaixe simples | Ampliar repertorio e cobertura de encaixes seguros | Bot consegue jogar alem da abertura |
 | Execucao automatica | Edge Function ou rotina equivalente executa o turno | Bot joga sem acao manual |
-| Testes | SQL/Playwright cobrem humano contra bot apos primeira rodada | Fluxo fica regressivo |
+| Testes | Ampliar casos alem de `LUA` deterministico | Fluxo fica regressivo |
 
 Prioridade:
 
@@ -5061,7 +5158,9 @@ Excecao entregue no MVP 2026-06-21:
 - a UI ja permite criar uma partida humano contra bot local
 - o bot `easy` tenta abertura horizontal com palavra reconhecida pelo dicionario
   ativo
-- se nao houver abertura segura, ele passa automaticamente
+- na tranche de 2026-06-22, o bot `easy` tambem passou a tentar um
+  encaixe simples em tabuleiro ja ocupado antes do passe
+- se nao houver abertura ou encaixe seguro, ele passa automaticamente
 - essa automacao existe para provar o ciclo de produto sem travar partida
   quando o turno chega ao bot
 
@@ -5081,9 +5180,8 @@ A primeira fase de bots de teste esta iniciada. Criterios ja atendidos:
 
 Proximo criterio de avanco:
 
-- permitir uma politica simples de encaixe em tabuleiro ja ocupado
 - decidir se o bot `easy` pode usar curingas ou se isso fica para outro nivel
-- cobrir jogada real do bot apos a primeira rodada por SQL/Playwright
+- ampliar a politica para mais de um encaixe seguro apos a primeira rodada
 
 Fim do documento.
 
@@ -5629,6 +5727,63 @@ Validacao inicial confirmada nesta frente:
 
 - `zsh scripts/run-sql-test-suite.sh sql/tests/test_get_match_bootstrap.sql sql/tests/test_get_pending_vote_context.sql sql/tests/test_preview_move.sql sql/tests/test_submit_move_bridge_existing_board_tile.sql sql/tests/test_hydrate_placed_tiles_declared_letter.sql`
 - `zsh scripts/run-sql-test-suite.sh all`
+
+## 1.11 Atualizacao operacional de continuidade - 2026-06-22 cadencia de desenvolvimento
+
+Decisao de processo:
+
+- proximas frentes devem ser executadas em tranches maiores de desenvolvimento
+- durante a tranche, evitar rodar suite completa a cada microalteracao
+- usar testes pontuais apenas quando houver risco localizado ou necessidade de
+  diagnostico
+- agrupar `lint`, `build`, Playwright, SQL e simulacoes no checkpoint de
+  fechamento da tranche
+- manter `supabase db reset` para fechamento de tranche com migration ou antes
+  de merge, nao como passo repetido apos cada edicao
+
+Impacto pratico:
+
+- maior volume de implementacao por ciclo
+- menos interrupcoes por teste intermediario
+- nenhum marco funcional deve ser aceito sem validacao automatizada pertinente
+  no final do bloco
+
+## 1.12 Atualizacao operacional de continuidade - 2026-06-22 tranche bot conectado
+
+Estado desta frente:
+
+- foco: permitir que o bot `easy` faca uma jogada simples conectada ao board
+  apos a abertura
+- migration nova: `supabase/migrations/20260622090000_28_easy_bot_connected_policy.sql`
+- RPC espelho atualizada: `sql/rpc/submit_easy_bot_turn.sql`
+- teste SQL ampliado: `sql/tests/test_easy_bot_turn_policy.sql`
+- Playwright ampliado em `frontend/tests/browser-validation.spec.ts`
+
+Implementado nesta tranche:
+
+- se o board esta vazio, a politica de abertura existente continua valendo
+- se o board ja tem pecas, o bot busca uma palavra ativa no dicionario que use
+  uma letra existente como ancora
+- a busca e deterministica, limitada a letras normais do rack, sem curingas e
+  sem criar adjacencias perpendiculares novas
+- jogadas verticais com apenas uma peca nova ficam fora desta tranche, porque o
+  extrator atual assume direcao horizontal quando recebe uma unica peca nova
+- fallback continua sendo `submit_patxanga_pass_turn(...)`
+
+Cobertura adicionada e validada:
+
+- SQL prepara `SOL` no board e valida bot jogando `LUA` conectado ao `L`
+- Playwright prepara o mesmo estado e espera a UI exibir `Bot jogou LUA.`
+
+Validacao confirmada no fechamento da tranche:
+
+- aplicar a nova migration no banco local
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_easy_bot_turn_policy.sql`
+- `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+- `cd frontend && npm run lint`
+- `cd frontend && npm run build`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
 
 ## 2. Matriz objetiva de avanco
 
@@ -7889,7 +8044,7 @@ to authenticated, anon;
 
 -- ============================================================
 -- PATXANGA - RPC: submit_patxanga_easy_bot_turn()
--- Purpose: first product bot policy: valid opening word before pass
+-- Purpose: easy bot can place an opening word or a simple connected word
 -- ============================================================
 
 create or replace function public.submit_patxanga_easy_bot_turn(
@@ -7907,6 +8062,9 @@ declare
     v_player record;
     v_existing_tile_count integer;
     v_candidate_word text;
+    v_candidate_direction text;
+    v_anchor_row integer;
+    v_anchor_col integer;
     v_placed_tiles jsonb;
     v_result jsonb;
     v_pass_reason text;
@@ -7955,7 +8113,302 @@ begin
     where jsonb_typeof(board_cell.cell_data->'tile') = 'object';
 
     if v_existing_tile_count > 0 then
-        v_pass_reason := 'board_not_empty';
+        with rack_tiles as (
+            select
+                rack_tile.tile->>'id' as tile_id,
+                public.normalize_patxanga_word(rack_tile.tile->>'letter') as letter,
+                row_number() over (
+                    partition by public.normalize_patxanga_word(rack_tile.tile->>'letter')
+                    order by rack_tile.ordinality
+                ) as occurrence
+            from jsonb_array_elements(v_player.rack_state)
+                with ordinality as rack_tile(tile, ordinality)
+            where coalesce((rack_tile.tile->>'is_special')::boolean, false) is false
+              and nullif(coalesce(rack_tile.tile->>'special_type', ''), '') is null
+              and char_length(public.normalize_patxanga_word(rack_tile.tile->>'letter')) = 1
+        ),
+        board_tiles as (
+            select
+                board_row.row_index::integer as board_row,
+                board_cell.col_index::integer as board_col,
+                public.normalize_patxanga_word(
+                    coalesce(
+                        board_cell.cell_data->'tile'->>'declared_letter',
+                        board_cell.cell_data->'tile'->>'letter'
+                    )
+                ) as letter
+            from jsonb_array_elements(v_match.board_state)
+                with ordinality as board_row(row_data, row_index)
+            cross join jsonb_array_elements(board_row.row_data)
+                with ordinality as board_cell(cell_data, col_index)
+            where jsonb_typeof(board_cell.cell_data->'tile') = 'object'
+        ),
+        candidate_words as (
+            select
+                dictionary.word_normalized,
+                char_length(dictionary.word_normalized) as word_len
+            from patxanga_dictionary dictionary
+            where dictionary.language = v_match.language
+              and dictionary.is_active = true
+              and char_length(dictionary.word_normalized) between 2 and 7
+              and dictionary.word_normalized ~ '^[A-Z]+$'
+        ),
+        candidate_anchors as (
+            select
+                candidate_words.word_normalized,
+                candidate_words.word_len,
+                board_tiles.board_row as anchor_row,
+                board_tiles.board_col as anchor_col,
+                anchor_position.i as anchor_position,
+                direction.direction,
+                case
+                    when direction.direction = 'H' then board_tiles.board_row
+                    else board_tiles.board_row - anchor_position.i + 1
+                end as start_row,
+                case
+                    when direction.direction = 'H' then board_tiles.board_col - anchor_position.i + 1
+                    else board_tiles.board_col
+                end as start_col
+            from candidate_words
+            cross join board_tiles
+            cross join lateral generate_series(1, candidate_words.word_len) as anchor_position(i)
+            cross join (values ('H'), ('V')) as direction(direction)
+            where substring(candidate_words.word_normalized from anchor_position.i for 1) = board_tiles.letter
+        ),
+        bounded_anchors as (
+            select *
+            from candidate_anchors
+            where start_row between 1 and 15
+              and start_col between 1 and 15
+              and (
+                  (direction = 'H' and start_col + word_len - 1 <= 15)
+                  or
+                  (direction = 'V' and start_row + word_len - 1 <= 15)
+              )
+              and not (direction = 'V' and word_len = 2)
+        ),
+        candidate_positions as (
+            select
+                bounded_anchors.*,
+                word_position.i as position,
+                target.target_row,
+                target.target_col,
+                target.letter,
+                target_board.letter as target_board_letter,
+                side_a.letter as side_a_letter,
+                side_b.letter as side_b_letter
+            from bounded_anchors
+            cross join lateral generate_series(1, bounded_anchors.word_len) as word_position(i)
+            cross join lateral (
+                select
+                    case
+                        when bounded_anchors.direction = 'H' then bounded_anchors.anchor_row
+                        else bounded_anchors.start_row + word_position.i - 1
+                    end as target_row,
+                    case
+                        when bounded_anchors.direction = 'H' then bounded_anchors.start_col + word_position.i - 1
+                        else bounded_anchors.anchor_col
+                    end as target_col,
+                    substring(bounded_anchors.word_normalized from word_position.i for 1) as letter
+            ) target
+            left join board_tiles target_board
+              on target_board.board_row = target.target_row
+             and target_board.board_col = target.target_col
+            left join board_tiles side_a
+              on side_a.board_row = case
+                    when bounded_anchors.direction = 'H' then target.target_row - 1
+                    else target.target_row
+                 end
+             and side_a.board_col = case
+                    when bounded_anchors.direction = 'H' then target.target_col
+                    else target.target_col - 1
+                 end
+            left join board_tiles side_b
+              on side_b.board_row = case
+                    when bounded_anchors.direction = 'H' then target.target_row + 1
+                    else target.target_row
+                 end
+             and side_b.board_col = case
+                    when bounded_anchors.direction = 'H' then target.target_col
+                    else target.target_col + 1
+                 end
+        ),
+        candidate_ok as (
+            select
+                word_normalized,
+                word_len,
+                direction,
+                anchor_row,
+                anchor_col,
+                anchor_position,
+                start_row,
+                start_col
+            from candidate_positions
+            group by
+                word_normalized,
+                word_len,
+                direction,
+                anchor_row,
+                anchor_col,
+                anchor_position,
+                start_row,
+                start_col
+            having bool_and(
+                case
+                    when position = anchor_position then
+                        target_row = anchor_row
+                        and target_col = anchor_col
+                        and target_board_letter = letter
+                    else
+                        target_board_letter is null
+                        and side_a_letter is null
+                        and side_b_letter is null
+                end
+            )
+        ),
+        candidate_open as (
+            select candidate_ok.*
+            from candidate_ok
+            left join board_tiles before_tile
+              on before_tile.board_row = case
+                    when candidate_ok.direction = 'H' then candidate_ok.start_row
+                    else candidate_ok.start_row - 1
+                 end
+             and before_tile.board_col = case
+                    when candidate_ok.direction = 'H' then candidate_ok.start_col - 1
+                    else candidate_ok.start_col
+                 end
+            left join board_tiles after_tile
+              on after_tile.board_row = case
+                    when candidate_ok.direction = 'H' then candidate_ok.start_row
+                    else candidate_ok.start_row + candidate_ok.word_len
+                 end
+             and after_tile.board_col = case
+                    when candidate_ok.direction = 'H' then candidate_ok.start_col + candidate_ok.word_len
+                    else candidate_ok.start_col
+                 end
+            where before_tile.board_row is null
+              and after_tile.board_row is null
+        ),
+        required_letters as (
+            select
+                candidate_open.*,
+                word_position.i as position,
+                target.target_row,
+                target.target_col,
+                target.letter,
+                row_number() over (
+                    partition by
+                        candidate_open.word_normalized,
+                        candidate_open.direction,
+                        candidate_open.anchor_row,
+                        candidate_open.anchor_col,
+                        candidate_open.anchor_position,
+                        target.letter
+                    order by word_position.i
+                ) as occurrence
+            from candidate_open
+            cross join lateral generate_series(1, candidate_open.word_len) as word_position(i)
+            cross join lateral (
+                select
+                    case
+                        when candidate_open.direction = 'H' then candidate_open.anchor_row
+                        else candidate_open.start_row + word_position.i - 1
+                    end as target_row,
+                    case
+                        when candidate_open.direction = 'H' then candidate_open.start_col + word_position.i - 1
+                        else candidate_open.anchor_col
+                    end as target_col,
+                    substring(candidate_open.word_normalized from word_position.i for 1) as letter
+            ) target
+            where word_position.i <> candidate_open.anchor_position
+        ),
+        mapped_required_letters as (
+            select
+                required_letters.*,
+                rack_tiles.tile_id
+            from required_letters
+            left join rack_tiles
+              on rack_tiles.letter = required_letters.letter
+             and rack_tiles.occurrence = required_letters.occurrence
+        ),
+        placement_candidates as (
+            select
+                word_normalized,
+                word_len,
+                direction,
+                anchor_row,
+                anchor_col,
+                anchor_position,
+                start_row,
+                start_col,
+                jsonb_agg(
+                    jsonb_build_object(
+                        'tile_id', tile_id,
+                        'row', target_row,
+                        'col', target_col,
+                        'declared_letter', null
+                    )
+                    order by position
+                ) as placed_tiles,
+                count(*) as needed_count,
+                count(tile_id) as mapped_count
+            from mapped_required_letters
+            group by
+                word_normalized,
+                word_len,
+                direction,
+                anchor_row,
+                anchor_col,
+                anchor_position,
+                start_row,
+                start_col
+            having count(*) = count(tile_id)
+               and count(*) between 1 and 6
+        )
+        select
+            word_normalized,
+            direction,
+            anchor_row,
+            anchor_col,
+            placed_tiles
+        into
+            v_candidate_word,
+            v_candidate_direction,
+            v_anchor_row,
+            v_anchor_col,
+            v_placed_tiles
+        from placement_candidates
+        order by
+            word_len,
+            word_normalized,
+            case direction when 'H' then 1 else 2 end,
+            anchor_row,
+            anchor_col,
+            anchor_position
+        limit 1;
+
+        if v_candidate_word is null then
+            v_pass_reason := 'no_connected_word';
+        else
+            v_result := public.submit_patxanga_move(
+                p_match_id,
+                p_player_id,
+                v_placed_tiles
+            );
+
+            return v_result || jsonb_build_object(
+                'bot_action', 'place_word',
+                'bot_strategy', 'easy_connected_dictionary_word',
+                'main_word', v_candidate_word,
+                'direction', v_candidate_direction,
+                'anchor', jsonb_build_object(
+                    'row', v_anchor_row,
+                    'col', v_anchor_col
+                ),
+                'placed_tiles', v_placed_tiles
+            );
+        end if;
     else
         with rack_letter_counts as (
             select
@@ -8059,7 +8512,7 @@ begin
 
     return v_result || jsonb_build_object(
         'bot_action', 'pass',
-        'bot_strategy', 'easy_opening_dictionary_word',
+        'bot_strategy', 'easy_dictionary_word',
         'pass_reason', v_pass_reason
     );
 end;
@@ -9758,7 +10211,7 @@ end $$;
 
 -- ============================================================
 -- PATXANGA - TEST: easy bot turn policy
--- Purpose: bot tries a valid opening word before pass fallback
+-- Purpose: bot tries a valid opening word, a connected word, then pass fallback
 -- ============================================================
 
 do $$
@@ -9774,6 +10227,20 @@ declare
     v_result jsonb;
     v_accepted_move_count integer;
     v_current_turn_player_id uuid;
+
+    v_connected_human_user_id uuid := gen_random_uuid();
+    v_connected_bot_user_id uuid := gen_random_uuid();
+    v_connected_match_id uuid;
+    v_connected_human_player_id uuid;
+    v_connected_bot_player_id uuid;
+    v_connected_tile_s_id uuid := gen_random_uuid();
+    v_connected_tile_o_id uuid := gen_random_uuid();
+    v_connected_tile_l_id uuid := gen_random_uuid();
+    v_connected_tile_u_id uuid := gen_random_uuid();
+    v_connected_tile_a_id uuid := gen_random_uuid();
+    v_connected_human_result jsonb;
+    v_connected_bot_result jsonb;
+    v_connected_move_count integer;
 
     v_fallback_human_user_id uuid := gen_random_uuid();
     v_fallback_bot_user_id uuid := gen_random_uuid();
@@ -9883,6 +10350,133 @@ begin
             v_current_turn_player_id;
     end if;
 
+    v_connected_match_id := public.create_patxanga_match(
+        p_host_user_id := v_connected_human_user_id,
+        p_host_guest_name := 'Human Connected SQL',
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    select id
+    into v_connected_human_player_id
+    from public.patxanga_players
+    where match_id = v_connected_match_id
+      and user_id = v_connected_human_user_id;
+
+    v_connected_bot_player_id := public.join_patxanga_match(
+        p_match_id := v_connected_match_id,
+        p_user_id := v_connected_bot_user_id,
+        p_guest_name := 'Bot Connected',
+        p_is_bot := true,
+        p_bot_level := 'easy',
+        p_bot_profile := 'balanced'
+    );
+
+    perform public.start_patxanga_match(v_connected_match_id);
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_connected_tile_s_id::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_connected_tile_o_id::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_connected_tile_l_id::text, 'letter', 'L', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Q', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'X', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Z', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'K', 'points', 7, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_connected_human_player_id;
+
+    update public.patxanga_matches
+    set current_turn_player_id = v_connected_human_player_id,
+        updated_at = now()
+    where id = v_connected_match_id;
+
+    v_connected_human_result := public.submit_patxanga_move(
+        v_connected_match_id,
+        v_connected_human_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_connected_tile_s_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_connected_tile_o_id::text, 'row', 8, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_connected_tile_l_id::text, 'row', 8, 'col', 10, 'declared_letter', null)
+        )
+    );
+
+    if v_connected_human_result->>'status' <> 'success' then
+        raise exception 'Expected connected setup opening success, got %',
+            v_connected_human_result;
+    end if;
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_connected_tile_u_id::text, 'letter', 'U', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_connected_tile_a_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Q', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'X', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Z', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'K', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'Y', 'points', 7, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_connected_bot_player_id;
+
+    v_connected_bot_result := public.submit_patxanga_easy_bot_turn(
+        v_connected_match_id,
+        v_connected_bot_player_id
+    );
+
+    if v_connected_bot_result->>'status' <> 'success' then
+        raise exception 'Expected connected bot turn success, got %',
+            v_connected_bot_result;
+    end if;
+
+    if v_connected_bot_result->>'bot_action' <> 'place_word' then
+        raise exception 'Expected connected bot to place a word, got %',
+            v_connected_bot_result;
+    end if;
+
+    if v_connected_bot_result->>'bot_strategy' <> 'easy_connected_dictionary_word' then
+        raise exception 'Expected connected bot strategy, got %',
+            v_connected_bot_result;
+    end if;
+
+    if v_connected_bot_result->>'main_word' <> 'LUA' then
+        raise exception 'Expected connected bot word LUA, got %',
+            v_connected_bot_result;
+    end if;
+
+    if v_connected_bot_result->>'direction' <> 'V' then
+        raise exception 'Expected connected bot direction V, got %',
+            v_connected_bot_result;
+    end if;
+
+    if (select board_state #>> '{7,9,tile,letter}' from public.patxanga_matches where id = v_connected_match_id) <> 'L' then
+        raise exception 'Expected L anchor to remain on board';
+    end if;
+
+    if (select board_state #>> '{8,9,tile,letter}' from public.patxanga_matches where id = v_connected_match_id) <> 'U' then
+        raise exception 'Expected U below L after connected bot move';
+    end if;
+
+    if (select board_state #>> '{9,9,tile,letter}' from public.patxanga_matches where id = v_connected_match_id) <> 'A' then
+        raise exception 'Expected A below U after connected bot move';
+    end if;
+
+    select count(*)
+    into v_connected_move_count
+    from public.patxanga_moves
+    where match_id = v_connected_match_id
+      and player_id = v_connected_bot_player_id
+      and move_type = 'place_word'
+      and status = 'accepted'
+      and main_word = 'LUA';
+
+    if v_connected_move_count <> 1 then
+        raise exception 'Expected exactly 1 accepted LUA bot move, got %',
+            v_connected_move_count;
+    end if;
+
     v_fallback_match_id := public.create_patxanga_match(
         p_host_user_id := v_fallback_human_user_id,
         p_host_guest_name := 'Human Fallback SQL',
@@ -9955,6 +10549,7 @@ begin
 
     raise notice 'Easy bot turn policy test passed';
     raise notice 'opening_result=%', v_result;
+    raise notice 'connected_result=%', v_connected_bot_result;
     raise notice 'fallback_result=%', v_fallback_result;
 end $$;
 

@@ -138,6 +138,10 @@ begin
 
     elsif v_distinct_cols = 1 then
         -- Vertical word
+        select min(c), max(c)
+        into v_min_col, v_max_col
+        from unnest(v_cols) c;
+
         select min(r), max(r)
         into v_min_row, v_max_row
         from unnest(v_rows) r;

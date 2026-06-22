@@ -232,7 +232,9 @@ Excecao entregue no MVP 2026-06-21:
 - a UI ja permite criar uma partida humano contra bot local
 - o bot `easy` tenta abertura horizontal com palavra reconhecida pelo dicionario
   ativo
-- se nao houver abertura segura, ele passa automaticamente
+- na tranche de 2026-06-22, o bot `easy` tambem passou a tentar um
+  encaixe simples em tabuleiro ja ocupado antes do passe
+- se nao houver abertura ou encaixe seguro, ele passa automaticamente
 - essa automacao existe para provar o ciclo de produto sem travar partida
   quando o turno chega ao bot
 
@@ -252,8 +254,7 @@ A primeira fase de bots de teste esta iniciada. Criterios ja atendidos:
 
 Proximo criterio de avanco:
 
-- permitir uma politica simples de encaixe em tabuleiro ja ocupado
 - decidir se o bot `easy` pode usar curingas ou se isso fica para outro nivel
-- cobrir jogada real do bot apos a primeira rodada por SQL/Playwright
+- ampliar a politica para mais de um encaixe seguro apos a primeira rodada
 
 Fim do documento.

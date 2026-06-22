@@ -1,6 +1,6 @@
 # PATXANGA - PROGRAMACAO DE TESTES
 
-Versao: 1.0
+Versao: 1.1
 Status: BASELINE OPERACIONAL
 
 ---
@@ -29,9 +29,24 @@ obrigatorio para evitar regressao silenciosa em:
 Nenhuma frente funcional deve ser considerada pronta sem pelo menos uma
 validacao automatizada pertinente.
 
+A cadencia padrao de desenvolvimento a partir de 2026-06-22 passa a ser por
+tranches maiores:
+
+- implementar blocos funcionais completos antes de interromper para bateria
+  ampla de testes
+- durante a tranche, rodar apenas checks pontuais quando uma mudanca tocar uma
+  area de alto risco ou quando uma falha precisar ser isolada
+- agrupar `lint`, `build`, Playwright, SQL e simulacoes de bot no checkpoint de
+  fechamento da tranche
+- evitar repetir a suite completa apos cada microajuste quando ainda houver
+  desenvolvimento planejado no mesmo bloco
+
+Esta cadencia reduz interrupcoes, mas nao altera o criterio de aceite: uma
+tranche funcional so fica pronta depois da validacao automatizada pertinente.
+
 Quando houver migration nova, o teste local da funcao alterada nao basta:
-`supabase db reset` deve passar para provar que a cadeia completa de migrations
-recria o banco do zero.
+`supabase db reset` deve passar no fechamento da tranche ou antes do merge para
+provar que a cadeia completa de migrations recria o banco do zero.
 
 Quando houver mudanca visual/interacional, build verde nao basta:
 Playwright deve passar e, se o ajuste depender de julgamento visual, deve haver
@@ -40,6 +55,57 @@ rodada manual de browser seguindo `docs/frontend-browser-validation-procedure-v1
 ---
 
 ## 3. Inventario de testes automatizados
+
+### 3.0 Perfis de execucao por tranche
+
+Durante desenvolvimento ativo:
+
+```bash
+git status --short --branch
+```
+
+Usar testes pontuais somente quando necessario, por exemplo:
+
+- teste SQL especifico da RPC alterada
+- Playwright de um fluxo alterado
+- `npm run build` apos mudanca de tipos ou contrato de frontend
+- simulacao de bot especifica apos alterar politica de bot
+
+No fechamento de tranche frontend:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+```
+
+No fechamento de tranche backend/SQL/bot:
+
+```bash
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
+
+No fechamento de tranche com migration:
+
+```bash
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
+
+No fechamento de tranche mista:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+cd ..
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+```
 
 ### 3.1 Frontend estatico
 
@@ -80,6 +146,7 @@ Cobre hoje:
 - composicao oficial de jogada por slots
 - criacao de partida humano contra bot
 - bot `easy` jogando abertura real `SOL`
+- bot `easy` jogando encaixe conectado real `LUA`
 - submit aceito por slots
 - palavra nao reconhecida indo para `pending_vote`
 
