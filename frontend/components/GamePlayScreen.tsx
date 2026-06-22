@@ -52,7 +52,7 @@ type MatchTimelineItem = {
   tone: "info" | "success" | "warning" | "error";
 };
 
-type GamePlayScreenProps = {
+export type GamePlayScreenProps = {
   stateLabel: string;
   matchLanguage: string;
   isWaiting: boolean;

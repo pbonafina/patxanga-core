@@ -19,6 +19,7 @@ import { PlayersSection } from "../components/PlayersSection";
 import { MatchStatusPanel } from "../components/MatchStatusPanel";
 import { MoveSubmitSection } from "../components/MoveSubmitSection";
 import { GamePlayScreen } from "../components/GamePlayScreen";
+import { HumanVsBotGameScreen } from "../components/HumanVsBotGameScreen";
 import type { MovePreviewResult } from "../types/movePreview";
 
 type BoardCell = {
@@ -2387,6 +2388,21 @@ export default function HomePage() {
     }
   }
 
+  function handleToggleExchangeMode() {
+    if (isExchangeMode) {
+      setIsExchangeMode(false);
+      setSelectedExchangeTileIds([]);
+      return;
+    }
+
+    setIsExchangeMode(true);
+    setErrorMessage(null);
+    setTurnActionMessage(null);
+    setIsSubmittingExchange(false);
+    setSelectedTileId(null);
+    clearMoveCompositionPreview();
+  }
+
   async function refreshPendingVoteContext(matchId: string, userId: string, status: string) {
     if (status !== "voting") {
       setPendingVoteContext(null);
@@ -2671,6 +2687,120 @@ export default function HomePage() {
   function handleReorderRackItem(draggedItemId: string, dropTargetId: string) {
     setLocalRackComposition((current) =>
       reorderRackComposition(current, draggedItemId, dropTargetId, selectedTileIds)
+    );
+  }
+
+  const hasBotPlayer = resolvedBootstrap.playersSummary.some((player) => player.is_bot);
+
+  if (resolvedBootstrap.matchId && hasBotPlayer) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          padding: 24,
+          fontFamily: '"Avenir Next", "Trebuchet MS", sans-serif',
+          maxWidth: 1280,
+          margin: "0 auto",
+          color: "#1f2933",
+          background:
+            "radial-gradient(circle at 10% 0%, rgba(187, 247, 208, 0.42), transparent 30%), radial-gradient(circle at 95% 12%, rgba(254, 243, 199, 0.5), transparent 32%), #f8fafc",
+        }}
+      >
+        <HumanVsBotGameScreen
+          stateLabel={stateLabel}
+          matchLanguage={resolvedBootstrap.language}
+          isWaiting={isWaiting}
+          isActive={isActive}
+          isVoting={isVoting}
+          isFinished={isFinished}
+          endSummary={resolvedBootstrap.endSummary}
+          winnerPlayerId={resolvedBootstrap.winnerPlayerId}
+          finishedAt={resolvedBootstrap.finishedAt}
+          dictionarySummary={resolvedBootstrap.dictionarySummary}
+          viewerPlayerId={resolvedBootstrap.playerId}
+          playersSummary={resolvedBootstrap.playersSummary}
+          currentTurnPlayerId={resolvedBootstrap.currentTurnPlayerId}
+          turnNumber={resolvedBootstrap.turnNumber}
+          boardState={resolvedBootstrap.boardState}
+          compositionPlacementsByCell={compositionPlacementsByCell}
+          pendingVoteTilesByCell={pendingVoteTilesByCell}
+          selectedTileId={selectedTileId}
+          selectedTileIds={isExchangeMode ? selectedExchangeTileIds : selectedTileIds}
+          selectedRackSlotId={selectedRackSlotId}
+          previewTileIds={previewTileIds}
+          playerRackState={orderedPlayerRackState}
+          rackSlotAssociations={localRackSlotAssociations}
+          rackSlotAssociationLabels={rackSlotAssociationLabels}
+          placedTilesPreview={placedTilesPreview}
+          localComposedWord={localComposedWord}
+          moveCompositionWarning={moveCompositionWarning}
+          canSubmitMove={
+            placedTilesPreview.length > 0 &&
+            Boolean(resolvedBootstrap.playerId) &&
+            !moveCompositionWarning
+          }
+          isSubmittingMove={isSubmittingMove}
+          movePreview={movePreview}
+          isLoadingMovePreview={isLoadingMovePreview}
+          pendingVoteError={pendingVoteError}
+          pendingVoteMove={pendingVoteMove}
+          canCurrentViewerVote={canCurrentViewerVote}
+          isSubmittingVote={isSubmittingVote}
+          voteResult={voteResult}
+          voteResolutionMessage={voteResolutionMessage}
+          showDebug={false}
+          botActionMessage={botActionMessage}
+          botActionError={botActionError}
+          botActionHistory={botActionHistory}
+          lastTurnActionSummary={lastTurnActionSummary}
+          matchTimeline={matchTimeline}
+          isAutoPlayingBotTurn={isAutoPlayingBotTurn}
+          buildCellKey={buildCellKey}
+          renderCellLabel={renderCellLabel}
+          renderCellBackground={renderCellBackground}
+          onPlaceTile={handlePlaceTile}
+          onToggleTile={handleToggleTile}
+          onToggleRackSlot={handleToggleRackSlot}
+          onClearRackSlotAssignment={handleClearRackSlotAssignment}
+          onClearRackSlotAssociation={handleClearRackSlotAssociation}
+          onClearPreview={clearMoveCompositionPreview}
+          onChangeRackSlotDraft={handleChangeRackSlotDraft}
+          onReorderTile={handleReorderRackItem}
+          onSubmitMove={handleSubmitMove}
+          onApprove={() => handleSubmitVote(false)}
+          onReject={() => handleSubmitVote(true)}
+          onToggleDebug={() => setShowDebug((current) => !current)}
+          isExchangeMode={isExchangeMode}
+          selectedExchangeTileIds={selectedExchangeTileIds}
+          canCurrentPlayerTakeTurnAction={canCurrentPlayerTakeTurnAction}
+          canSubmitExchange={canSubmitExchange}
+          isSubmittingPassTurn={isSubmittingPassTurn}
+          isSubmittingExchange={isSubmittingExchange}
+          turnActionMessage={turnActionMessage}
+          turnActionBlockReason={turnActionBlockReason}
+          onPassTurn={handlePassTurn}
+          onToggleExchangeMode={handleToggleExchangeMode}
+          onSubmitExchange={handleSubmitExchange}
+          onCreateNewBotMatch={handleCreateHumanVsBotMatch}
+          isCreatingBotMatch={isCreatingBotMatch}
+        />
+
+        {errorMessage ? (
+          <p
+            style={{
+              marginTop: 14,
+              padding: 12,
+              borderRadius: 14,
+              border: "1px solid #fca5a5",
+              background: "#fff1f2",
+              color: "#991b1b",
+              fontWeight: 800,
+            }}
+          >
+            {errorMessage}
+          </p>
+        ) : null}
+      </main>
     );
   }
 
@@ -3909,19 +4039,7 @@ export default function HomePage() {
             {isActive && !isFinished && resolvedBootstrap.playerId ? (
               <button
                 type="button"
-                onClick={() => {
-                  if (isExchangeMode) {
-                    setIsExchangeMode(false);
-                    setSelectedExchangeTileIds([]);
-                  } else {
-                    setIsExchangeMode(true);
-                    setErrorMessage(null);
-                    setTurnActionMessage(null);
-                    setIsSubmittingExchange(false);
-                    setSelectedTileId(null);
-                    clearMoveCompositionPreview();
-                  }
-                }}
+                onClick={handleToggleExchangeMode}
                 disabled={
                   !canCurrentPlayerTakeTurnAction ||
                   isSubmittingExchange ||

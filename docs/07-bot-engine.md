@@ -261,4 +261,21 @@ Proximo criterio de avanco:
 - decidir se o bot `easy` pode usar curingas ou se isso fica para outro nivel
 - ampliar a politica para mais de um encaixe seguro apos a primeira rodada
 
+---
+
+## 10. Proxima fase formal - bots jogaveis e humano x bot
+
+A evolucao seguinte deixa de tratar o bot apenas como automacao minima e passa
+a organizar:
+
+- importacao ampla e auditavel de dicionarios
+- motor de candidatos de jogada do bot
+- bot votante com vereditos explicaveis para aceitar/rejeitar palavras
+- simulacoes longas com metricas
+- modo humano x bot com UX de produto
+
+Plano de execucao:
+
+- `docs/bot-and-human-vs-bot-evolution-plan-v1.0.md`
+
 Fim do documento.

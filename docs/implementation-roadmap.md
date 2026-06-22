@@ -102,6 +102,8 @@ Frentes abertas apos esta baseline:
 - acoes de turno no frontend: `pass`, `exchange`, feedback e bloqueios
 - humano contra bot demonstravel em partida longa
 - dicionario amplo e controlado por fonte, licenca e pipeline auditavel
+- evolucao longa de bots jogaveis, votos automaticos de bot e modo humano x bot
+  de produto conforme `docs/bot-and-human-vs-bot-evolution-plan-v1.0.md`
 
 Documento operacional:
 

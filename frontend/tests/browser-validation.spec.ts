@@ -1086,7 +1086,8 @@ test.describe("browser validation scenarios", () => {
 
     await page.getByTestId("bot-match-create").click();
 
-    await expect(page.getByText("bot_user_id:")).toBeVisible();
+    await expect(page.getByTestId("human-vs-bot-screen")).toBeVisible();
+    await expect(page.getByText("Jogue contra o Bot Easy")).toBeVisible();
     await expect(page.getByText("bot easy / balanced", { exact: true })).toBeVisible();
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
   });
@@ -1103,13 +1104,8 @@ test.describe("browser validation scenarios", () => {
       .fill(scenario.humanUserId);
     await page.getByRole("button", { name: "Abrir partida" }).click();
 
+    await expect(page.getByTestId("human-vs-bot-screen")).toBeVisible();
     await expect(page.getByText("bot easy / balanced", { exact: true })).toBeVisible();
-    await expect(page.getByTestId("dictionary-language-badge")).toContainText(
-      "dicionário pt-BR ativo"
-    );
-    await expect(page.getByTestId("bot-action-message")).toContainText(
-      "Bot jogou SOL como abertura."
-    );
     await expect(page.getByTestId("game-bot-action-message")).toContainText(
       "Bot jogou SOL como abertura."
     );
@@ -1119,8 +1115,7 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("game-bot-action-history")).toContainText(
       "Bot jogou SOL como abertura."
     );
-    await expect(page.getByTestId("bot-product-state")).toContainText("Bot com");
-    await expect(page.getByTestId("match-action-timeline")).toContainText("Bot jogou");
+    await expect(page.getByTestId("bot-product-state")).toContainText("Bot Easy");
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
     await expect(page.getByTestId("board-cell-7-7")).toContainText("S");
     await expect(page.getByTestId("board-cell-7-8")).toContainText("O");
@@ -1139,10 +1134,8 @@ test.describe("browser validation scenarios", () => {
       .fill(scenario.humanUserId);
     await page.getByRole("button", { name: "Abrir partida" }).click();
 
+    await expect(page.getByTestId("human-vs-bot-screen")).toBeVisible();
     await expect(page.getByText("bot easy / balanced", { exact: true })).toBeVisible();
-    await expect(page.getByTestId("bot-action-message")).toContainText(
-      "Bot jogou LUA conectando ao tabuleiro."
-    );
     await expect(page.getByTestId("game-bot-action-message")).toContainText(
       "Bot jogou LUA conectando ao tabuleiro."
     );
@@ -1190,7 +1183,7 @@ test.describe("browser validation scenarios", () => {
       "Bot jogou SOL como abertura."
     );
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
-    await expect(page.getByText(/turno 2/)).toBeVisible();
+    await expect(page.getByText(/turno 2/i)).toBeVisible();
 
     const firstBotActionText = await page
       .getByTestId("game-bot-action-message")
@@ -1199,10 +1192,10 @@ test.describe("browser validation scenarios", () => {
     await page.getByTestId("pass-turn-action").click();
     await expect(page.getByTestId("turn-action-message")).toContainText("Turno passado com sucesso.");
     await expect(page.getByTestId("pass-turn-action")).toBeDisabled();
-    await expect(page.getByText("turno 3", { exact: true })).toBeVisible();
+    await expect(page.getByText(/turno 3/i)).toBeVisible();
 
     await expect(page.getByTestId("game-bot-action-message")).not.toHaveText(firstBotActionText);
-    await expect(page.getByText(/turno 4/)).toBeVisible();
+    await expect(page.getByText(/turno 4/i)).toBeVisible();
 
     await expect(page.getByTestId("game-bot-action-message")).toContainText("Bot ");
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
@@ -1210,7 +1203,7 @@ test.describe("browser validation scenarios", () => {
     await page.getByTestId("pass-turn-action").click();
     await expect(page.getByTestId("turn-action-message")).toContainText("Turno passado com sucesso.");
 
-    await expect(page.getByText("turno 5")).toBeVisible();
+    await expect(page.getByText(/turno 5/i)).toBeVisible();
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
     await expect(page.getByTestId("game-bot-action-message")).toContainText("Bot ");
   });
