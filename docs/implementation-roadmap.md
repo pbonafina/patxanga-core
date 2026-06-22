@@ -230,6 +230,16 @@ zsh scripts/run-sql-test-suite.sh lobby_ops
 zsh scripts/run-sql-test-suite.sh engine_regression
 ```
 
+Atualizacao de execucao - 2026-06-22:
+
+- `waiting` ganhou painel de pre-jogo com contagem de jogadores e proxima acao
+- desistente passa a ver aviso de produto dentro da mesa jogavel
+- `finished` ganhou painel com vencedor por nome, placar final ordenado e
+  desistencias registradas
+- listas de partidas retomaveis e convites pendentes foram refinadas para
+  mostrar contexto de mesa, jogador, idioma, turno e presenca sem depender de
+  IDs tecnicos fora do debug
+
 ---
 
 ## 8. Fase 4 - Cobertura automatizada do fluxo jogavel
@@ -257,6 +267,14 @@ npm run build
 npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
 zsh ../scripts/run-sql-test-suite.sh all
 ```
+
+Atualizacao de execucao - 2026-06-22:
+
+- Playwright passou a cobrir fluxo humano-humano mais longo:
+  abertura aceita via slots, troca de sessao, retomada pelo outro jogador,
+  jogada conectada que entra em `pending_vote`, rejeicao por outro jogador e
+  retorno do turno ao autor
+- o arquivo browser agora roda 10 cenarios de produto/regressao
 
 ---
 

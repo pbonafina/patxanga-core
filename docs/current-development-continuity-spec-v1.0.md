@@ -672,10 +672,34 @@ Validacao confirmada:
 - `cd frontend && npm run lint`
 - `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
 
-Observacao:
+## 1.15 Atualizacao operacional de continuidade - 2026-06-22 tranches estados e fluxo humano-humano
 
-- nao houve mudanca backend nesta tranche, portanto SQL completo nao foi
-  repetido neste fechamento
+Estado desta frente:
+
+- foco: executar as tranches 1 e 2 pedidas pelo operador em bloco maior
+- arquivos principais: `frontend/components/GamePlayScreen.tsx`,
+  `frontend/pages/index.tsx`, `frontend/tests/browser-validation.spec.ts`,
+  `docs/implementation-roadmap.md`
+
+Implementado nesta tranche:
+
+- painel de pre-jogo para `waiting`, com contagem de jogadores e proxima acao
+- aviso de produto para jogador desistente dentro da mesa jogavel
+- painel de `finished` com vencedor por nome, placar final ordenado e
+  desistencias registradas
+- cards de partidas retomaveis e convites pendentes com linguagem de produto,
+  exibindo jogador, idioma, turno, presenca e capacidade sem depender de IDs
+  fora do debug
+- novo fluxo Playwright humano-humano mais longo:
+  abertura `DA` aceita via slots, troca de sessao, retomada pelo outro jogador,
+  bridge vertical `DAR` em `pending_vote`, rejeicao por outro jogador e retorno
+  do turno ao autor
+
+Validacao confirmada nesta tranche antes do commit intermediario:
+
+- `cd frontend && npm run build`
+- `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+- resultado browser: 10 cenarios passaram
 
 ## 2. Matriz objetiva de avanco
 

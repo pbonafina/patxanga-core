@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-22 14:24:10
+Generated at: 2026-06-22 15:42:59
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,13 +93,10 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## develop...origin/develop [ahead 2]
- M docs/18-room-baton-package-current.md
+## develop...origin/develop [ahead 3]
  M docs/current-development-continuity-spec-v1.0.md
- M docs/frontend-contract-pending-vote-ux-v1.0.md
  M docs/implementation-roadmap.md
  M frontend/components/GamePlayScreen.tsx
- M frontend/components/VotingSection.tsx
  M frontend/pages/index.tsx
  M frontend/tests/browser-validation.spec.ts
 ```
@@ -112,7 +109,8 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-20a59c1 (HEAD -> develop) feat: improve playable game experience
+7a8e4b6 (HEAD -> develop) feat: complete pending vote player flow
+20a59c1 feat: improve playable game experience
 49b5625 feat: add easy bot connected move policy
 7cfd46d (origin/develop, origin/HEAD) Merge pull request #15 from pbonafina/docs/test-program
 57a7369 (origin/docs/test-program) docs: add testing program
@@ -126,7 +124,6 @@ f4ada51 test: cover slot submit browser flows
 b71e1b0 test: cover lexical policy voting path
 ece4650 Merge pull request #10 from pbonafina/feature/offline-lexical-policy-boundaries
 c727200 test: cover offline lexical policy boundaries
-f6c18f1 Merge pull request #9 from pbonafina/feature/lexical-policy-imported-words-regression
 ```
 
 ### tail -n 60 ../project-log.md
@@ -4590,6 +4587,16 @@ zsh scripts/run-sql-test-suite.sh lobby_ops
 zsh scripts/run-sql-test-suite.sh engine_regression
 ```
 
+Atualizacao de execucao - 2026-06-22:
+
+- `waiting` ganhou painel de pre-jogo com contagem de jogadores e proxima acao
+- desistente passa a ver aviso de produto dentro da mesa jogavel
+- `finished` ganhou painel com vencedor por nome, placar final ordenado e
+  desistencias registradas
+- listas de partidas retomaveis e convites pendentes foram refinadas para
+  mostrar contexto de mesa, jogador, idioma, turno e presenca sem depender de
+  IDs tecnicos fora do debug
+
 ---
 
 ## 8. Fase 4 - Cobertura automatizada do fluxo jogavel
@@ -4617,6 +4624,14 @@ npm run build
 npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
 zsh ../scripts/run-sql-test-suite.sh all
 ```
+
+Atualizacao de execucao - 2026-06-22:
+
+- Playwright passou a cobrir fluxo humano-humano mais longo:
+  abertura aceita via slots, troca de sessao, retomada pelo outro jogador,
+  jogada conectada que entra em `pending_vote`, rejeicao por outro jogador e
+  retorno do turno ao autor
+- o arquivo browser agora roda 10 cenarios de produto/regressao
 
 ---
 
@@ -5890,10 +5905,34 @@ Validacao confirmada:
 - `cd frontend && npm run lint`
 - `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
 
-Observacao:
+## 1.15 Atualizacao operacional de continuidade - 2026-06-22 tranches estados e fluxo humano-humano
 
-- nao houve mudanca backend nesta tranche, portanto SQL completo nao foi
-  repetido neste fechamento
+Estado desta frente:
+
+- foco: executar as tranches 1 e 2 pedidas pelo operador em bloco maior
+- arquivos principais: `frontend/components/GamePlayScreen.tsx`,
+  `frontend/pages/index.tsx`, `frontend/tests/browser-validation.spec.ts`,
+  `docs/implementation-roadmap.md`
+
+Implementado nesta tranche:
+
+- painel de pre-jogo para `waiting`, com contagem de jogadores e proxima acao
+- aviso de produto para jogador desistente dentro da mesa jogavel
+- painel de `finished` com vencedor por nome, placar final ordenado e
+  desistencias registradas
+- cards de partidas retomaveis e convites pendentes com linguagem de produto,
+  exibindo jogador, idioma, turno, presenca e capacidade sem depender de IDs
+  fora do debug
+- novo fluxo Playwright humano-humano mais longo:
+  abertura `DA` aceita via slots, troca de sessao, retomada pelo outro jogador,
+  bridge vertical `DAR` em `pending_vote`, rejeicao por outro jogador e retorno
+  do turno ao autor
+
+Validacao confirmada nesta tranche antes do commit intermediario:
+
+- `cd frontend && npm run build`
+- `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+- resultado browser: 10 cenarios passaram
 
 ## 2. Matriz objetiva de avanco
 

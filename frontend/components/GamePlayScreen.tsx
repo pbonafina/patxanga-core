@@ -105,6 +105,10 @@ function formatFinishedAt(value: string | null): string {
   return value;
 }
 
+function formatPlayerCount(value: number): string {
+  return `${value} jogador${value === 1 ? "" : "es"}`;
+}
+
 export function GamePlayScreen({
   stateLabel,
   isWaiting,
@@ -170,6 +174,10 @@ export function GamePlayScreen({
   const viewerPlayer =
     playersSummary.find((player) => player.player_id === viewerPlayerId) ?? null;
   const scoreLeader = [...playersSummary].sort((left, right) => right.score - left.score)[0] ?? null;
+  const finalStandings = [...playersSummary].sort((left, right) => right.score - left.score);
+  const winnerPlayer =
+    playersSummary.find((player) => player.player_id === winnerPlayerId) ?? null;
+  const forfeitedPlayers = playersSummary.filter((player) => player.has_forfeited);
 
   const totalPlayers = playersSummary.length;
   const placedTileCount = placedTilesPreview.length;
@@ -489,33 +497,98 @@ export function GamePlayScreen({
 
       {isWaiting ? (
         <div
+          data-testid="waiting-product-panel"
           style={{
             marginBottom: 18,
             padding: 16,
-            borderRadius: 14,
-            border: "1px solid #e5e7eb",
-            background: "#ffffff",
+            borderRadius: 18,
+            border: "1px solid #bfdbfe",
+            background:
+              "linear-gradient(135deg, rgba(239, 246, 255, 0.92) 0%, rgba(255, 255, 255, 0.92) 100%)",
             color: "#374151",
           }}
         >
-          A partida ainda não começou. Assim que ela for iniciada, a mesa de jogo será liberada.
+          <div style={{ fontWeight: 900, color: "#1d4ed8", marginBottom: 8 }}>
+            Pré-jogo pronto para iniciar
+          </div>
+          <div>
+            A mesa tem <strong>{formatPlayerCount(totalPlayers)}</strong>. Quando o host iniciar o
+            lobby, o tabuleiro e o rack oficial ficam liberados aqui.
+          </div>
+          <div style={{ marginTop: 8, fontSize: 14 }}>
+            Próxima ação: use <strong>Iniciar partida do lobby</strong> no painel de ações da
+            partida atual.
+          </div>
+        </div>
+      ) : null}
+
+      {viewerPlayer?.has_forfeited ? (
+        <div
+          data-testid="forfeit-product-panel"
+          style={{
+            marginBottom: 18,
+            padding: 14,
+            borderRadius: 16,
+            border: "1px solid #fdba74",
+            background: "#fff7ed",
+            color: "#9a3412",
+            fontWeight: 800,
+          }}
+        >
+          Você desistiu desta partida. A mesa continua visível para consulta, mas esta sessão não
+          executa novas jogadas.
         </div>
       ) : null}
 
       {isFinished ? (
         <div
+          data-testid="finished-product-panel"
           style={{
             marginBottom: 18,
             padding: 16,
-            borderRadius: 14,
+            borderRadius: 18,
             border: "1px solid #fecaca",
-            background: "#fff7f7",
+            background:
+              "radial-gradient(circle at top left, rgba(248, 113, 113, 0.12), transparent 30%), #fff7f7",
             color: "#7f1d1d",
           }}
         >
           <div style={{ fontWeight: 700, marginBottom: 6 }}>Resultado final</div>
-          <div>Vencedor: <strong>{winnerPlayerId || "(não disponível)"}</strong></div>
+          <div>
+            Vencedor:{" "}
+            <strong>{winnerPlayer?.display_name ?? winnerPlayerId ?? "(não disponível)"}</strong>
+          </div>
           <div>Encerrada em: <strong>{formatFinishedAt(finishedAt)}</strong></div>
+          {forfeitedPlayers.length > 0 ? (
+            <div style={{ marginTop: 6 }}>
+              Desistências registradas: <strong>{forfeitedPlayers.length}</strong>
+            </div>
+          ) : null}
+          {finalStandings.length > 0 ? (
+            <div style={{ marginTop: 12, display: "grid", gap: 6 }}>
+              {finalStandings.map((player, index) => (
+                <div
+                  key={player.player_id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    padding: "8px 10px",
+                    borderRadius: 12,
+                    background: "rgba(255, 255, 255, 0.78)",
+                    color: "#111827",
+                  }}
+                >
+                  <span>
+                    {index + 1}. {player.display_name}
+                    {player.player_id === viewerPlayer?.player_id ? " · você" : ""}
+                    {player.has_forfeited ? " · desistente" : ""}
+                  </span>
+                  <strong>{player.score} pts</strong>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

@@ -9,6 +9,14 @@ type SlotMoveScenario = {
   tileIds: Record<string, string>;
 };
 
+type LongHumanFlowScenario = {
+  matchId: string;
+  openingUserId: string;
+  bridgeUserId: string;
+  openingTileIds: Record<"D" | "A", string>;
+  bridgeTileIds: Record<"D" | "R", string>;
+};
+
 type HumanVsBotScenario = {
   matchId: string;
   humanUserId: string;
@@ -166,6 +174,112 @@ end
 $setup$;
 
 select payload from e2e_slot_move_result;
+`);
+}
+
+function createLongHumanFlowScenario(): LongHumanFlowScenario {
+  return runDatabaseJson<LongHumanFlowScenario>(`
+create temp table e2e_long_human_flow_result(payload text);
+
+do $setup$
+declare
+    v_host_user_id uuid := gen_random_uuid();
+    v_guest_user_id uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_opening_player_id uuid;
+    v_bridge_player_id uuid;
+    v_opening_user_id uuid;
+    v_bridge_user_id uuid;
+    v_opening_tile_d_id uuid := gen_random_uuid();
+    v_opening_tile_a_id uuid := gen_random_uuid();
+    v_bridge_tile_d_id uuid := gen_random_uuid();
+    v_bridge_tile_r_id uuid := gen_random_uuid();
+begin
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_host_user_id,
+        p_host_guest_name := 'Long Flow Host',
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    perform public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_guest_user_id,
+        p_guest_name := 'Long Flow Guest'
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    select current_turn_player_id
+    into v_opening_player_id
+    from public.patxanga_matches
+    where id = v_match_id;
+
+    select id
+    into v_bridge_player_id
+    from public.patxanga_players
+    where match_id = v_match_id
+      and id <> v_opening_player_id
+    order by joined_at asc
+    limit 1;
+
+    select user_id
+    into v_opening_user_id
+    from public.patxanga_players
+    where id = v_opening_player_id;
+
+    select user_id
+    into v_bridge_user_id
+    from public.patxanga_players
+    where id = v_bridge_player_id;
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_opening_tile_d_id::text, 'letter', 'D', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_opening_tile_a_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'M', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_opening_player_id;
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_bridge_tile_d_id::text, 'letter', 'D', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_bridge_tile_r_id::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'M', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'T', 'points', 1, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_bridge_player_id;
+
+    insert into e2e_long_human_flow_result(payload)
+    values (
+        jsonb_build_object(
+            'matchId', v_match_id,
+            'openingUserId', v_opening_user_id,
+            'bridgeUserId', v_bridge_user_id,
+            'openingTileIds', jsonb_build_object(
+                'D', v_opening_tile_d_id,
+                'A', v_opening_tile_a_id
+            ),
+            'bridgeTileIds', jsonb_build_object(
+                'D', v_bridge_tile_d_id,
+                'R', v_bridge_tile_r_id
+            )
+        )::text
+    );
+end
+$setup$;
+
+select payload from e2e_long_human_flow_result;
 `);
 }
 
@@ -588,6 +702,65 @@ test.describe("browser validation scenarios", () => {
 
     await expect(page.getByText("Aguardando o outro jogador")).toBeVisible();
     await expect(page.getByText("0 peças em preparo")).toBeVisible();
+    await expect(page.getByTestId("board-cell-7-7")).toContainText("D");
+    await expect(page.getByTestId("board-cell-7-8")).toContainText("A");
+  });
+
+  test("plays a longer human flow with resume, connected pending vote and rejection", async ({
+    page,
+  }) => {
+    const scenario = createLongHumanFlowScenario();
+
+    await page.goto("/");
+    await openMatchAsUser(page, scenario.matchId, scenario.openingUserId);
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+
+    await placeTileThroughSlot(page, scenario.openingTileIds.D, 1, 7, 7);
+    await placeTileThroughSlot(page, scenario.openingTileIds.A, 2, 7, 8);
+
+    await expect(page.getByText("Palavra principal: DA")).toBeVisible();
+    await expect(page.getByText("dicionario reconhece")).toBeVisible();
+
+    await page.getByRole("button", { name: "Confirmar jogada" }).click();
+
+    await expect(page.getByText("Aguardando o outro jogador")).toBeVisible();
+    await expect(page.getByTestId("board-cell-7-7")).toContainText("D");
+    await expect(page.getByTestId("board-cell-7-8")).toContainText("A");
+
+    await openMatchAsUser(page, scenario.matchId, scenario.bridgeUserId);
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+    await expect(page.getByTestId("board-cell-7-7")).toContainText("D");
+    await expect(page.getByTestId("board-cell-7-8")).toContainText("A");
+
+    await placeTileThroughSlot(page, scenario.bridgeTileIds.D, 1, 6, 8);
+    await placeTileThroughSlot(page, scenario.bridgeTileIds.R, 2, 8, 8);
+
+    await expect(page.getByText("Palavra principal: DAR")).toBeVisible();
+    await expect(page.getByText("vai para votacao")).toBeVisible();
+
+    await page.getByRole("button", { name: "Confirmar jogada" }).click();
+
+    await expect(page.getByText("A mesa está em votação")).toBeVisible();
+    await expect(page.getByText("Autor não vota na própria palavra")).toBeVisible();
+    await expect(page.getByTestId("pending-vote-word")).toContainText("D");
+    await expect(page.getByTestId("pending-vote-word")).toContainText("A");
+    await expect(page.getByTestId("pending-vote-word")).toContainText("R");
+    await expect(page.getByText("D em 7,9")).toBeVisible();
+    await expect(page.getByText("R em 9,9")).toBeVisible();
+
+    await openMatchAsUser(page, scenario.matchId, scenario.openingUserId);
+    await expect(page.getByText("Você pode votar porque não é o autor desta jogada.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Rejeitar palavra" }).click();
+
+    await expect(page.getByTestId("vote-resolution-message")).toContainText(
+      "Palavra rejeitada. O turno voltou ao autor."
+    );
+    await expect(page.getByText("Aguardando o outro jogador")).toBeVisible();
+    await expect(page.getByTestId("pending-vote-panel")).toHaveCount(0);
+
+    await openMatchAsUser(page, scenario.matchId, scenario.bridgeUserId);
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
     await expect(page.getByTestId("board-cell-7-7")).toContainText("D");
     await expect(page.getByTestId("board-cell-7-8")).toContainText("A");
   });

@@ -2412,19 +2412,39 @@ export default function HomePage() {
                     {resumableMatches.map((match) => (
                       <div
                         key={`${match.matchId}-${match.playerId}`}
+                        data-testid="resumable-match-card"
                         style={{
                           display: "grid",
                           gap: 6,
                           padding: 12,
-                          border: "1px solid #d1d5db",
-                          borderRadius: 8,
+                          border: "1px solid #bfdbfe",
+                          borderRadius: 14,
+                          background: "linear-gradient(135deg, #eff6ff 0%, #ffffff 100%)",
                         }}
                       >
-                        <div><strong>match_id:</strong> {match.matchId}</div>
-                        <div><strong>player_id:</strong> {match.playerId}</div>
-                        <div><strong>status:</strong> {match.matchStatus}</div>
-                        <div><strong>turno:</strong> {match.turnNumber}</div>
-                        <div><strong>online:</strong> {match.isOnline ? "sim" : "nao"}</div>
+                        <div style={{ fontWeight: 900, color: "#1d4ed8" }}>
+                          Retomar mesa {match.matchStatus}
+                        </div>
+                        <div>
+                          Você entra como <strong>{match.displayName}</strong>, com{" "}
+                          <strong>{match.score}</strong> ponto{match.score === 1 ? "" : "s"}.
+                        </div>
+                        <div>
+                          Turno <strong>{match.turnNumber}</strong> · idioma{" "}
+                          <strong>{match.language}</strong> ·{" "}
+                          {match.isOnline ? "sessão online recentemente" : "sessão sem presença recente"}
+                        </div>
+                        {match.hasForfeited ? (
+                          <div style={{ color: "#92400e", fontWeight: 800 }}>
+                            Este jogador já consta como desistente.
+                          </div>
+                        ) : null}
+                        {showDebug ? (
+                          <>
+                            <div><strong>match_id:</strong> {match.matchId}</div>
+                            <div><strong>player_id:</strong> {match.playerId}</div>
+                          </>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => handleResumeListedMatch(match.matchId)}
@@ -2452,19 +2472,35 @@ export default function HomePage() {
                     {pendingInvites.map((invite) => (
                       <div
                         key={invite.inviteId}
+                        data-testid="pending-invite-card"
                         style={{
                           display: "grid",
                           gap: 6,
                           padding: 12,
-                          border: "1px solid #d1d5db",
-                          borderRadius: 8,
+                          border: "1px solid #bbf7d0",
+                          borderRadius: 14,
+                          background: "linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%)",
                         }}
                       >
-                        <div><strong>invite_id:</strong> {invite.inviteId}</div>
-                        <div><strong>match_id:</strong> {invite.matchId}</div>
-                        <div><strong>lobby:</strong> {invite.lobbyStatus}</div>
-                        <div><strong>modo:</strong> {invite.matchMode}</div>
-                        <div><strong>idioma:</strong> {invite.language}</div>
+                        <div style={{ fontWeight: 900, color: "#166534" }}>
+                          Convite para mesa {invite.lobbyStatus}
+                        </div>
+                        <div>
+                          Modo <strong>{invite.matchMode}</strong> · idioma{" "}
+                          <strong>{invite.language}</strong> · até{" "}
+                          <strong>{invite.maxPlayers}</strong> jogadores.
+                        </div>
+                        {invite.hostGuestName ? (
+                          <div>
+                            Criada por <strong>{invite.hostGuestName}</strong>.
+                          </div>
+                        ) : null}
+                        {showDebug ? (
+                          <>
+                            <div><strong>invite_id:</strong> {invite.inviteId}</div>
+                            <div><strong>match_id:</strong> {invite.matchId}</div>
+                          </>
+                        ) : null}
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
                           <button
                             type="button"
