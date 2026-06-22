@@ -193,6 +193,35 @@ Leitura de produto:
 - a expansao `pt-PT` segue controlada por fonte e fixture local, sem importar
   dump amplo nem escolher licenca de produto automaticamente
 
+## 6.2 Atualizacao de execucao - cinco tranches
+
+Tranche planejada para atravessar cinco frentes em uma unica rodada longa:
+
+1. composicao oficial por slots
+2. humano contra bot demonstravel
+3. dicionario `pt-BR`/`pt-PT` controlado
+4. tela jogavel como superficie principal
+5. continuidade e checkpoint de validacao
+
+Entregas adicionadas:
+
+- a mesa jogavel passou a exibir um resumo estavel da composicao com quantidade
+  de pecas, slots associados ao board e casas preparadas
+- a criacao rapida de partidas passou a permitir escolha de dicionario
+  `pt-BR` ou `pt-PT`
+- Playwright passou a cobrir recomposicao de slot antes do submit oficial
+- Playwright passou a cobrir partida rapida `pt-PT` exibindo o dicionario ativo
+- a cobertura de humano contra bot continua validando troca humana, jogada
+  automatica do bot e retorno do turno ao humano
+
+Leitura de produto:
+
+- o jogador passa a ver quando a composicao esta pronta antes de confirmar a
+  jogada
+- `pt-PT` fica acessivel na superficie principal sem importar dump amplo nem
+  alterar a politica lexical
+- a rodada continua sem migration nova, reduzindo risco operacional
+
 ## 7. Politica de commits
 
 - cada tranche grande pode atravessar mais de uma frente, desde que tenha

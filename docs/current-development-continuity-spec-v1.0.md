@@ -845,6 +845,39 @@ Validacao planejada para fechamento desta tranche:
 - `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
 - `git diff --check`
 
+## 1.20 Atualizacao operacional de continuidade - 2026-06-22 cinco tranches
+
+Estado desta frente:
+
+- foco: executar cinco tranches em bloco maior antes de novo commit
+- tranches: composicao oficial por slots, humano contra bot demonstravel,
+  dicionario controlado, consolidacao da tela jogavel e continuidade
+- arquivos principais: `frontend/components/GamePlayScreen.tsx`,
+  `frontend/pages/index.tsx`, `frontend/tests/browser-validation.spec.ts`,
+  `docs/development-fronts-2026-06-22.md`,
+  `docs/current-development-continuity-spec-v1.0.md`
+
+Implementado nesta tranche:
+
+- mesa jogavel passou a mostrar `move-composition-summary` com pecas prontas,
+  slots associados e casas preparadas
+- partida local rapida passou a ter seletor de dicionario `pt-BR`/`pt-PT`
+- sessoes rapidas registram o idioma criado junto de `match_id`, host e guest
+- Playwright passou a recompor um slot antes de enviar `DA` oficialmente
+- Playwright passou a criar partida rapida `pt-PT` e validar o badge de
+  dicionario ativo na tela principal
+
+Validacao planejada para fechamento desta tranche:
+
+- `cd frontend && npm run build`
+- `cd frontend && npm run lint`
+- `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+- `zsh scripts/run-sql-test-suite.sh sql/tests/test_get_match_bootstrap.sql`
+- `zsh scripts/run-bot-simulation.sh all`
+- `zsh scripts/test-dictionary-import-tooling.sh`
+- `zsh scripts/test-libreoffice-dictionary-sample.sh`
+- `git diff --check`
+
 ## 2. Matriz objetiva de avanco
 
 Percentual global estimado nesta leitura: `75%`

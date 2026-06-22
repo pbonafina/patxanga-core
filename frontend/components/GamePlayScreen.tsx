@@ -18,6 +18,12 @@ type BoardCell = {
   multiplier_type?: string | null;
 } | null;
 
+type PreparedTilePreview = {
+  row?: number;
+  col?: number;
+  declared_letter?: string | null;
+};
+
 type GamePlayScreenProps = {
   stateLabel: string;
   matchLanguage: string;
@@ -132,6 +138,15 @@ function formatEndReason(summary: MatchEndSummary | null): string {
   }
 }
 
+function formatPreparedTileCoordinates(tiles: unknown[]): string {
+  const coordinates = tiles
+    .map((tile) => tile as PreparedTilePreview)
+    .filter((tile) => typeof tile.row === "number" && typeof tile.col === "number")
+    .map((tile) => `${tile.row},${tile.col}`);
+
+  return coordinates.length > 0 ? coordinates.join(" · ") : "sem casas associadas";
+}
+
 export function GamePlayScreen({
   stateLabel,
   matchLanguage,
@@ -214,6 +229,8 @@ export function GamePlayScreen({
 
   const totalPlayers = playersSummary.length;
   const placedTileCount = placedTilesPreview.length;
+  const associatedSlotCount = Object.keys(rackSlotAssociations).length;
+  const preparedTileCoordinates = formatPreparedTileCoordinates(placedTilesPreview);
   const isPlayersTurn =
     Boolean(viewerPlayerId) &&
     Boolean(currentTurnPlayerId) &&
@@ -453,6 +470,29 @@ export function GamePlayScreen({
               style={{ marginTop: 10, fontSize: 13, color: "#166534", fontWeight: 700 }}
             >
               Fontes do dicionário: {dictionarySources.join(", ")}
+            </div>
+          ) : null}
+
+          {placedTileCount > 0 || associatedSlotCount > 0 ? (
+            <div
+              data-testid="move-composition-summary"
+              style={{
+                marginTop: 10,
+                padding: "9px 11px",
+                borderRadius: 12,
+                border: "1px solid #bfdbfe",
+                background: "#eff6ff",
+                color: "#1e3a8a",
+                fontSize: 13,
+                fontWeight: 800,
+              }}
+            >
+              Composição: {placedTileCount} peça{placedTileCount === 1 ? "" : "s"} pronta{placedTileCount === 1 ? "" : "s"}
+              {associatedSlotCount > 0
+                ? ` · ${associatedSlotCount} slot${associatedSlotCount === 1 ? "" : "s"} no board`
+                : ""}
+              {" · "}
+              casas {preparedTileCoordinates}
             </div>
           ) : null}
 

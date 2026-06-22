@@ -52,6 +52,7 @@ type RackTileState = {
 };
 
 type SessionRole = "host" | "guest";
+type MatchLanguage = "pt-BR" | "pt-PT";
 
 type SessionSwitchDraft = {
   matchId: string;
@@ -487,7 +488,9 @@ export default function HomePage() {
     hostUserId: string;
     guestUserId: string;
     opponentIsBot: boolean;
+    language: MatchLanguage;
   } | null>(null);
+  const [quickMatchLanguage, setQuickMatchLanguage] = useState<MatchLanguage>("pt-BR");
   const [browserValidationScenarios, setBrowserValidationScenarios] = useState<
     BrowserValidationScenario[]
   >([]);
@@ -1286,7 +1289,7 @@ export default function HomePage() {
       const { data: matchId, error: createError } = await client.rpc("create_patxanga_match", {
         p_host_user_id: hostUserId,
         p_host_guest_name: "Host Local",
-        p_language: "pt-BR",
+        p_language: quickMatchLanguage,
         p_match_mode: "synchronous",
         p_max_players: 2,
       });
@@ -1321,6 +1324,7 @@ export default function HomePage() {
         hostUserId,
         guestUserId,
         opponentIsBot: false,
+        language: quickMatchLanguage,
       };
 
       setQuickMatchSession(nextQuickMatchSession);
@@ -1355,7 +1359,7 @@ export default function HomePage() {
       const { data: matchId, error: createError } = await client.rpc("create_patxanga_match", {
         p_host_user_id: hostUserId,
         p_host_guest_name: "Humano Local",
-        p_language: "pt-BR",
+        p_language: quickMatchLanguage,
         p_match_mode: "synchronous",
         p_max_players: 2,
       });
@@ -1390,6 +1394,7 @@ export default function HomePage() {
         hostUserId,
         guestUserId: botUserId,
         opponentIsBot: true,
+        language: quickMatchLanguage,
       };
 
       setQuickMatchSession(nextQuickMatchSession);
@@ -2248,6 +2253,36 @@ export default function HomePage() {
         </div>
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 14,
+              color: "#374151",
+              fontWeight: 700,
+            }}
+          >
+            Dicionário
+            <select
+              data-testid="quick-match-language"
+              value={quickMatchLanguage}
+              onChange={(event) => setQuickMatchLanguage(event.target.value as MatchLanguage)}
+              disabled={isCreatingQuickMatch || isCreatingBotMatch}
+              style={{
+                padding: "9px 10px",
+                borderRadius: 10,
+                border: "1px solid #d1d5db",
+                background: "#ffffff",
+                color: "#111827",
+                fontWeight: 700,
+              }}
+            >
+              <option value="pt-BR">pt-BR</option>
+              <option value="pt-PT">pt-PT</option>
+            </select>
+          </label>
+
           <button
             type="button"
             data-testid="quick-match-create"
@@ -2295,6 +2330,7 @@ export default function HomePage() {
         {quickMatchSession ? (
           <div style={{ marginTop: 12, display: "grid", gap: 6, fontFamily: "monospace", fontSize: 13 }}>
             <div>match_id: {quickMatchSession.matchId}</div>
+            <div>language: {quickMatchSession.language}</div>
             <div>host_user_id: {quickMatchSession.hostUserId}</div>
             <div>
               {quickMatchSession.opponentIsBot ? "bot_user_id" : "guest_user_id"}:{" "}

@@ -823,6 +823,58 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("rack-slot-1-association")).toHaveCount(0);
   });
 
+  test("recomposes a slot assignment before submitting the official move", async ({ page }) => {
+    const scenario = createSlotMoveScenario("DA");
+
+    await openPreparedMatch(page, scenario);
+
+    await placeTileThroughSlot(page, scenario.tileIds.D, 1, 7, 7);
+    await expect(page.getByTestId("move-composition-summary")).toContainText(
+      "1 peça pronta"
+    );
+
+    await page.getByTestId("rack-slot-1-clear-assignment").click();
+    await expect(page.getByTestId("rack-slot-1-bound-tile")).toHaveCount(0);
+
+    await page.getByTestId("rack-slot-1").click();
+    await page.getByTestId(`rack-tile-${scenario.tileIds.A}`).click();
+    await expect(page.getByTestId("rack-slot-1-bound-tile")).toBeVisible();
+    await expect(page.getByTestId("board-cell-7-7")).toContainText("A");
+    await expect(page.getByTestId("move-composition-summary")).toContainText(
+      "casas 8,8"
+    );
+
+    await page.getByTestId("rack-slot-1-clear-assignment").click();
+    await page.getByTestId("rack-slot-1").click();
+    await page.getByTestId(`rack-tile-${scenario.tileIds.D}`).click();
+    await expect(page.getByTestId("board-cell-7-7")).toContainText("D");
+
+    await placeTileThroughSlot(page, scenario.tileIds.A, 2, 7, 8);
+
+    await expect(page.getByTestId("move-composition-summary")).toContainText(
+      "2 peças prontas"
+    );
+    await expect(page.getByText("Palavra principal: DA")).toBeVisible();
+
+    await page.getByRole("button", { name: "Confirmar jogada" }).click();
+
+    await expect(page.getByText("Aguardando o outro jogador")).toBeVisible();
+    await expect(page.getByTestId("board-cell-7-7")).toContainText("D");
+    await expect(page.getByTestId("board-cell-7-8")).toContainText("A");
+  });
+
+  test("creates a pt-PT quick match and surfaces its dictionary summary", async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByTestId("quick-match-language").selectOption("pt-PT");
+    await page.getByTestId("quick-match-create").click();
+
+    await expect(page.getByText("language: pt-PT")).toBeVisible();
+    await expect(page.getByTestId("dictionary-language-badge")).toContainText(
+      "dicionário pt-PT ativo"
+    );
+  });
+
   test("creates a human versus bot quick match", async ({ page }) => {
     await page.goto("/");
 
