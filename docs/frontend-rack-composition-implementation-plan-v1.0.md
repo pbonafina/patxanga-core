@@ -182,6 +182,16 @@ Saida entregue:
 - Playwright cobre wildcard em slot formando palavra aceita depois da letra
   declarada
 
+### Etapa 9 — limpeza parcial da associacao do slot
+Status:
+- implementada
+
+Saida entregue:
+- slot associado ao board pode limpar apenas a casa de destino
+- a peca vinculada ao slot permanece vinculada
+- badges do board e resumo de composicao sao atualizados sem limpar o slot todo
+- Playwright cobre esse comportamento antes de limpar a jogada completa
+
 ## 8. Fora de escopo atual
 
 Nao entra nesta baseline:
@@ -214,12 +224,13 @@ Coberturas minimas atuais:
 - composicao oficial por slot alimentando `placedTilesPreview`
 - bloqueio de submit para peca especial sem `declared_letter`
 - submit aceito com wildcard por slot e letra declarada
+- limpeza parcial de casa associada ao slot sem perder a peca vinculada
 
 ## 11. Proximos passos produtivos
 
 Depois desta baseline, os proximos passos com melhor retorno sao:
 
-1. ampliar recomposicao parcial: trocar associacao de casa sem limpar slot
+1. ampliar recomposicao parcial: trocar associacao de casa por gesto direto
 2. decidir se o fluxo direto de peca -> board continua coexistindo
    ou se a tela jogavel converge para um unico fluxo oficial
 3. ampliar Playwright para limpar, trocar e recompor slots em uma mesma jogada

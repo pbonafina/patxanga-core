@@ -30,6 +30,7 @@ type RackSectionProps = {
   onToggleTile: (tileId: string) => void;
   onToggleSlot: (slotId: string) => void;
   onClearSlotAssignment: (slotId: string) => void;
+  onClearSlotAssociation: (slotId: string) => void;
   onClearPreview: () => void;
   onReorderTile: (draggedItemId: string, dropTargetId: string) => void;
   onChangeSlotDraft: (slotId: string, nextValue: string) => void;
@@ -209,6 +210,7 @@ export function RackSection({
   onToggleTile,
   onToggleSlot,
   onClearSlotAssignment,
+  onClearSlotAssociation,
   onClearPreview,
   onReorderTile,
   onChangeSlotDraft,
@@ -446,7 +448,8 @@ export function RackSection({
                     data-testid={slotTestId}
                     draggable
                     onMouseDown={(event) => {
-                      if ((event.target as HTMLElement).tagName !== "INPUT") {
+                      const tagName = (event.target as HTMLElement).tagName;
+                      if (tagName !== "INPUT" && tagName !== "BUTTON") {
                         onToggleSlot(slotId);
                       }
                     }}
@@ -638,6 +641,31 @@ export function RackSection({
                       >
                         {associationLabel}
                       </div>
+                    ) : null}
+
+                    {associationLabel ? (
+                      <button
+                        type="button"
+                        data-testid={`${slotTestId}-clear-association`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onClearSlotAssociation(slotId);
+                        }}
+                        style={{
+                          marginBottom: 4,
+                          padding: "2px 5px",
+                          border: "1px solid #c4b5fd",
+                          borderRadius: 999,
+                          background: "#ffffff",
+                          color: "#6d28d9",
+                          fontSize: 9,
+                          fontWeight: 800,
+                          cursor: "pointer",
+                        }}
+                        title="Limpar apenas a casa associada ao slot"
+                      >
+                        limpar casa
+                      </button>
                     ) : null}
                   </div>
                 );

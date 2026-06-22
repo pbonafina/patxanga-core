@@ -110,6 +110,17 @@ type BotActionHistoryItem = {
   tone: "pending" | "success" | "error";
 };
 
+type TurnActionSummary = {
+  actionLabel: string;
+  beforeTurnNumber: number;
+  afterTurnNumber: number;
+  beforeRackCount: number;
+  afterRackCount: number;
+  beforeScore: number;
+  afterScore: number;
+  nextPlayerName: string;
+};
+
 const DEFAULT_RACK_SLOT_IDS = ["__slot__:1", "__slot__:2", "__slot__:3"] as const;
 const INSERTION_TARGET_PREFIX = "__insert__:";
 const DECLARED_LETTER_SPECIAL_TYPES = new Set([
@@ -538,6 +549,8 @@ export default function HomePage() {
   const [botActionMessage, setBotActionMessage] = useState<string | null>(null);
   const [botActionError, setBotActionError] = useState<string | null>(null);
   const [botActionHistory, setBotActionHistory] = useState<BotActionHistoryItem[]>([]);
+  const [lastTurnActionSummary, setLastTurnActionSummary] =
+    useState<TurnActionSummary | null>(null);
   const botAutoActionKeyRef = useRef<string | null>(null);
   const botAutoActionInFlightRef = useRef(false);
 
@@ -605,6 +618,34 @@ export default function HomePage() {
         .map((tile) => [tile.id as string, tile])
     );
   }, [resolvedBootstrap.playerContext]);
+
+  const currentRackCount = resolvedBootstrap.playerContext?.rack_state?.length ?? 0;
+  const currentPlayerScore = resolvedBootstrap.playerContext?.score ?? 0;
+
+  function buildTurnActionSummary(
+    actionLabel: string,
+    before: {
+      turnNumber: number;
+      rackCount: number;
+      score: number;
+    },
+    after: MatchBootstrap
+  ): TurnActionSummary {
+    const nextPlayer =
+      after.playersSummary.find((player) => player.player_id === after.currentTurnPlayerId) ??
+      null;
+
+    return {
+      actionLabel,
+      beforeTurnNumber: before.turnNumber,
+      afterTurnNumber: after.turnNumber,
+      beforeRackCount: before.rackCount,
+      afterRackCount: after.playerContext?.rack_state?.length ?? 0,
+      beforeScore: before.score,
+      afterScore: after.playerContext?.score ?? before.score,
+      nextPlayerName: nextPlayer?.display_name ?? "aguardando definição",
+    };
+  }
 
   const moveCompositionPlacements = useMemo(() => {
     if (!resolvedBootstrap.playerContext) {
@@ -1114,6 +1155,7 @@ export default function HomePage() {
     setBotActionError(null);
     setBotActionMessage(null);
     setBotActionHistory([]);
+    setLastTurnActionSummary(null);
     setIsAutoPlayingBotTurn(false);
     setTurnActionMessage(null);
     setSelectedTileId(null);
@@ -1183,6 +1225,16 @@ export default function HomePage() {
       delete next[slotId];
       return next;
     });
+    setMovePreview(null);
+  }
+
+  function handleClearRackSlotAssociation(slotId: string) {
+    setLocalRackSlotAssociations((current) => {
+      const next = { ...current };
+      delete next[slotId];
+      return next;
+    });
+    setSelectedRackSlotId(slotId);
     setMovePreview(null);
   }
 
@@ -1789,6 +1841,12 @@ export default function HomePage() {
     setVoteResolutionMessage(null);
     setTurnActionMessage(null);
 
+    const before = {
+      turnNumber: resolvedBootstrap.turnNumber,
+      rackCount: currentRackCount,
+      score: currentPlayerScore,
+    };
+
     try {
       const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
       const client = getSupabaseBrowserClient();
@@ -1819,6 +1877,9 @@ export default function HomePage() {
       await refreshPendingVoteContext(refreshedData.matchId, playerIdInput, refreshedData.status);
       clearMoveCompositionPreview();
       resetExchangeSelection();
+      setLastTurnActionSummary(
+        buildTurnActionSummary("Jogada enviada", before, refreshedData)
+      );
       setTurnActionMessage("Jogada enviada com sucesso.");
     } catch (error) {
       setErrorMessage(
@@ -1845,6 +1906,12 @@ export default function HomePage() {
     setTurnActionMessage("Passando turno...");
     setVoteResolutionMessage(null);
 
+    const before = {
+      turnNumber: resolvedBootstrap.turnNumber,
+      rackCount: currentRackCount,
+      score: currentPlayerScore,
+    };
+
     try {
       const client = (await import("../lib/supabase/client")).getSupabaseBrowserClient();
       if (!client) {
@@ -1861,8 +1928,13 @@ export default function HomePage() {
       }
 
       setSubmitResult(data ?? null);
-      await refreshMatchStateAfterTurnAction();
+      const refreshedData = await refreshMatchStateAfterTurnAction();
       clearMoveCompositionPreview();
+      if (refreshedData) {
+        setLastTurnActionSummary(
+          buildTurnActionSummary("Turno passado", before, refreshedData)
+        );
+      }
       setTurnActionMessage("Turno passado com sucesso.");
     } catch (error) {
       setErrorMessage(
@@ -1901,6 +1973,12 @@ export default function HomePage() {
     setTurnActionMessage(`Trocando ${exchangeTileIds.length} peça(s)...`);
     setVoteResolutionMessage(null);
 
+    const before = {
+      turnNumber: resolvedBootstrap.turnNumber,
+      rackCount: currentRackCount,
+      score: currentPlayerScore,
+    };
+
     try {
       const client = (await import("../lib/supabase/client")).getSupabaseBrowserClient();
       if (!client) {
@@ -1918,9 +1996,18 @@ export default function HomePage() {
       }
 
       setSubmitResult(data ?? null);
-      await refreshMatchStateAfterTurnAction();
+      const refreshedData = await refreshMatchStateAfterTurnAction();
       clearMoveCompositionPreview();
       resetExchangeSelection();
+      if (refreshedData) {
+        setLastTurnActionSummary(
+          buildTurnActionSummary(
+            `Troca de ${exchangeTileIds.length} peça${exchangeTileIds.length === 1 ? "" : "s"}`,
+            before,
+            refreshedData
+          )
+        );
+      }
       setTurnActionMessage(
         `Troca concluída com ${exchangeTileIds.length} peça${exchangeTileIds.length === 1 ? "" : "s"}.`
       );
@@ -1964,9 +2051,9 @@ export default function HomePage() {
     setPendingVoteError(null);
   }
 
-  async function refreshMatchStateAfterTurnAction() {
+  async function refreshMatchStateAfterTurnAction(): Promise<MatchBootstrap | null> {
     if (!resolvedBootstrap.matchId) {
-      return;
+      return null;
     }
 
     const refreshedData = await loadMatchBootstrap({
@@ -1977,6 +2064,7 @@ export default function HomePage() {
     setBootstrapData(refreshedData);
     await refreshPendingVoteContext(refreshedData.matchId, playerIdInput, refreshedData.status);
     resetExchangeSelection();
+    return refreshedData;
   }
 
   async function handleSubmitVote(voteReject: boolean) {
@@ -2291,6 +2379,54 @@ export default function HomePage() {
             </button>
           </div>
         </div>
+      </section>
+
+      <section
+        data-testid="primary-product-actions"
+        style={{
+          marginTop: 24,
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: 14,
+        }}
+      >
+        {[
+          {
+            title: "Jogar agora",
+            body: "Crie uma partida humano contra humano usando o dicionário escolhido.",
+            tone: "#1d4ed8",
+            bg: "#eff6ff",
+          },
+          {
+            title: "Treinar contra bot",
+            body: "Abra uma mesa humano contra bot easy com histórico visual de ações.",
+            tone: "#166534",
+            bg: "#ecfdf5",
+          },
+          {
+            title: "Retomar mesa",
+            body: "Use o user_id da sessão para listar convites e partidas retomáveis.",
+            tone: "#9a3412",
+            bg: "#fff7ed",
+          },
+        ].map((card) => (
+          <div
+            key={card.title}
+            style={{
+              padding: 16,
+              borderRadius: 18,
+              border: "1px solid rgba(120, 113, 108, 0.2)",
+              background: card.bg,
+              color: card.tone,
+              boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
+            }}
+          >
+            <div style={{ fontSize: 18, fontWeight: 900 }}>{card.title}</div>
+            <div style={{ marginTop: 6, fontSize: 14, lineHeight: 1.45, color: "#374151" }}>
+              {card.body}
+            </div>
+          </div>
+        ))}
       </section>
 
       <section
@@ -3112,6 +3248,7 @@ export default function HomePage() {
         botActionMessage={botActionMessage}
         botActionError={botActionError}
         botActionHistory={botActionHistory}
+        lastTurnActionSummary={lastTurnActionSummary}
         isAutoPlayingBotTurn={isAutoPlayingBotTurn}
         buildCellKey={buildCellKey}
         renderCellLabel={renderCellLabel}
@@ -3120,6 +3257,7 @@ export default function HomePage() {
         onToggleTile={handleToggleTile}
         onToggleRackSlot={handleToggleRackSlot}
         onClearRackSlotAssignment={handleClearRackSlotAssignment}
+        onClearRackSlotAssociation={handleClearRackSlotAssociation}
         onClearPreview={clearMoveCompositionPreview}
         onChangeRackSlotDraft={handleChangeRackSlotDraft}
         onReorderTile={handleReorderRackItem}
@@ -3178,6 +3316,7 @@ export default function HomePage() {
         onToggleTile={handleToggleTile}
         onToggleSlot={handleToggleRackSlot}
         onClearSlotAssignment={handleClearRackSlotAssignment}
+        onClearSlotAssociation={handleClearRackSlotAssociation}
         onClearPreview={clearMoveCompositionPreview}
         onChangeSlotDraft={handleChangeRackSlotDraft}
         onReorderTile={handleReorderRackItem}

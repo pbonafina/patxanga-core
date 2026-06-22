@@ -1191,6 +1191,53 @@ Leitura correta:
   rejeitaria
 - `pt-BR` e `pt-PT` seguem separados; nao houve importacao ampla de dicionario
 
+### 7.6 Checkpoint operacional - cinco tranches de produto jogavel
+
+Estado da rodada:
+
+- branch local: `develop`
+- trabalho executado sem migration nova
+- foco: reduzir leitura tecnica da partida e fortalecer a demonstracao jogavel
+
+Entregas:
+
+- cartao de ultima acao oficial na tela jogavel com turno, rack, placar e
+  proximo jogador antes/depois da acao
+- `pass` e `exchange` alimentam esse cartao usando o bootstrap oficial
+  recarregado do backend
+- slot associado ao board pode limpar apenas a casa sem desvincular a peca
+- cartao de lexico operacional mostra idioma, volume e ausencia de fallback
+  automatico
+- historico do bot passou a ser validado por Playwright
+- home ganhou entradas de produto para jogar agora, treinar contra bot e
+  retomar mesa
+
+Validacao frontend confirmada:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+zsh scripts/test-dictionary-import-tooling.sh
+zsh scripts/test-libreoffice-dictionary-sample.sh
+```
+
+Resultado browser: `19 passed`.
+Resultado SQL/bot/dicionario: suites completas verdes apos
+`supabase db reset`.
+
+Leitura correta:
+
+- esta rodada nao altera engine, migrations ou contrato de RPC
+- o resumo de turno e derivado do bootstrap oficial recarregado
+- a limpeza parcial de slot e estado local de composicao; nada novo entra em
+  `p_placed_tiles`
+- ferramentas de validacao continuam disponiveis na home
+
 ## 8. Ordem segura de retomada a partir daqui
 
 Ao retomar esta frente em outra sala:

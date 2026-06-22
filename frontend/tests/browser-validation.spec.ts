@@ -810,6 +810,9 @@ test.describe("browser validation scenarios", () => {
     await page.goto("/");
 
     await expect(page.getByRole("heading", { name: "Patxanga" })).toBeVisible();
+    await expect(page.getByTestId("primary-product-actions")).toContainText("Jogar agora");
+    await expect(page.getByTestId("primary-product-actions")).toContainText("Treinar contra bot");
+    await expect(page.getByTestId("primary-product-actions")).toContainText("Retomar mesa");
     await expect(
       page.getByRole("heading", { name: "Cenarios de validacao browser" })
     ).toBeVisible();
@@ -905,6 +908,16 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByText("1 peça em preparo")).toBeVisible();
     await expect(page.getByTestId("board-cell-7-7-slot-badges")).toContainText("S1");
 
+    await page.getByTestId("rack-slot-1-clear-association").click();
+
+    await expect(page.getByTestId("rack-slot-1-bound-tile")).toBeVisible();
+    await expect(page.getByTestId("rack-slot-1-association")).toHaveCount(0);
+    await expect(page.getByTestId("board-cell-7-7-slot-badges")).toHaveCount(0);
+    await expect(page.getByText("0 peças em preparo")).toBeVisible();
+
+    await centerCell.click();
+    await expect(page.getByTestId("rack-slot-1-association")).toHaveText("8,8");
+
     await page.getByRole("button", { name: "Limpar jogada" }).click();
 
     await expect(page.getByText("0 peças em preparo")).toBeVisible();
@@ -925,7 +938,6 @@ test.describe("browser validation scenarios", () => {
     await page.getByTestId("rack-slot-1-clear-assignment").click();
     await expect(page.getByTestId("rack-slot-1-bound-tile")).toHaveCount(0);
 
-    await page.getByTestId("rack-slot-1").click();
     await page.getByTestId(`rack-tile-${scenario.tileIds.A}`).click();
     await expect(page.getByTestId("rack-slot-1-bound-tile")).toBeVisible();
     await expect(page.getByTestId("board-cell-7-7")).toContainText("A");
@@ -934,7 +946,6 @@ test.describe("browser validation scenarios", () => {
     );
 
     await page.getByTestId("rack-slot-1-clear-assignment").click();
-    await page.getByTestId("rack-slot-1").click();
     await page.getByTestId(`rack-tile-${scenario.tileIds.D}`).click();
     await expect(page.getByTestId("board-cell-7-7")).toContainText("D");
 
@@ -998,6 +1009,9 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("dictionary-language-badge")).toContainText(
       "dicionário pt-PT ativo"
     );
+    await expect(page.getByTestId("dictionary-operational-card")).toContainText(
+      "sem fallback automático"
+    );
   });
 
   test("creates a human versus bot quick match", async ({ page }) => {
@@ -1029,6 +1043,12 @@ test.describe("browser validation scenarios", () => {
       "Bot jogou SOL como abertura."
     );
     await expect(page.getByTestId("game-bot-action-message")).toContainText(
+      "Bot jogou SOL como abertura."
+    );
+    await expect(page.getByTestId("game-bot-action-history")).toContainText(
+      "Histórico recente do bot"
+    );
+    await expect(page.getByTestId("game-bot-action-history")).toContainText(
       "Bot jogou SOL como abertura."
     );
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
@@ -1079,6 +1099,8 @@ test.describe("browser validation scenarios", () => {
     await page.getByTestId("exchange-turn-submit").click();
 
     await expect(page.getByTestId("turn-action-message")).toContainText("Troca concluída com 2 peças");
+    await expect(page.getByTestId("turn-action-summary-card")).toContainText("Troca de 2 peças");
+    await expect(page.getByTestId("turn-action-summary-card")).toContainText("rack 7 → 7");
     await expect(page.getByTestId("game-bot-action-message")).toContainText(
       "Bot jogou SOL como abertura."
     );
@@ -1106,7 +1128,7 @@ test.describe("browser validation scenarios", () => {
     await page.getByTestId("pass-turn-action").click();
     await expect(page.getByTestId("turn-action-message")).toContainText("Turno passado com sucesso.");
     await expect(page.getByTestId("pass-turn-action")).toBeDisabled();
-    await expect(page.getByText("turno 3")).toBeVisible();
+    await expect(page.getByText("turno 3", { exact: true })).toBeVisible();
 
     await expect(page.getByTestId("game-bot-action-message")).not.toHaveText(firstBotActionText);
     await expect(page.getByText(/turno 4/)).toBeVisible();
@@ -1131,6 +1153,8 @@ test.describe("browser validation scenarios", () => {
     await page.getByTestId("pass-turn-action").click();
 
     await expect(page.getByTestId("turn-action-message")).toContainText("Turno passado com sucesso.");
+    await expect(page.getByTestId("turn-action-summary-card")).toContainText("Turno passado");
+    await expect(page.getByTestId("turn-action-summary-card")).toContainText("rack 7 → 7");
     await expect(page.getByText("Aguardando o outro jogador")).toBeVisible();
   });
 

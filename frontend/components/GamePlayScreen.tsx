@@ -32,6 +32,17 @@ type BotActionHistoryItem = {
   tone: "pending" | "success" | "error";
 };
 
+type TurnActionSummary = {
+  actionLabel: string;
+  beforeTurnNumber: number;
+  afterTurnNumber: number;
+  beforeRackCount: number;
+  afterRackCount: number;
+  beforeScore: number;
+  afterScore: number;
+  nextPlayerName: string;
+};
+
 type GamePlayScreenProps = {
   stateLabel: string;
   matchLanguage: string;
@@ -92,6 +103,7 @@ type GamePlayScreenProps = {
   botActionMessage: string | null;
   botActionError: string | null;
   botActionHistory: BotActionHistoryItem[];
+  lastTurnActionSummary: TurnActionSummary | null;
   isAutoPlayingBotTurn: boolean;
 
   buildCellKey: (rowIndex: number, colIndex: number) => string;
@@ -106,6 +118,7 @@ type GamePlayScreenProps = {
   onToggleTile: (tileId: string) => void;
   onToggleRackSlot: (slotId: string) => void;
   onClearRackSlotAssignment: (slotId: string) => void;
+  onClearRackSlotAssociation: (slotId: string) => void;
   onClearPreview: () => void;
   onReorderTile: (draggedItemId: string, dropTargetId: string) => void;
   onChangeRackSlotDraft: (slotId: string, nextValue: string) => void;
@@ -201,6 +214,7 @@ export function GamePlayScreen({
   botActionMessage,
   botActionError,
   botActionHistory,
+  lastTurnActionSummary,
   isAutoPlayingBotTurn,
 
   buildCellKey,
@@ -211,6 +225,7 @@ export function GamePlayScreen({
   onToggleTile,
   onToggleRackSlot,
   onClearRackSlotAssignment,
+  onClearRackSlotAssociation,
   onClearPreview,
   onReorderTile,
   onChangeRackSlotDraft,
@@ -485,6 +500,24 @@ export function GamePlayScreen({
             </div>
           ) : null}
 
+          <div
+            data-testid="dictionary-operational-card"
+            style={{
+              marginTop: 10,
+              padding: "9px 11px",
+              borderRadius: 12,
+              border: "1px solid #bbf7d0",
+              background: "#f0fdf4",
+              color: "#14532d",
+              fontSize: 13,
+              fontWeight: 800,
+            }}
+          >
+            Léxico operacional: {dictionaryLanguage}
+            {dictionaryWordCount ? ` · ${dictionaryWordCount}` : ""}
+            {" · sem fallback automático entre idiomas"}
+          </div>
+
           {placedTileCount > 0 || associatedSlotCount > 0 ? (
             <div
               data-testid="move-composition-summary"
@@ -566,6 +599,33 @@ export function GamePlayScreen({
           ) : null}
         </div>
       </div>
+
+      {lastTurnActionSummary ? (
+        <div
+          data-testid="turn-action-summary-card"
+          style={{
+            marginBottom: 18,
+            padding: 14,
+            borderRadius: 16,
+            border: "1px solid #bfdbfe",
+            background: "#eff6ff",
+            color: "#1e3a8a",
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.8, textTransform: "uppercase" }}>
+            Última ação oficial
+          </div>
+          <div style={{ marginTop: 8, fontSize: 15, fontWeight: 900 }}>
+            {lastTurnActionSummary.actionLabel}
+          </div>
+          <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap", fontSize: 13, fontWeight: 800 }}>
+            <span>turno {lastTurnActionSummary.beforeTurnNumber} → {lastTurnActionSummary.afterTurnNumber}</span>
+            <span>rack {lastTurnActionSummary.beforeRackCount} → {lastTurnActionSummary.afterRackCount}</span>
+            <span>placar {lastTurnActionSummary.beforeScore} → {lastTurnActionSummary.afterScore}</span>
+            <span>próximo: {lastTurnActionSummary.nextPlayerName}</span>
+          </div>
+        </div>
+      ) : null}
 
       {botActionMessage || botActionError || isAutoPlayingBotTurn ? (
         <div
@@ -932,6 +992,7 @@ export function GamePlayScreen({
                 onToggleTile={onToggleTile}
                 onToggleSlot={onToggleRackSlot}
                 onClearSlotAssignment={onClearRackSlotAssignment}
+                onClearSlotAssociation={onClearRackSlotAssociation}
                 onClearPreview={onClearPreview}
                 onReorderTile={onReorderTile}
                 onChangeSlotDraft={onChangeRackSlotDraft}

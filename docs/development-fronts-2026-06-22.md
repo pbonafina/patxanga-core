@@ -273,6 +273,58 @@ zsh scripts/test-libreoffice-dictionary-sample.sh
 Resultado browser: `19 passed`.
 Resultado SQL/bot: suites completas verdes apos `supabase db reset`.
 
+## 6.4 Atualizacao de execucao - cinco tranches de produto jogavel
+
+Tranche executada sobre a robustez anterior, sem migration nova.
+
+Frentes atravessadas:
+
+1. leitura de fim de turno e reposicao de rack
+2. composicao por slots com limpeza parcial
+3. humano contra bot com historico validado
+4. dicionario operacional visivel na mesa
+5. home com entradas principais de produto
+
+Entregas adicionadas:
+
+- a mesa jogavel passou a mostrar um cartao de ultima acao oficial com turno,
+  rack, placar e proximo jogador antes/depois da acao
+- acoes de passar turno e trocar pecas agora alimentam esse resumo a partir do
+  bootstrap oficial recarregado
+- slots associados ao board ganharam botao para limpar apenas a casa, mantendo
+  a peca vinculada ao slot
+- Playwright cobre a limpeza parcial de slot sem perder a peca vinculada
+- Playwright valida historico recente do bot em partida humano contra bot
+- a tela passou a mostrar um cartao de lexico operacional com idioma, volume e
+  ausencia de fallback automatico
+- a home ganhou cards de entrada para jogar agora, treinar contra bot e retomar
+  mesa, sem remover as ferramentas de validacao
+
+Leitura de produto:
+
+- o jogador consegue entender melhor o que mudou apos uma acao de turno
+- recompor slots ficou menos destrutivo porque a casa pode ser limpa sem perder
+  a vinculacao da peca
+- a demonstracao humano contra bot e a leitura de dicionario ficaram menos
+  dependentes de debug
+
+Validacao confirmada nesta tranche ate este ponto:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+zsh scripts/test-dictionary-import-tooling.sh
+zsh scripts/test-libreoffice-dictionary-sample.sh
+```
+
+Resultado browser: `19 passed`.
+Resultado SQL/bot/dicionario: suites completas verdes apos `supabase db reset`.
+
 ## 7. Politica de commits
 
 - cada tranche grande pode atravessar mais de uma frente, desde que tenha
