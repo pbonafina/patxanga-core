@@ -102,6 +102,14 @@ type RpcVoteResult = {
   status?: string;
 };
 
+type BotActionHistoryItem = {
+  id: string;
+  turnNumber: number;
+  playerName: string;
+  message: string;
+  tone: "pending" | "success" | "error";
+};
+
 const DEFAULT_RACK_SLOT_IDS = ["__slot__:1", "__slot__:2", "__slot__:3"] as const;
 const INSERTION_TARGET_PREFIX = "__insert__:";
 const DECLARED_LETTER_SPECIAL_TYPES = new Set([
@@ -166,6 +174,11 @@ function getDeclaredLetterPromptLabel(specialType?: string | null): string {
     default:
       return "Qual letra esta peca especial deve representar?";
   }
+}
+
+function getSlotShortLabel(slotId: string): string {
+  const suffix = slotId.split(":").pop() ?? slotId;
+  return `S${suffix}`;
 }
 
 function buildInitialRackComposition(tileIds: string[]): RackCompositionItem[] {
@@ -524,6 +537,7 @@ export default function HomePage() {
   const [isAutoPlayingBotTurn, setIsAutoPlayingBotTurn] = useState(false);
   const [botActionMessage, setBotActionMessage] = useState<string | null>(null);
   const [botActionError, setBotActionError] = useState<string | null>(null);
+  const [botActionHistory, setBotActionHistory] = useState<BotActionHistoryItem[]>([]);
   const botAutoActionKeyRef = useRef<string | null>(null);
   const botAutoActionInFlightRef = useRef(false);
 
@@ -683,6 +697,27 @@ export default function HomePage() {
     [moveCompositionPlacements]
   );
 
+  const moveCompositionIssues = useMemo(() => {
+    return moveCompositionPlacements
+      .map((placement) => {
+        const tile = rackTilesById.get(placement.tileId);
+
+        if (!requiresDeclaredLetter(tile?.special_type) || placement.declaredLetter) {
+          return null;
+        }
+
+        const sourceLabel = placement.slotId
+          ? getSlotShortLabel(placement.slotId)
+          : formatBoardCoordinates(placement.cellKey);
+
+        return `${sourceLabel} precisa de uma letra declarada para a peça especial.`;
+      })
+      .filter((issue): issue is string => issue !== null);
+  }, [moveCompositionPlacements, rackTilesById]);
+
+  const moveCompositionWarning =
+    moveCompositionIssues.length > 0 ? moveCompositionIssues.join(" ") : null;
+
   const compositionPlacementsByCell = useMemo(
     () =>
       Object.fromEntries(
@@ -825,6 +860,16 @@ export default function HomePage() {
       setBotActionMessage(
         `${currentTurnPlayerSummary?.display_name ?? "Bot"} esta tentando uma jogada.`
       );
+      setBotActionHistory((current) => [
+        {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          turnNumber: resolvedBootstrap.turnNumber,
+          playerName: currentTurnPlayerSummary?.display_name ?? "Bot",
+          message: "Tentando jogada automatica.",
+          tone: "pending" as const,
+        },
+        ...current,
+      ].slice(0, 5));
 
       try {
         const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
@@ -865,15 +910,37 @@ export default function HomePage() {
 
         const botTurnResult = data as RpcEasyBotTurnResult | null;
 
-        setBotActionMessage(formatBotTurnMessage(botTurnResult));
+        const nextMessage = formatBotTurnMessage(botTurnResult);
+        setBotActionMessage(nextMessage);
+        setBotActionHistory((current) => [
+          {
+            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            turnNumber: resolvedBootstrap.turnNumber,
+            playerName: currentTurnPlayerSummary?.display_name ?? "Bot",
+            message: nextMessage,
+            tone: "success" as const,
+          },
+          ...current,
+        ].slice(0, 5));
       } catch (error) {
         if (!cancelled) {
-          setBotActionError(
+          const nextError =
             error instanceof Error
               ? error.message
-              : "Falha ao executar turno automatico do bot."
-          );
+              : "Falha ao executar turno automatico do bot.";
+
+          setBotActionError(nextError);
           setBotActionMessage(null);
+          setBotActionHistory((current) => [
+            {
+              id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+              turnNumber: resolvedBootstrap.turnNumber,
+              playerName: currentTurnPlayerSummary?.display_name ?? "Bot",
+              message: nextError,
+              tone: "error" as const,
+            },
+            ...current,
+          ].slice(0, 5));
         }
       } finally {
         if (!cancelled) {
@@ -1046,6 +1113,7 @@ export default function HomePage() {
     setPendingVoteError(null);
     setBotActionError(null);
     setBotActionMessage(null);
+    setBotActionHistory([]);
     setIsAutoPlayingBotTurn(false);
     setTurnActionMessage(null);
     setSelectedTileId(null);
@@ -1710,6 +1778,11 @@ export default function HomePage() {
       return;
     }
 
+    if (moveCompositionWarning) {
+      setErrorMessage(moveCompositionWarning);
+      return;
+    }
+
     setIsSubmittingMove(true);
     setErrorMessage(null);
     setSubmitResult(null);
@@ -2325,6 +2398,53 @@ export default function HomePage() {
               </button>
             </>
           ) : null}
+        </div>
+
+        <div
+          data-testid="quick-match-product-summary"
+          style={{
+            marginTop: 14,
+            display: "grid",
+            gap: 8,
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          }}
+        >
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 14,
+              border: "1px solid #bfdbfe",
+              background: "#eff6ff",
+              color: "#1d4ed8",
+              fontWeight: 800,
+            }}
+          >
+            Idioma selecionado: {quickMatchLanguage}
+          </div>
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 14,
+              border: "1px solid #bbf7d0",
+              background: "#ecfdf5",
+              color: "#166534",
+              fontWeight: 800,
+            }}
+          >
+            Bot usa RPC oficial e não escreve estado local paralelo
+          </div>
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 14,
+              border: "1px solid #fed7aa",
+              background: "#fff7ed",
+              color: "#9a3412",
+              fontWeight: 800,
+            }}
+          >
+            Dicionário segue separado por idioma, sem fallback automático
+          </div>
         </div>
 
         {quickMatchSession ? (
@@ -2973,7 +3093,12 @@ export default function HomePage() {
         rackSlotAssociations={localRackSlotAssociations}
         rackSlotAssociationLabels={rackSlotAssociationLabels}
         placedTilesPreview={placedTilesPreview}
-        canSubmitMove={placedTilesPreview.length > 0 && Boolean(resolvedBootstrap.playerId)}
+        moveCompositionWarning={moveCompositionWarning}
+        canSubmitMove={
+          placedTilesPreview.length > 0 &&
+          Boolean(resolvedBootstrap.playerId) &&
+          !moveCompositionWarning
+        }
         isSubmittingMove={isSubmittingMove}
         movePreview={movePreview}
         isLoadingMovePreview={isLoadingMovePreview}
@@ -2986,6 +3111,7 @@ export default function HomePage() {
         showDebug={showDebug}
         botActionMessage={botActionMessage}
         botActionError={botActionError}
+        botActionHistory={botActionHistory}
         isAutoPlayingBotTurn={isAutoPlayingBotTurn}
         buildCellKey={buildCellKey}
         renderCellLabel={renderCellLabel}

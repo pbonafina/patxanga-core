@@ -562,6 +562,7 @@ export function RackSection({
                     ) : null}
 
                     <input
+                      data-testid={`${slotTestId}-letter-input`}
                       value={draftLetter}
                       onClick={(event) => event.stopPropagation()}
                       onFocus={() => {
@@ -592,6 +593,29 @@ export function RackSection({
                       }}
                       title="Letra de rascunho"
                     />
+
+                    {requiresDeclaredLetterForAssignedTile && associationLabel ? (
+                      <div
+                        data-testid={`${slotTestId}-special-letter-status`}
+                        style={{
+                          marginBottom: 4,
+                          padding: "2px 4px",
+                          maxWidth: "100%",
+                          borderRadius: 999,
+                          background: draftLetter ? "#dcfce7" : "#ffedd5",
+                          color: draftLetter ? "#166534" : "#9a3412",
+                          fontSize: 9,
+                          fontWeight: 800,
+                          lineHeight: 1.2,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                        title="Estado da letra declarada para peça especial"
+                      >
+                        {draftLetter ? `letra ${draftLetter}` : "letra obrigatória"}
+                      </div>
+                    ) : null}
 
                     {associationLabel ? (
                       <div

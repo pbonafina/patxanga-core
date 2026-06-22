@@ -24,6 +24,14 @@ type PreparedTilePreview = {
   declared_letter?: string | null;
 };
 
+type BotActionHistoryItem = {
+  id: string;
+  turnNumber: number;
+  playerName: string;
+  message: string;
+  tone: "pending" | "success" | "error";
+};
+
 type GamePlayScreenProps = {
   stateLabel: string;
   matchLanguage: string;
@@ -68,6 +76,7 @@ type GamePlayScreenProps = {
   rackSlotAssociationLabels: Record<string, string>;
 
   placedTilesPreview: unknown[];
+  moveCompositionWarning: string | null;
   canSubmitMove: boolean;
   isSubmittingMove: boolean;
   movePreview: MovePreviewResult | null;
@@ -82,6 +91,7 @@ type GamePlayScreenProps = {
   showDebug: boolean;
   botActionMessage: string | null;
   botActionError: string | null;
+  botActionHistory: BotActionHistoryItem[];
   isAutoPlayingBotTurn: boolean;
 
   buildCellKey: (rowIndex: number, colIndex: number) => string;
@@ -175,6 +185,7 @@ export function GamePlayScreen({
   rackSlotAssociationLabels,
 
   placedTilesPreview,
+  moveCompositionWarning,
   canSubmitMove,
   isSubmittingMove,
   movePreview,
@@ -189,6 +200,7 @@ export function GamePlayScreen({
   showDebug,
   botActionMessage,
   botActionError,
+  botActionHistory,
   isAutoPlayingBotTurn,
 
   buildCellKey,
@@ -576,6 +588,51 @@ export function GamePlayScreen({
         </div>
       ) : null}
 
+      {botActionHistory.length > 0 ? (
+        <div
+          data-testid="game-bot-action-history"
+          style={{
+            marginBottom: 18,
+            padding: 14,
+            borderRadius: 16,
+            border: "1px solid #bbf7d0",
+            background: "#f8fffb",
+            color: "#14532d",
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.8, textTransform: "uppercase" }}>
+            Histórico recente do bot
+          </div>
+          <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
+            {botActionHistory.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: 12,
+                  background:
+                    item.tone === "error"
+                      ? "#fff1f2"
+                      : item.tone === "pending"
+                        ? "#fffbeb"
+                        : "#ecfdf5",
+                  color:
+                    item.tone === "error"
+                      ? "#991b1b"
+                      : item.tone === "pending"
+                        ? "#92400e"
+                        : "#166534",
+                  fontSize: 13,
+                  fontWeight: 700,
+                }}
+              >
+                Turno {item.turnNumber} · {item.playerName}: {item.message}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {voteResolutionMessage ? (
         <div
           data-testid="vote-resolution-message"
@@ -844,6 +901,23 @@ export function GamePlayScreen({
                       </span>
                     </div>
                   ) : null}
+                </div>
+              ) : null}
+
+              {moveCompositionWarning ? (
+                <div
+                  data-testid="move-composition-warning"
+                  style={{
+                    marginBottom: 14,
+                    padding: 12,
+                    borderRadius: 12,
+                    border: "1px solid #f59e0b",
+                    background: "#fff7ed",
+                    color: "#92400e",
+                    fontWeight: 800,
+                  }}
+                >
+                  {moveCompositionWarning}
                 </div>
               ) : null}
 

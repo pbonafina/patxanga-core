@@ -222,6 +222,57 @@ Leitura de produto:
   alterar a politica lexical
 - a rodada continua sem migration nova, reduzindo risco operacional
 
+## 6.3 Atualizacao de execucao - cinco tranches de robustez jogavel
+
+Tranche executada sobre a baseline anterior, ainda sem migration nova.
+
+Frentes atravessadas:
+
+1. composicao por slots mais defensiva
+2. humano contra bot com leitura historica
+3. superficie principal menos dependente de debug
+4. dicionario por idioma visivel na criacao rapida
+5. validacao browser ampliada
+
+Entregas adicionadas:
+
+- a tela jogavel agora bloqueia o envio quando uma peca especial vinculada a
+  slot nao tem `declared_letter`
+- slots com peca especial passam a exibir status de letra obrigatoria ou letra
+  declarada
+- Playwright cobre wildcard por slot: primeiro bloqueio sem letra, depois envio
+  aceito com letra declarada formando `DA`
+- o bot ganhou historico curto de acoes recentes para demonstrar alternancias
+  sem depender de debug ou banco
+- a criacao rapida passou a expor resumo de produto sobre idioma selecionado,
+  bot por RPC oficial e ausencia de fallback automatico de dicionario
+
+Leitura de produto:
+
+- a composicao por slot ficou mais segura porque evita erro previsivel de
+  backend antes do submit
+- humano contra bot ficou mais demonstravel em fluxo longo porque a tela mostra
+  eventos recentes do bot
+- `pt-BR` e `pt-PT` continuam separados por idioma; esta tranche nao importa
+  dump amplo nem muda politica lexical
+
+Validacao confirmada nesta tranche:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+zsh scripts/test-dictionary-import-tooling.sh
+zsh scripts/test-libreoffice-dictionary-sample.sh
+```
+
+Resultado browser: `19 passed`.
+Resultado SQL/bot: suites completas verdes apos `supabase db reset`.
+
 ## 7. Politica de commits
 
 - cada tranche grande pode atravessar mais de uma frente, desde que tenha

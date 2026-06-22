@@ -9,6 +9,12 @@ type SlotMoveScenario = {
   tileIds: Record<string, string>;
 };
 
+type SpecialSlotMoveScenario = {
+  matchId: string;
+  currentUserId: string;
+  tileIds: Record<"wildcard" | "A", string>;
+};
+
 type LongHumanFlowScenario = {
   matchId: string;
   openingUserId: string;
@@ -184,6 +190,89 @@ end
 $setup$;
 
 select payload from e2e_slot_move_result;
+`);
+}
+
+function createSpecialSlotMoveScenario(): SpecialSlotMoveScenario {
+  return runDatabaseJson<SpecialSlotMoveScenario>(`
+create temp table e2e_special_slot_move_result(payload text);
+
+do $setup$
+declare
+    v_host_user_id uuid := gen_random_uuid();
+    v_guest_user_id uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_current_player_id uuid;
+    v_current_user_id uuid;
+    v_wildcard_tile_id uuid := gen_random_uuid();
+    v_a_tile_id uuid := gen_random_uuid();
+begin
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_host_user_id,
+        p_host_guest_name := 'Special Slot E2E Host',
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    perform public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_guest_user_id,
+        p_guest_name := 'Special Slot E2E Guest'
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    select current_turn_player_id
+    into v_current_player_id
+    from public.patxanga_matches
+    where id = v_match_id;
+
+    select user_id
+    into v_current_user_id
+    from public.patxanga_players
+    where id = v_current_player_id;
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object(
+                'id', v_wildcard_tile_id::text,
+                'letter', null,
+                'points', 0,
+                'is_special', true,
+                'special_type', 'wildcard'
+            ),
+            jsonb_build_object(
+                'id', v_a_tile_id::text,
+                'letter', 'A',
+                'points', 1,
+                'is_special', false,
+                'special_type', null
+            ),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'M', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_current_player_id;
+
+    insert into e2e_special_slot_move_result(payload)
+    values (
+        jsonb_build_object(
+            'matchId', v_match_id,
+            'currentUserId', v_current_user_id,
+            'tileIds', jsonb_build_object(
+                'wildcard', v_wildcard_tile_id,
+                'A', v_a_tile_id
+            )
+        )::text
+    );
+end
+$setup$;
+
+select payload from e2e_special_slot_move_result;
 `);
 }
 
@@ -854,6 +943,42 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("move-composition-summary")).toContainText(
       "2 peças prontas"
     );
+    await expect(page.getByText("Palavra principal: DA")).toBeVisible();
+
+    await page.getByRole("button", { name: "Confirmar jogada" }).click();
+
+    await expect(page.getByText("Aguardando o outro jogador")).toBeVisible();
+    await expect(page.getByTestId("board-cell-7-7")).toContainText("D");
+    await expect(page.getByTestId("board-cell-7-8")).toContainText("A");
+  });
+
+  test("requires declared letters for special tiles composed through slots", async ({ page }) => {
+    const scenario = createSpecialSlotMoveScenario();
+
+    await openPreparedMatch(page, {
+      matchId: scenario.matchId,
+      currentUserId: scenario.currentUserId,
+      otherUserId: scenario.currentUserId,
+      tileIds: scenario.tileIds,
+    });
+
+    await placeTileThroughSlot(page, scenario.tileIds.wildcard, 1, 7, 7);
+    await placeTileThroughSlot(page, scenario.tileIds.A, 2, 7, 8);
+
+    await expect(page.getByTestId("rack-slot-1-special-letter-status")).toHaveText(
+      "letra obrigatória"
+    );
+    await expect(page.getByTestId("move-composition-warning")).toContainText(
+      "S1 precisa de uma letra declarada"
+    );
+    await expect(page.getByRole("button", { name: "Confirmar jogada" })).toBeDisabled();
+
+    await page.getByTestId("rack-slot-1-letter-input").fill("d");
+
+    await expect(page.getByTestId("rack-slot-1-special-letter-status")).toHaveText(
+      "letra D"
+    );
+    await expect(page.getByTestId("move-composition-warning")).toHaveCount(0);
     await expect(page.getByText("Palavra principal: DA")).toBeVisible();
 
     await page.getByRole("button", { name: "Confirmar jogada" }).click();

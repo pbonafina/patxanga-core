@@ -1146,6 +1146,51 @@ Coberturas mais valiosas a seguir:
 3. estados de pending vote e resolucao
 4. regressao do rack apos acoes de partida real
 
+### 7.5 Checkpoint operacional - cinco tranches de robustez jogavel
+
+Estado da rodada:
+
+- branch local: `develop`
+- trabalho executado sem migration nova
+- foco: robustez de composicao por slots, UX de bot, superficie principal e
+  dicionario por idioma na criacao rapida
+
+Entregas:
+
+- guardrail frontend para impedir submit de peca especial sem
+  `declared_letter`
+- status visual em slot especial indicando letra obrigatoria ou letra declarada
+- historico curto de acoes recentes do bot na tela jogavel
+- resumo de produto na criacao rapida com idioma selecionado, bot por RPC
+  oficial e ausencia de fallback automatico de dicionario
+- Playwright ampliado de 18 para 19 cenarios com wildcard por slot
+
+Validacao frontend confirmada:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+supabase db reset
+zsh scripts/run-sql-test-suite.sh all
+zsh scripts/run-bot-simulation.sh all
+zsh scripts/test-dictionary-import-tooling.sh
+zsh scripts/test-libreoffice-dictionary-sample.sh
+```
+
+Resultado browser: `19 passed`.
+Resultado SQL/bot/dicionario: suites verdes em banco limpo apos
+`supabase db reset`.
+
+Leitura correta:
+
+- esta rodada nao muda engine nem contrato da RPC
+- o backend continua server-authoritative
+- o bloqueio de `declared_letter` no frontend apenas antecipa erro que a RPC ja
+  rejeitaria
+- `pt-BR` e `pt-PT` seguem separados; nao houve importacao ampla de dicionario
+
 ## 8. Ordem segura de retomada a partir daqui
 
 Ao retomar esta frente em outra sala:

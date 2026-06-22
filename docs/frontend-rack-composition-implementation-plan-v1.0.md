@@ -170,6 +170,18 @@ Saida entregue:
 - preview do backend responde a essa nova superficie
 - submit continua usando a mesma RPC oficial
 
+### Etapa 8 — guardrail de peca especial em slot
+Status:
+- implementada
+
+Saida entregue:
+- slot com `wildcard`, `skip_turn` ou `patxanga_real` vinculado e associado ao
+  board exige letra local antes do submit
+- a tela mostra aviso de composicao quando a letra declarada esta ausente
+- o botao de confirmar jogada fica bloqueado enquanto houver esse aviso
+- Playwright cobre wildcard em slot formando palavra aceita depois da letra
+  declarada
+
 ## 8. Fora de escopo atual
 
 Nao entra nesta baseline:
@@ -200,16 +212,18 @@ Coberturas minimas atuais:
 - convites/lobby/retomada/desistencia
 - associacao local de slot sem contaminar gameplay
 - composicao oficial por slot alimentando `placedTilesPreview`
+- bloqueio de submit para peca especial sem `declared_letter`
+- submit aceito com wildcard por slot e letra declarada
 
 ## 11. Proximos passos produtivos
 
 Depois desta baseline, os proximos passos com melhor retorno sao:
 
-1. validar submit real e preview real com cenarios mais ricos da composicao por slot
+1. ampliar recomposicao parcial: trocar associacao de casa sem limpar slot
 2. decidir se o fluxo direto de peca -> board continua coexistindo
    ou se a tela jogavel converge para um unico fluxo oficial
 3. ampliar Playwright para limpar, trocar e recompor slots em uma mesma jogada
-4. revisar UX de destaque para slot especial sem `declared_letter`
+4. revisar a UX de drag/drop para ficar menos dependente de clique sequencial
 
 ## 12. Fechamento correto desta frente
 
