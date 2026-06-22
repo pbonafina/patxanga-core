@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-22 15:52:10
+Generated at: 2026-06-22 16:05:14
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,8 +93,7 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## develop...origin/develop [ahead 4]
- M docs/07-bot-engine.md
+## develop...origin/develop [ahead 5]
  M docs/current-development-continuity-spec-v1.0.md
  M docs/frontend-contract-rpcs-v1.0.md
  M docs/implementation-roadmap.md
@@ -106,8 +105,9 @@ Resposta obrigatoria da IA apos a frase de retomada:
  M frontend/tests/browser-validation.spec.ts
  M frontend/types/match.ts
  M sql/rpc/get_match_bootstrap.sql
- M sql/tests/test_match_bootstrap_bot_metadata.sql
-?? supabase/migrations/20260622150000_29_match_bootstrap_language.sql
+ M sql/tests/test_get_match_bootstrap.sql
+ M sql/tests/test_match_end_empty_rack.sql
+?? supabase/migrations/20260622170000_30_bootstrap_demo_end_dictionary_contract.sql
 ```
 
 ### git remote -v
@@ -118,7 +118,8 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-88054d0 (HEAD -> develop) feat: improve match state UX and long human flow
+f28f1fb (HEAD -> develop) feat: surface match language and bot strategy
+88054d0 feat: improve match state UX and long human flow
 7a8e4b6 feat: complete pending vote player flow
 20a59c1 feat: improve playable game experience
 49b5625 feat: add easy bot connected move policy
@@ -132,7 +133,6 @@ fa4702d Merge pull request #12 from pbonafina/feature/slot-submit-playwright-reg
 f4ada51 test: cover slot submit browser flows
 2d415d9 Merge pull request #11 from pbonafina/feature/lexical-policy-voting-regression
 b71e1b0 test: cover lexical policy voting path
-ece4650 Merge pull request #10 from pbonafina/feature/offline-lexical-policy-boundaries
 ```
 
 ### tail -n 60 ../project-log.md
@@ -2366,7 +2366,7 @@ Fim do documento.
 ## FILE: docs/frontend-contract-rpcs-v1.0.md
 
 # PATXANGA — FRONTEND CONTRACT: RPCs
-Version: 1.2
+Version: 1.3
 Status: ACTIVE OPERATIONAL BASELINE
 Base normativa:
 - Context Snapshot Master v1.6
@@ -2420,9 +2420,35 @@ Carregar o estado server-authoritative necessario para renderizar uma partida.
 - `finished_at`
 - `player_context`
 - `players_summary`
+- `end_summary`
+- `dictionary_summary`
+
+#### `end_summary`
+
+Retornado como `null` enquanto a partida nao estiver encerrada. Quando
+`status` for `finished` ou `cancelled`, deve expor:
+
+- `reason`: `empty_rack`, `all_passed`, `finished` ou `cancelled`
+- `ended_by_empty_rack`
+- `ended_by_all_passed`
+- `total_penalties`
+- `empty_rack_player_id`
+
+#### `dictionary_summary`
+
+Resumo informativo do dicionario ativo da partida:
+
+- `language`
+- `active_words_count`
+- `active_sources_count`
+- `sample_sources`
 
 #### Regra de produto
 - `language` deve ser exibido pela UI como contexto do dicionario ativo
+- `dictionary_summary` pode ser exibido pela UI para explicar volume e fonte
+  do dicionario, mas nao substitui validacao lexical do backend
+- `end_summary` deve ser usado para explicar ao jogador por que a partida
+  terminou, sem recalcular o fim no frontend
 - frontend nao escolhe dicionario localmente; ele apenas mostra o idioma da
   partida e envia jogadas para validacao server-authoritative
 
@@ -4422,10 +4448,10 @@ Leitura atual do projeto:
 |--------|--------|
 | Backend server-authoritative | Maduro e validado para partida sincrona, submit, voting, pass, exchange, forfeit e endgame |
 | Lobby, convite e retomada | Baseline operacional implementada e validada |
-| Primeira tela jogavel | Tranche de produto iniciada: hero, mesa jogavel, placar, guia de acao e rack com linguagem menos tecnica |
+| Primeira tela jogavel | Tranche de produto avançada: hero, mesa jogavel, placar, guia de acao, rack com linguagem menos tecnica e roteiro de demo interna |
 | Rack e composicao por slots | Implementado como superficie oficial de preparo no frontend |
 | Votacao | Funcional; tranche de UX de produto iniciada com painel de palavra, coordenadas e regra autor/votante |
-| Dicionario | Contrato por idioma/fonte/ativo consolidado; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
+| Dicionario | Contrato por idioma/fonte/ativo consolidado; bootstrap expõe resumo informativo; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
 | Bots de teste e simulacao | Baseline alta: contrato, runner e sete cenarios deterministicos validados |
 | Bot | MVP humano contra bot criado; bot `easy` tenta abertura valida e encaixe simples conectado antes do fallback de passe |
@@ -4474,6 +4500,17 @@ Diretriz ativa desde 2026-06-22:
 
 Uma tranche tipica deve buscar entregar comportamento observavel de ponta a
 ponta, documentacao essencial e testes agrupados de aceite.
+
+Atualizacao de execucao - 2026-06-22 cinco frentes:
+
+- demo interna ganhou painel visivel com roteiro ponta-a-ponta na home
+- `get_patxanga_match_bootstrap()` passou a expor `end_summary` e
+  `dictionary_summary`
+- tela final passou a mostrar motivo do encerramento e penalidades finais
+- badge de dicionario passou a mostrar idioma e volume ativo quando disponivel
+- Playwright cobre partida finalizada por rack vazio aberta pelo frontend
+- testes SQL cobrem `dictionary_summary`, `end_summary` nulo em partida ativa e
+  `end_summary.reason = empty_rack` em partida finalizada
 
 ---
 
@@ -6019,6 +6056,52 @@ Validacao completa confirmada antes do segundo commit:
 - `zsh scripts/test-dictionary-import-tooling.sh`
 - `zsh scripts/test-libreoffice-dictionary-sample.sh`
 - resultado browser: 10 cenarios passaram
+
+## 1.17 Atualizacao operacional de continuidade - 2026-06-22 cinco frentes
+
+Estado desta frente:
+
+- foco: seguir com cinco frentes em uma tranche unica antes de testes completos
+  e commit
+- frentes: demo interna ponta-a-ponta, endgame real no frontend, bot como
+  adversario demonstravel, dicionario amplo/controlado e hardening de
+  seguranca/contratos
+- arquivos principais: `sql/rpc/get_match_bootstrap.sql`,
+  `supabase/migrations/20260622170000_30_bootstrap_demo_end_dictionary_contract.sql`,
+  `frontend/types/match.ts`,
+  `frontend/lib/backend/matchBootstrap.real.ts`,
+  `frontend/components/GamePlayScreen.tsx`,
+  `frontend/pages/index.tsx`,
+  `frontend/tests/browser-validation.spec.ts`,
+  `sql/tests/test_get_match_bootstrap.sql`,
+  `sql/tests/test_match_end_empty_rack.sql`,
+  `docs/frontend-contract-rpcs-v1.0.md`,
+  `docs/implementation-roadmap.md`
+
+Implementado nesta tranche:
+
+- bootstrap passou a retornar `end_summary` com motivo de encerramento,
+  flags oficiais e penalidades finais
+- bootstrap passou a retornar `dictionary_summary` com idioma, total de
+  palavras ativas, total de fontes ativas e fontes amostrais
+- frontend mapeia os novos campos para `MatchBootstrap`
+- tela de jogo exibe volume/fonte do dicionario quando disponivel
+- tela de fim exibe motivo do encerramento e penalidades finais
+- home ganhou painel `Demo interna ponta-a-ponta` com roteiro operacional
+- Playwright ganhou cenario de partida finalizada por rack vazio
+- testes SQL passaram a proteger o contrato de bootstrap ativo e finalizado
+
+Validacao planejada para fechamento desta tranche:
+
+- `supabase migration up`
+- `cd frontend && npm run build`
+- `cd frontend && npm run lint`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+- `cd frontend && npm run test:e2e`
+- `zsh scripts/test-dictionary-import-tooling.sh`
+- `zsh scripts/test-libreoffice-dictionary-sample.sh`
+- `git diff --check`
 
 ## 2. Matriz objetiva de avanco
 
@@ -10826,8 +10909,10 @@ begin
     raise notice 'Bootstrap result: %', v_result;
     raise notice 'match_id: %', v_result->>'match_id';
     raise notice 'status: %', v_result->>'status';
+    raise notice 'language: %', v_result->>'language';
     raise notice 'player_context.player_id: %', v_result->'player_context'->>'player_id';
     raise notice 'players_summary length: %', jsonb_array_length(v_result->'players_summary');
+    raise notice 'dictionary_summary: %', v_result->'dictionary_summary';
 
     if v_result->>'match_id' <> v_match_id::text then
         raise exception 'Unexpected match_id in bootstrap payload';
@@ -10835,6 +10920,10 @@ begin
 
     if v_result->>'status' <> 'active' then
         raise exception 'Expected active match status in bootstrap payload';
+    end if;
+
+    if v_result->>'language' <> 'pt-BR' then
+        raise exception 'Expected pt-BR language in bootstrap payload';
     end if;
 
     if v_result->'player_context'->>'player_id' <> v_player2_id::text then
@@ -10847,6 +10936,26 @@ begin
 
     if jsonb_array_length(v_result->'players_summary') <> 2 then
         raise exception 'Expected players_summary with 2 players';
+    end if;
+
+    if not (v_result ? 'end_summary') then
+        raise exception 'Expected end_summary key in bootstrap payload';
+    end if;
+
+    if v_result->'end_summary' <> 'null'::jsonb then
+        raise exception 'Expected null end_summary for active match';
+    end if;
+
+    if v_result->'dictionary_summary'->>'language' <> 'pt-BR' then
+        raise exception 'Expected dictionary_summary language pt-BR';
+    end if;
+
+    if coalesce((v_result->'dictionary_summary'->>'active_words_count')::integer, -1) < 0 then
+        raise exception 'Expected non-negative active_words_count';
+    end if;
+
+    if jsonb_typeof(v_result->'dictionary_summary'->'sample_sources') <> 'array' then
+        raise exception 'Expected dictionary_summary.sample_sources to be an array';
     end if;
 end;
 $$;

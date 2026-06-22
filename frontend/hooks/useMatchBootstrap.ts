@@ -16,6 +16,8 @@ export function useMatchBootstrap(initialData?: Partial<MatchBootstrap>) {
       boardState: initialData?.boardState ?? [],
       playerContext: initialData?.playerContext ?? null,
       playersSummary: initialData?.playersSummary ?? [],
+      endSummary: initialData?.endSummary ?? null,
+      dictionarySummary: initialData?.dictionarySummary ?? null,
     }),
     [initialData]
   );

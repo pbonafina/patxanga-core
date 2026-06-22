@@ -1,5 +1,5 @@
 # PATXANGA — FRONTEND CONTRACT: RPCs
-Version: 1.2
+Version: 1.3
 Status: ACTIVE OPERATIONAL BASELINE
 Base normativa:
 - Context Snapshot Master v1.6
@@ -53,9 +53,35 @@ Carregar o estado server-authoritative necessario para renderizar uma partida.
 - `finished_at`
 - `player_context`
 - `players_summary`
+- `end_summary`
+- `dictionary_summary`
+
+#### `end_summary`
+
+Retornado como `null` enquanto a partida nao estiver encerrada. Quando
+`status` for `finished` ou `cancelled`, deve expor:
+
+- `reason`: `empty_rack`, `all_passed`, `finished` ou `cancelled`
+- `ended_by_empty_rack`
+- `ended_by_all_passed`
+- `total_penalties`
+- `empty_rack_player_id`
+
+#### `dictionary_summary`
+
+Resumo informativo do dicionario ativo da partida:
+
+- `language`
+- `active_words_count`
+- `active_sources_count`
+- `sample_sources`
 
 #### Regra de produto
 - `language` deve ser exibido pela UI como contexto do dicionario ativo
+- `dictionary_summary` pode ser exibido pela UI para explicar volume e fonte
+  do dicionario, mas nao substitui validacao lexical do backend
+- `end_summary` deve ser usado para explicar ao jogador por que a partida
+  terminou, sem recalcular o fim no frontend
 - frontend nao escolhe dicionario localmente; ele apenas mostra o idioma da
   partida e envia jogadas para validacao server-authoritative
 

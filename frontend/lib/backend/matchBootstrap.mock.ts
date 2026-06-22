@@ -67,6 +67,22 @@ export const mockMatchBootstrapService: MatchBootstrapService = {
             },
           ]
         : [],
+      endSummary:
+        status === "finished" || status === "cancelled"
+          ? {
+              reason: status === "cancelled" ? "cancelled" : "finished",
+              ended_by_empty_rack: false,
+              ended_by_all_passed: false,
+              total_penalties: 0,
+              empty_rack_player_id: null,
+            }
+          : null,
+      dictionarySummary: {
+        language: "pt-BR",
+        active_words_count: 0,
+        active_sources_count: 0,
+        sample_sources: [],
+      },
     };
   },
 };

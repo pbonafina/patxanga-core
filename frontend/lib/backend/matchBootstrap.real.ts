@@ -31,6 +31,21 @@ interface RpcPlayerContext {
   bot_profile: string | null;
 }
 
+interface RpcMatchEndSummary {
+  reason: string;
+  ended_by_empty_rack: boolean;
+  ended_by_all_passed: boolean;
+  total_penalties: number;
+  empty_rack_player_id: string | null;
+}
+
+interface RpcMatchDictionarySummary {
+  language: string;
+  active_words_count: number;
+  active_sources_count: number;
+  sample_sources: string[];
+}
+
 interface RpcMatchBootstrap {
   match_id: string;
   language?: string;
@@ -43,6 +58,8 @@ interface RpcMatchBootstrap {
   finished_at: string | null;
   player_context: RpcPlayerContext | null;
   players_summary: RpcPlayerSummary[];
+  end_summary?: RpcMatchEndSummary | null;
+  dictionary_summary?: RpcMatchDictionarySummary | null;
 }
 
 export const realMatchBootstrapService: MatchBootstrapService = {
@@ -89,6 +106,8 @@ export const realMatchBootstrapService: MatchBootstrapService = {
       boardState: payload.board_state ?? [],
       playerContext: payload.player_context,
       playersSummary: payload.players_summary ?? [],
+      endSummary: payload.end_summary ?? null,
+      dictionarySummary: payload.dictionary_summary ?? null,
     };
   },
 };

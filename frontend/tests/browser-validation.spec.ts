@@ -17,6 +17,12 @@ type LongHumanFlowScenario = {
   bridgeTileIds: Record<"D" | "R", string>;
 };
 
+type FinishedMatchScenario = {
+  matchId: string;
+  viewerUserId: string;
+  emptyRackPlayerId: string;
+};
+
 type HumanVsBotScenario = {
   matchId: string;
   humanUserId: string;
@@ -283,6 +289,88 @@ select payload from e2e_long_human_flow_result;
 `);
 }
 
+function createFinishedEmptyRackScenario(): FinishedMatchScenario {
+  return runDatabaseJson<FinishedMatchScenario>(`
+create temp table e2e_finished_empty_rack_result(payload text);
+
+do $setup$
+declare
+    v_host_user_id uuid := gen_random_uuid();
+    v_guest_user_id uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_current_player_id uuid;
+    v_current_user_id uuid;
+    v_tile_d_id uuid := gen_random_uuid();
+    v_tile_a_id uuid := gen_random_uuid();
+    v_result jsonb;
+begin
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_host_user_id,
+        p_host_guest_name := 'Finished E2E Host',
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    perform public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_guest_user_id,
+        p_guest_name := 'Finished E2E Guest'
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    select current_turn_player_id
+    into v_current_player_id
+    from public.patxanga_matches
+    where id = v_match_id;
+
+    select user_id
+    into v_current_user_id
+    from public.patxanga_players
+    where id = v_current_player_id;
+
+    update public.patxanga_matches
+    set bag_state = jsonb_build_object('tiles', '[]'::jsonb, 'remaining', 0),
+        updated_at = now()
+    where id = v_match_id;
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_tile_d_id::text, 'letter', 'D', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_tile_a_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_current_player_id;
+
+    v_result := public.submit_patxanga_move(
+        v_match_id,
+        v_current_player_id,
+        jsonb_build_array(
+            jsonb_build_object('tile_id', v_tile_d_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_tile_a_id::text, 'row', 8, 'col', 9, 'declared_letter', null)
+        )
+    );
+
+    if v_result->>'status' <> 'success' then
+        raise exception 'Expected final move success, got %', v_result;
+    end if;
+
+    insert into e2e_finished_empty_rack_result(payload)
+    values (
+        jsonb_build_object(
+            'matchId', v_match_id,
+            'viewerUserId', v_current_user_id,
+            'emptyRackPlayerId', v_current_player_id
+        )::text
+    );
+end
+$setup$;
+
+select payload from e2e_finished_empty_rack_result;
+`);
+}
+
 function createHumanVsBotScenarioWithBotTurn(): HumanVsBotScenario {
   return runDatabaseJson<HumanVsBotScenario>(`
 create temp table e2e_human_vs_bot_result(payload text);
@@ -543,6 +631,11 @@ test.describe("browser validation scenarios", () => {
     await expect(
       page.getByRole("heading", { name: "Alternar host e guest" })
     ).toBeVisible();
+    await expect(page.getByTestId("demo-roadmap-panel")).toContainText(
+      "Demo interna ponta-a-ponta"
+    );
+    await expect(page.getByTestId("demo-roadmap-panel")).toContainText("Bot");
+    await expect(page.getByTestId("demo-roadmap-panel")).toContainText("Dicionário");
 
     await page.getByRole("button", { name: "Gerar cenarios de validacao" }).click();
 
@@ -693,6 +786,23 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("board-cell-7-9")).toContainText("L");
     await expect(page.getByTestId("board-cell-8-9")).toContainText("U");
     await expect(page.getByTestId("board-cell-9-9")).toContainText("A");
+  });
+
+  test("opens a finished match with endgame summary", async ({ page }) => {
+    const scenario = createFinishedEmptyRackScenario();
+
+    await page.goto("/");
+    await openMatchAsUser(page, scenario.matchId, scenario.viewerUserId);
+
+    await expect(page.getByText("Partida encerrada").first()).toBeVisible();
+    await expect(page.getByTestId("finished-product-panel")).toBeVisible();
+    await expect(page.getByTestId("finished-product-panel")).toContainText("Resultado final");
+    await expect(page.getByTestId("finished-product-panel")).toContainText("Motivo:");
+    await expect(page.getByTestId("finished-product-panel")).toContainText("Fim por rack vazio");
+    await expect(page.getByTestId("finished-product-panel")).toContainText("Penalidades finais:");
+    await expect(page.getByTestId("dictionary-language-badge")).toContainText(
+      "dicionário pt-BR ativo"
+    );
   });
 
   test("submits an accepted word through rack slots", async ({ page }) => {

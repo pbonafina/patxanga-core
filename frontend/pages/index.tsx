@@ -2159,6 +2159,47 @@ export default function HomePage() {
         ) : null}
       </section>
 
+      <section
+        data-testid="demo-roadmap-panel"
+        style={{
+          marginTop: 24,
+          padding: 20,
+          border: "1px solid #b7c7aa",
+          borderRadius: 22,
+          background:
+            "radial-gradient(circle at top right, rgba(34, 197, 94, 0.14), transparent 30%), linear-gradient(135deg, #f4f7ed 0%, #ffffff 100%)",
+          boxShadow: "0 12px 30px rgba(21, 128, 61, 0.08)",
+        }}
+      >
+        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 1.2, textTransform: "uppercase", color: "#3f6212" }}>
+          Demo interna ponta-a-ponta
+        </div>
+        <h2 style={{ margin: "8px 0 6px" }}>Roteiro operacional da mesa</h2>
+        <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.5 }}>
+          Fluxo validável no navegador: criar mesa, alternar sessão, jogar, votar palavra,
+          retomar partida, executar bot, consultar dicionário e encerrar com resultado final.
+        </p>
+        <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {["Criar mesa", "Jogar", "Votar", "Retomar", "Encerrar", "Bot", "Dicionário"].map(
+            (item) => (
+              <span
+                key={item}
+                style={{
+                  padding: "7px 11px",
+                  borderRadius: 999,
+                  background: "#ecfdf5",
+                  color: "#166534",
+                  fontSize: 13,
+                  fontWeight: 800,
+                }}
+              >
+                {item}
+              </span>
+            )
+          )}
+        </div>
+      </section>
+
       <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
         <h2>Cenarios de validacao browser</h2>
         <p>
@@ -2620,8 +2661,10 @@ export default function HomePage() {
         isActive={isActive}
         isVoting={isVoting}
         isFinished={isFinished}
+        endSummary={resolvedBootstrap.endSummary}
         winnerPlayerId={resolvedBootstrap.winnerPlayerId}
         finishedAt={resolvedBootstrap.finishedAt}
+        dictionarySummary={resolvedBootstrap.dictionarySummary}
         viewerPlayerId={resolvedBootstrap.playerId}
         playersSummary={resolvedBootstrap.playersSummary}
         currentTurnPlayerId={resolvedBootstrap.currentTurnPlayerId}

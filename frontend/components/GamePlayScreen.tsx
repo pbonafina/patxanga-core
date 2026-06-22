@@ -1,6 +1,7 @@
 import { BoardSection } from "./BoardSection";
 import { RackSection } from "./RackSection";
 import { VotingSection } from "./VotingSection";
+import type { MatchDictionarySummary, MatchEndSummary } from "../types/match";
 import type { MovePreviewResult } from "../types/movePreview";
 
 type PendingVoteMove = {
@@ -24,8 +25,10 @@ type GamePlayScreenProps = {
   isActive: boolean;
   isVoting: boolean;
   isFinished: boolean;
+  endSummary: MatchEndSummary | null;
   winnerPlayerId: string | null;
   finishedAt: string | null;
+  dictionarySummary: MatchDictionarySummary | null;
   viewerPlayerId: string | null;
   playersSummary: Array<{
     player_id: string;
@@ -110,6 +113,25 @@ function formatPlayerCount(value: number): string {
   return `${value} jogador${value === 1 ? "" : "es"}`;
 }
 
+function formatDictionaryWordCount(value: number): string {
+  return `${value} palavra${value === 1 ? "" : "s"}`;
+}
+
+function formatEndReason(summary: MatchEndSummary | null): string {
+  switch (summary?.reason) {
+    case "empty_rack":
+      return "Fim por rack vazio";
+    case "all_passed":
+      return "Fim por todos passarem";
+    case "cancelled":
+      return "Partida cancelada";
+    case "finished":
+      return "Partida finalizada";
+    default:
+      return "Motivo nao informado";
+  }
+}
+
 export function GamePlayScreen({
   stateLabel,
   matchLanguage,
@@ -117,8 +139,10 @@ export function GamePlayScreen({
   isActive,
   isVoting,
   isFinished,
+  endSummary,
   winnerPlayerId,
   finishedAt,
+  dictionarySummary,
   viewerPlayerId,
   playersSummary,
   currentTurnPlayerId,
@@ -180,6 +204,13 @@ export function GamePlayScreen({
   const winnerPlayer =
     playersSummary.find((player) => player.player_id === winnerPlayerId) ?? null;
   const forfeitedPlayers = playersSummary.filter((player) => player.has_forfeited);
+  const dictionaryLanguage = dictionarySummary?.language ?? matchLanguage;
+  const dictionaryWordCount = dictionarySummary
+    ? formatDictionaryWordCount(dictionarySummary.active_words_count)
+    : null;
+  const dictionarySources =
+    dictionarySummary?.sample_sources.filter(Boolean).slice(0, 3) ?? [];
+  const endReasonLabel = formatEndReason(endSummary);
 
   const totalPlayers = playersSummary.length;
   const placedTileCount = placedTilesPreview.length;
@@ -345,7 +376,8 @@ export function GamePlayScreen({
                 fontWeight: 800,
               }}
             >
-              dicionário {matchLanguage} ativo
+              dicionário {dictionaryLanguage} ativo
+              {dictionaryWordCount ? ` · ${dictionaryWordCount}` : ""}
             </span>
 
             <span
@@ -414,6 +446,15 @@ export function GamePlayScreen({
               turno {turnNumber}
             </span>
           </div>
+
+          {dictionarySources.length > 0 ? (
+            <div
+              data-testid="dictionary-sources-summary"
+              style={{ marginTop: 10, fontSize: 13, color: "#166534", fontWeight: 700 }}
+            >
+              Fontes do dicionário: {dictionarySources.join(", ")}
+            </div>
+          ) : null}
 
           {playersSummary.length > 0 ? (
             <div style={{ marginTop: 14, display: "grid", gap: 8 }}>
@@ -575,6 +616,14 @@ export function GamePlayScreen({
             Vencedor:{" "}
             <strong>{winnerPlayer?.display_name ?? winnerPlayerId ?? "(não disponível)"}</strong>
           </div>
+          <div>
+            Motivo: <strong>{endReasonLabel}</strong>
+          </div>
+          {typeof endSummary?.total_penalties === "number" ? (
+            <div>
+              Penalidades finais: <strong>{endSummary.total_penalties}</strong>
+            </div>
+          ) : null}
           <div>Encerrada em: <strong>{formatFinishedAt(finishedAt)}</strong></div>
           {forfeitedPlayers.length > 0 ? (
             <div style={{ marginTop: 6 }}>

@@ -740,6 +740,52 @@ Validacao completa confirmada antes do segundo commit:
 - `zsh scripts/test-libreoffice-dictionary-sample.sh`
 - resultado browser: 10 cenarios passaram
 
+## 1.17 Atualizacao operacional de continuidade - 2026-06-22 cinco frentes
+
+Estado desta frente:
+
+- foco: seguir com cinco frentes em uma tranche unica antes de testes completos
+  e commit
+- frentes: demo interna ponta-a-ponta, endgame real no frontend, bot como
+  adversario demonstravel, dicionario amplo/controlado e hardening de
+  seguranca/contratos
+- arquivos principais: `sql/rpc/get_match_bootstrap.sql`,
+  `supabase/migrations/20260622170000_30_bootstrap_demo_end_dictionary_contract.sql`,
+  `frontend/types/match.ts`,
+  `frontend/lib/backend/matchBootstrap.real.ts`,
+  `frontend/components/GamePlayScreen.tsx`,
+  `frontend/pages/index.tsx`,
+  `frontend/tests/browser-validation.spec.ts`,
+  `sql/tests/test_get_match_bootstrap.sql`,
+  `sql/tests/test_match_end_empty_rack.sql`,
+  `docs/frontend-contract-rpcs-v1.0.md`,
+  `docs/implementation-roadmap.md`
+
+Implementado nesta tranche:
+
+- bootstrap passou a retornar `end_summary` com motivo de encerramento,
+  flags oficiais e penalidades finais
+- bootstrap passou a retornar `dictionary_summary` com idioma, total de
+  palavras ativas, total de fontes ativas e fontes amostrais
+- frontend mapeia os novos campos para `MatchBootstrap`
+- tela de jogo exibe volume/fonte do dicionario quando disponivel
+- tela de fim exibe motivo do encerramento e penalidades finais
+- home ganhou painel `Demo interna ponta-a-ponta` com roteiro operacional
+- Playwright ganhou cenario de partida finalizada por rack vazio
+- testes SQL passaram a proteger o contrato de bootstrap ativo e finalizado
+
+Validacao planejada para fechamento desta tranche:
+
+- `supabase migration up`
+- `cd frontend && npm run build`
+- `cd frontend && npm run lint`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+- `cd frontend && npm run test:e2e`
+- `zsh scripts/test-dictionary-import-tooling.sh`
+- `zsh scripts/test-libreoffice-dictionary-sample.sh`
+- `git diff --check`
+
 ## 2. Matriz objetiva de avanco
 
 Percentual global estimado nesta leitura: `75%`

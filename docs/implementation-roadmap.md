@@ -32,10 +32,10 @@ Leitura atual do projeto:
 |--------|--------|
 | Backend server-authoritative | Maduro e validado para partida sincrona, submit, voting, pass, exchange, forfeit e endgame |
 | Lobby, convite e retomada | Baseline operacional implementada e validada |
-| Primeira tela jogavel | Tranche de produto iniciada: hero, mesa jogavel, placar, guia de acao e rack com linguagem menos tecnica |
+| Primeira tela jogavel | Tranche de produto avançada: hero, mesa jogavel, placar, guia de acao, rack com linguagem menos tecnica e roteiro de demo interna |
 | Rack e composicao por slots | Implementado como superficie oficial de preparo no frontend |
 | Votacao | Funcional; tranche de UX de produto iniciada com painel de palavra, coordenadas e regra autor/votante |
-| Dicionario | Contrato por idioma/fonte/ativo consolidado; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
+| Dicionario | Contrato por idioma/fonte/ativo consolidado; bootstrap expõe resumo informativo; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
 | Bots de teste e simulacao | Baseline alta: contrato, runner e sete cenarios deterministicos validados |
 | Bot | MVP humano contra bot criado; bot `easy` tenta abertura valida e encaixe simples conectado antes do fallback de passe |
@@ -84,6 +84,17 @@ Diretriz ativa desde 2026-06-22:
 
 Uma tranche tipica deve buscar entregar comportamento observavel de ponta a
 ponta, documentacao essencial e testes agrupados de aceite.
+
+Atualizacao de execucao - 2026-06-22 cinco frentes:
+
+- demo interna ganhou painel visivel com roteiro ponta-a-ponta na home
+- `get_patxanga_match_bootstrap()` passou a expor `end_summary` e
+  `dictionary_summary`
+- tela final passou a mostrar motivo do encerramento e penalidades finais
+- badge de dicionario passou a mostrar idioma e volume ativo quando disponivel
+- Playwright cobre partida finalizada por rack vazio aberta pelo frontend
+- testes SQL cobrem `dictionary_summary`, `end_summary` nulo em partida ativa e
+  `end_summary.reason = empty_rack` em partida finalizada
 
 ---
 

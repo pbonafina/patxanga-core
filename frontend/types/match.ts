@@ -32,6 +32,21 @@ export interface MatchPlayerContext {
   bot_profile: string | null;
 }
 
+export interface MatchEndSummary {
+  reason: "empty_rack" | "all_passed" | "cancelled" | "finished" | string;
+  ended_by_empty_rack: boolean;
+  ended_by_all_passed: boolean;
+  total_penalties: number;
+  empty_rack_player_id: string | null;
+}
+
+export interface MatchDictionarySummary {
+  language: string;
+  active_words_count: number;
+  active_sources_count: number;
+  sample_sources: string[];
+}
+
 export interface MatchBootstrap {
   matchId: string;
   language: string;
@@ -45,6 +60,8 @@ export interface MatchBootstrap {
   boardState: unknown[][];
   playerContext: MatchPlayerContext | null;
   playersSummary: MatchPlayerSummary[];
+  endSummary: MatchEndSummary | null;
+  dictionarySummary: MatchDictionarySummary | null;
 }
 
 export interface MatchBootstrapInput {

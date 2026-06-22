@@ -13,6 +13,7 @@ declare
     v_tile1_id uuid := gen_random_uuid();
     v_tile2_id uuid := gen_random_uuid();
     v_result jsonb;
+    v_bootstrap jsonb;
 begin
     v_match_id := public.create_patxanga_match(
         p_host_user_id := v_user1,
@@ -75,4 +76,32 @@ begin
         from patxanga_matches
         where id = v_match_id
     );
+
+    v_bootstrap := public.get_patxanga_match_bootstrap(v_match_id, v_user1);
+
+    raise notice 'Bootstrap end summary: %', v_bootstrap->'end_summary';
+
+    if v_bootstrap->>'status' <> 'finished' then
+        raise exception 'Expected finished status after empty rack end, got %', v_bootstrap->>'status';
+    end if;
+
+    if v_bootstrap->'end_summary'->>'reason' <> 'empty_rack' then
+        raise exception 'Expected empty_rack end reason, got %', v_bootstrap->'end_summary'->>'reason';
+    end if;
+
+    if not coalesce((v_bootstrap->'end_summary'->>'ended_by_empty_rack')::boolean, false) then
+        raise exception 'Expected ended_by_empty_rack true in bootstrap end summary';
+    end if;
+
+    if coalesce((v_bootstrap->'end_summary'->>'ended_by_all_passed')::boolean, true) then
+        raise exception 'Expected ended_by_all_passed false in bootstrap end summary';
+    end if;
+
+    if v_bootstrap->'end_summary'->>'empty_rack_player_id' <> v_current_player_id::text then
+        raise exception 'Expected empty_rack_player_id to match current player';
+    end if;
+
+    if coalesce((v_bootstrap->'end_summary'->>'total_penalties')::integer, -1) < 0 then
+        raise exception 'Expected non-negative total_penalties in bootstrap end summary';
+    end if;
 end $$;

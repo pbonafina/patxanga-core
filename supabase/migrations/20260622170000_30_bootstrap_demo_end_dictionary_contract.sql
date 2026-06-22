@@ -1,7 +1,6 @@
 -- ============================================================
--- PATXANGA - RPC: get_patxanga_match_bootstrap()
--- Version: 1.2
--- Purpose: Return minimal server-authoritative bootstrap payload for frontend
+-- PATXANGA - MIGRATION 30: bootstrap demo/end/dictionary contract
+-- Purpose: expose match end and dictionary summaries to frontend bootstrap
 -- ============================================================
 
 create or replace function public.get_patxanga_match_bootstrap(
