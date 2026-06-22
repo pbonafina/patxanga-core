@@ -788,6 +788,31 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("board-cell-9-9")).toContainText("A");
   });
 
+  test("alternates turns repeatedly in human versus bot after an initial bot opening", async ({ page }) => {
+    const scenario = createHumanVsBotScenarioWithBotTurn();
+
+    await page.goto("/");
+    await openMatchAsUser(page, scenario.matchId, scenario.humanUserId);
+    await expect(page.getByTestId("game-bot-action-message")).toContainText(
+      "Bot jogou SOL como abertura."
+    );
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+
+    const firstBotActionText = await page
+      .getByTestId("game-bot-action-message")
+      .innerText();
+
+    await page.getByTestId("pass-turn-action").click();
+    await expect(page.getByTestId("turn-action-message")).toContainText("Turno passado com sucesso.");
+
+    await expect(page.getByText("Executando turno automático")).toBeVisible();
+    await expect(page.getByText("Aguardar o outro jogador")).toBeVisible();
+    await expect(page.getByTestId("game-bot-action-message")).not.toHaveText(firstBotActionText);
+
+    await expect(page.getByTestId("game-bot-action-message")).toContainText("Bot ");
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+  });
+
   test("passes the turn on the current match without making a move", async ({ page }) => {
     const scenario = createSlotMoveScenario("DA");
 
