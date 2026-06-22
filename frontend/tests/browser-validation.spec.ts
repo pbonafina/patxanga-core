@@ -816,6 +816,18 @@ async function submitUnrecognizedTsToPendingVote(
 }
 
 test.describe("browser validation scenarios", () => {
+  test("serves operational health without exposing secrets", async ({ request }) => {
+    const response = await request.get("/api/health");
+    expect(response.ok()).toBeTruthy();
+
+    const body = await response.json();
+    expect(body.status).toBe("ok");
+    expect(body.service).toBe("patxanga-frontend");
+    expect(body.supabase.urlConfigured).toBe(true);
+    expect(body.supabase.anonKeyConfigured).toBe(true);
+    expect(JSON.stringify(body)).not.toContain("eyJ");
+  });
+
   test("runs invite, lobby, resume and forfeit flows from the test page", async ({
     page,
   }) => {
