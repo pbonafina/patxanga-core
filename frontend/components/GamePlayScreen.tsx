@@ -68,6 +68,7 @@ type GamePlayScreenProps = {
   canCurrentViewerVote: boolean;
   isSubmittingVote: boolean;
   voteResult: unknown | null;
+  voteResolutionMessage: string | null;
   showDebug: boolean;
   botActionMessage: string | null;
   botActionError: string | null;
@@ -139,6 +140,7 @@ export function GamePlayScreen({
   canCurrentViewerVote,
   isSubmittingVote,
   voteResult,
+  voteResolutionMessage,
   showDebug,
   botActionMessage,
   botActionError,
@@ -465,6 +467,23 @@ export function GamePlayScreen({
             : isAutoPlayingBotTurn
               ? "Bot executando turno automático..."
               : botActionMessage}
+        </div>
+      ) : null}
+
+      {voteResolutionMessage ? (
+        <div
+          data-testid="vote-resolution-message"
+          style={{
+            marginBottom: 18,
+            padding: 14,
+            borderRadius: 16,
+            border: "1px solid #fcd34d",
+            background: "#fffbeb",
+            color: "#92400e",
+            fontWeight: 800,
+          }}
+        >
+          {voteResolutionMessage}
         </div>
       ) : null}
 

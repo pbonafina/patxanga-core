@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-22 13:51:23
+Generated at: 2026-06-22 14:24:10
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,13 +93,15 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## develop...origin/develop [ahead 1]
+## develop...origin/develop [ahead 2]
+ M docs/18-room-baton-package-current.md
  M docs/current-development-continuity-spec-v1.0.md
+ M docs/frontend-contract-pending-vote-ux-v1.0.md
  M docs/implementation-roadmap.md
- M frontend/components/BoardSection.tsx
  M frontend/components/GamePlayScreen.tsx
- M frontend/components/RackSection.tsx
+ M frontend/components/VotingSection.tsx
  M frontend/pages/index.tsx
+ M frontend/tests/browser-validation.spec.ts
 ```
 
 ### git remote -v
@@ -110,7 +112,8 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-49b5625 (HEAD -> develop) feat: add easy bot connected move policy
+20a59c1 (HEAD -> develop) feat: improve playable game experience
+49b5625 feat: add easy bot connected move policy
 7cfd46d (origin/develop, origin/HEAD) Merge pull request #15 from pbonafina/docs/test-program
 57a7369 (origin/docs/test-program) docs: add testing program
 7248b54 Merge pull request #14 from pbonafina/feature/easy-bot-opening-policy
@@ -124,7 +127,6 @@ b71e1b0 test: cover lexical policy voting path
 ece4650 Merge pull request #10 from pbonafina/feature/offline-lexical-policy-boundaries
 c727200 test: cover offline lexical policy boundaries
 f6c18f1 Merge pull request #9 from pbonafina/feature/lexical-policy-imported-words-regression
-a8222ee test: add lexical policy imported word regression
 ```
 
 ### tail -n 60 ../project-log.md
@@ -4392,7 +4394,7 @@ Leitura atual do projeto:
 | Lobby, convite e retomada | Baseline operacional implementada e validada |
 | Primeira tela jogavel | Tranche de produto iniciada: hero, mesa jogavel, placar, guia de acao e rack com linguagem menos tecnica |
 | Rack e composicao por slots | Implementado como superficie oficial de preparo no frontend |
-| Votacao | Funcional, mas ainda precisa UX de produto |
+| Votacao | Funcional; tranche de UX de produto iniciada com painel de palavra, coordenadas e regra autor/votante |
 | Dicionario | Contrato por idioma/fonte/ativo consolidado; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
 | Bots de teste e simulacao | Baseline alta: contrato, runner e sete cenarios deterministicos validados |
@@ -4540,6 +4542,27 @@ Cobertura desejada adicional:
 - outro jogador rejeita
 - outro jogador aceita
 - board e rack refletem corretamente cada decisao
+
+Atualizacao de execucao - 2026-06-22:
+
+- painel de votacao passou a exibir `Palavra em avaliação`
+- palavra principal renderizada como pecas visuais
+- coordenadas das pecas propostas aparecem no painel
+- UI explica quando o autor nao pode votar na propria palavra
+- botoes passaram a usar linguagem de produto: `Aceitar palavra` e
+  `Rejeitar palavra`
+- fluxo browser agora alterna do autor para outro jogador, rejeita a palavra e
+  mostra `Palavra rejeitada. O turno voltou ao autor.` fora do painel de
+  votacao
+- fluxo browser tambem aceita a palavra como outro jogador, mostra
+  `Palavra aceita. O tabuleiro oficial foi atualizado.` e confirma retorno para
+  jogo ativo
+
+Pendencias restantes desta fase:
+
+- cobrir mais de um ciclo consecutivo de `pending_vote`
+- validar visualmente rack/board depois de aceite e rejeicao em tranches mais
+  longas de jogo
 
 ---
 
@@ -5816,6 +5839,50 @@ Implementado nesta tranche:
   apenas em modo debug
 - tabuleiro passou a usar rolagem horizontal local para telas pequenas
 - paineis duplicados de waiting/finished fora da mesa foram removidos
+
+Validacao confirmada:
+
+- `cd frontend && npm run build`
+- `cd frontend && npm run lint`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+- `cd frontend && npm run test:e2e`
+- `zsh scripts/test-dictionary-import-tooling.sh`
+- `zsh scripts/test-libreoffice-dictionary-sample.sh`
+
+## 1.14 Atualizacao operacional de continuidade - 2026-06-22 tranche UX votacao
+
+Estado desta frente:
+
+- foco: transformar `pending_vote` em uma experiencia clara de produto
+- arquivos principais: `frontend/components/VotingSection.tsx`,
+  `frontend/components/GamePlayScreen.tsx`, `frontend/pages/index.tsx`,
+  `frontend/tests/browser-validation.spec.ts`,
+  `docs/frontend-contract-pending-vote-ux-v1.0.md`
+
+Implementado nesta tranche:
+
+- painel `Palavra em avaliação`
+- palavra principal renderizada como pecas visuais
+- coordenadas das pecas propostas no painel de votacao
+- explicacao explicita de que autor nao vota na propria palavra
+- botoes renomeados para `Aceitar palavra` e `Rejeitar palavra`
+- mensagem de resultado humanizada para aceite/rejeicao quando houver retorno
+  de voto
+- mensagem persistente de resolucao fora do painel de votacao, porque a match
+  sai de `voting` apos aceite/rejeicao
+- fluxos de outro jogador aceitando e rejeitando foram conectados ao produto
+
+Cobertura ampliada:
+
+- Playwright do fluxo `TS` em `pending_vote` passa a validar painel, palavra,
+  coordenadas e regra de autor sem voto
+- o mesmo fluxo alterna para o outro jogador, rejeita a palavra, valida a
+  mensagem `Palavra rejeitada. O turno voltou ao autor.` e confirma que o
+  painel de votacao saiu da tela
+- fluxo adicional aceita a palavra como outro jogador, valida a mensagem
+  `Palavra aceita. O tabuleiro oficial foi atualizado.`, confirma volta ao jogo
+  ativo e preserva a palavra no board
 
 Validacao confirmada:
 

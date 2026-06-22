@@ -5,6 +5,7 @@ import type { Page } from "@playwright/test";
 type SlotMoveScenario = {
   matchId: string;
   currentUserId: string;
+  otherUserId: string;
   tileIds: Record<string, string>;
 };
 
@@ -86,6 +87,7 @@ declare
     v_match_id uuid;
     v_current_player_id uuid;
     v_current_user_id uuid;
+    v_other_user_id uuid;
     v_first_tile_id uuid := gen_random_uuid();
     v_second_tile_id uuid := gen_random_uuid();
 begin
@@ -114,6 +116,14 @@ begin
     into v_current_user_id
     from public.patxanga_players
     where id = v_current_player_id;
+
+    select user_id
+    into v_other_user_id
+    from public.patxanga_players
+    where match_id = v_match_id
+      and id <> v_current_player_id
+    order by joined_at asc
+    limit 1;
 
     update public.patxanga_players
     set rack_state = jsonb_build_array(
@@ -145,6 +155,7 @@ begin
         jsonb_build_object(
             'matchId', v_match_id,
             'currentUserId', v_current_user_id,
+            'otherUserId', v_other_user_id,
             'tileIds', jsonb_build_object(
                 '${rack.firstLetter}', v_first_tile_id,
                 '${rack.secondLetter}', v_second_tile_id
@@ -364,6 +375,43 @@ async function placeTileThroughSlot(
   ).toContainText(`S${slotNumber}`);
 }
 
+async function openMatchAsUser(page: Page, matchId: string, userId: string) {
+  await page.getByLabel("match_id", { exact: true }).fill(matchId);
+  await page
+    .getByLabel("user_id da sessao (temporario neste bootstrap real)")
+    .fill(userId);
+  await page.getByRole("button", { name: "Abrir partida" }).click();
+}
+
+async function submitUnrecognizedTsToPendingVote(
+  page: Page,
+  scenario: SlotMoveScenario
+) {
+  await openPreparedMatch(page, scenario);
+
+  await placeTileThroughSlot(page, scenario.tileIds.T, 1, 7, 7);
+  await placeTileThroughSlot(page, scenario.tileIds.S, 2, 7, 8);
+
+  await expect(page.getByText("2 peças em preparo")).toBeVisible();
+  await expect(page.getByText("Palavra principal: TS")).toBeVisible();
+  await expect(page.getByText("vai para votacao")).toBeVisible();
+
+  await page.getByRole("button", { name: "Confirmar jogada" }).click();
+
+  await expect(page.getByText("A mesa está em votação")).toBeVisible();
+  await expect(page.getByTestId("pending-vote-panel")).toBeVisible();
+  await expect(page.getByText("Palavra em avaliação")).toBeVisible();
+  await expect(page.getByText("Jogada aguardando decisão da mesa")).toBeVisible();
+  await expect(page.getByTestId("pending-vote-word")).toContainText("T");
+  await expect(page.getByTestId("pending-vote-word")).toContainText("S");
+  await expect(page.getByText("T em 8,8")).toBeVisible();
+  await expect(page.getByText("S em 8,9")).toBeVisible();
+  await expect(page.getByText("Autor não vota na própria palavra")).toBeVisible();
+  await expect(page.getByText("O tabuleiro oficial continua intacto")).toBeVisible();
+  await expect(page.getByTestId("board-cell-7-7")).toContainText("T");
+  await expect(page.getByTestId("board-cell-7-8")).toContainText("S");
+}
+
 test.describe("browser validation scenarios", () => {
   test("runs invite, lobby, resume and forfeit flows from the test page", async ({
     page,
@@ -544,25 +592,44 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("board-cell-7-8")).toContainText("A");
   });
 
-  test("sends an unrecognized slot word to pending vote", async ({ page }) => {
+  test("sends an unrecognized slot word to pending vote and rejects it as another player", async ({
+    page,
+  }) => {
     const scenario = createSlotMoveScenario("TS");
 
-    await openPreparedMatch(page, scenario);
-
-    await placeTileThroughSlot(page, scenario.tileIds.T, 1, 7, 7);
-    await placeTileThroughSlot(page, scenario.tileIds.S, 2, 7, 8);
-
-    await expect(page.getByText("2 peças em preparo")).toBeVisible();
-    await expect(page.getByText("Palavra principal: TS")).toBeVisible();
-    await expect(page.getByText("vai para votacao")).toBeVisible();
-
-    await page.getByRole("button", { name: "Confirmar jogada" }).click();
+    await submitUnrecognizedTsToPendingVote(page, scenario);
+    await openMatchAsUser(page, scenario.matchId, scenario.otherUserId);
 
     await expect(page.getByText("A mesa está em votação")).toBeVisible();
-    await expect(page.getByText("Jogada aguardando decisão da mesa")).toBeVisible();
-    await expect(page.getByText("Palavra principal:")).toBeVisible();
-    await expect(page.getByText("TS", { exact: true })).toBeVisible();
-    await expect(page.getByText("O tabuleiro oficial continua intacto")).toBeVisible();
+    await expect(page.getByText("Você pode votar porque não é o autor desta jogada.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Aceitar palavra" })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Rejeitar palavra" })).toBeEnabled();
+
+    await page.getByRole("button", { name: "Rejeitar palavra" }).click();
+
+    await expect(page.getByTestId("vote-resolution-message")).toContainText(
+      "Palavra rejeitada. O turno voltou ao autor."
+    );
+    await expect(page.getByText("Aguardando o outro jogador")).toBeVisible();
+    await expect(page.getByTestId("pending-vote-panel")).toHaveCount(0);
+  });
+
+  test("accepts an unrecognized slot word as another player", async ({ page }) => {
+    const scenario = createSlotMoveScenario("TS");
+
+    await submitUnrecognizedTsToPendingVote(page, scenario);
+    await openMatchAsUser(page, scenario.matchId, scenario.otherUserId);
+
+    await expect(page.getByText("A mesa está em votação")).toBeVisible();
+    await expect(page.getByText("Você pode votar porque não é o autor desta jogada.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Aceitar palavra" }).click();
+
+    await expect(page.getByTestId("vote-resolution-message")).toContainText(
+      "Palavra aceita. O tabuleiro oficial foi atualizado."
+    );
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+    await expect(page.getByTestId("pending-vote-panel")).toHaveCount(0);
     await expect(page.getByTestId("board-cell-7-7")).toContainText("T");
     await expect(page.getByTestId("board-cell-7-8")).toContainText("S");
   });

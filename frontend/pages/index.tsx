@@ -96,6 +96,10 @@ type RpcEasyBotTurnResult = {
   status?: string;
 };
 
+type RpcVoteResult = {
+  status?: string;
+};
+
 const DEFAULT_RACK_SLOT_IDS = ["__slot__:1", "__slot__:2", "__slot__:3"] as const;
 const INSERTION_TARGET_PREFIX = "__insert__:";
 const DECLARED_LETTER_SPECIAL_TYPES = new Set([
@@ -110,6 +114,28 @@ function normalizeSpecialType(specialType?: string | null): string {
 
 function requiresDeclaredLetter(specialType?: string | null): boolean {
   return DECLARED_LETTER_SPECIAL_TYPES.has(normalizeSpecialType(specialType));
+}
+
+function formatVoteResolutionMessage(voteResult: unknown): string | null {
+  if (!voteResult || typeof voteResult !== "object") {
+    return null;
+  }
+
+  const status = (voteResult as RpcVoteResult).status;
+
+  if (status === "accepted") {
+    return "Palavra aceita. O tabuleiro oficial foi atualizado.";
+  }
+
+  if (status === "rejected") {
+    return "Palavra rejeitada. O turno voltou ao autor.";
+  }
+
+  if (status === "pending_vote") {
+    return "Voto registrado. Aguardando outros votos.";
+  }
+
+  return null;
 }
 
 function getDeclaredLetterPromptLabel(specialType?: string | null): string {
@@ -419,6 +445,7 @@ export default function HomePage() {
   const [submitResult, setSubmitResult] = useState<unknown | null>(null);
   const [pendingVoteError, setPendingVoteError] = useState<string | null>(null);
   const [voteResult, setVoteResult] = useState<unknown | null>(null);
+  const [voteResolutionMessage, setVoteResolutionMessage] = useState<string | null>(null);
   const [isSubmittingVote, setIsSubmittingVote] = useState(false);
   const [pendingVoteContext, setPendingVoteContext] = useState<unknown | null>(null);
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
@@ -973,6 +1000,7 @@ export default function HomePage() {
     setErrorMessage(null);
     setSubmitResult(null);
     setVoteResult(null);
+    setVoteResolutionMessage(null);
     setPendingVoteError(null);
     setBotActionError(null);
     setSelectedTileId(null);
@@ -1629,6 +1657,7 @@ export default function HomePage() {
     setIsSubmittingMove(true);
     setErrorMessage(null);
     setSubmitResult(null);
+    setVoteResolutionMessage(null);
 
     try {
       const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
@@ -1723,6 +1752,7 @@ export default function HomePage() {
     setIsSubmittingVote(true);
     setErrorMessage(null);
     setVoteResult(null);
+    setVoteResolutionMessage(null);
 
     try {
       const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
@@ -1743,6 +1773,7 @@ export default function HomePage() {
       }
 
       setVoteResult(data ?? null);
+      setVoteResolutionMessage(formatVoteResolutionMessage(data));
 
       const refreshedData = await loadMatchBootstrap({
         matchId: matchIdInput,
@@ -2564,6 +2595,7 @@ export default function HomePage() {
         canCurrentViewerVote={canCurrentViewerVote}
         isSubmittingVote={isSubmittingVote}
         voteResult={voteResult}
+        voteResolutionMessage={voteResolutionMessage}
         showDebug={showDebug}
         botActionMessage={botActionMessage}
         botActionError={botActionError}

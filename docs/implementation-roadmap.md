@@ -34,7 +34,7 @@ Leitura atual do projeto:
 | Lobby, convite e retomada | Baseline operacional implementada e validada |
 | Primeira tela jogavel | Tranche de produto iniciada: hero, mesa jogavel, placar, guia de acao e rack com linguagem menos tecnica |
 | Rack e composicao por slots | Implementado como superficie oficial de preparo no frontend |
-| Votacao | Funcional, mas ainda precisa UX de produto |
+| Votacao | Funcional; tranche de UX de produto iniciada com painel de palavra, coordenadas e regra autor/votante |
 | Dicionario | Contrato por idioma/fonte/ativo consolidado; seeds pequenos para QA; fontes LibreOffice Hunspell pt-BR e pt-PT validadas como candidatas tecnicas de amostra |
 | Automacao | Build, Playwright e suite SQL existem e passam na baseline recente |
 | Bots de teste e simulacao | Baseline alta: contrato, runner e sete cenarios deterministicos validados |
@@ -182,6 +182,27 @@ Cobertura desejada adicional:
 - outro jogador rejeita
 - outro jogador aceita
 - board e rack refletem corretamente cada decisao
+
+Atualizacao de execucao - 2026-06-22:
+
+- painel de votacao passou a exibir `Palavra em avaliação`
+- palavra principal renderizada como pecas visuais
+- coordenadas das pecas propostas aparecem no painel
+- UI explica quando o autor nao pode votar na propria palavra
+- botoes passaram a usar linguagem de produto: `Aceitar palavra` e
+  `Rejeitar palavra`
+- fluxo browser agora alterna do autor para outro jogador, rejeita a palavra e
+  mostra `Palavra rejeitada. O turno voltou ao autor.` fora do painel de
+  votacao
+- fluxo browser tambem aceita a palavra como outro jogador, mostra
+  `Palavra aceita. O tabuleiro oficial foi atualizado.` e confirma retorno para
+  jogo ativo
+
+Pendencias restantes desta fase:
+
+- cobrir mais de um ciclo consecutivo de `pending_vote`
+- validar visualmente rack/board depois de aceite e rejeicao em tranches mais
+  longas de jogo
 
 ---
 

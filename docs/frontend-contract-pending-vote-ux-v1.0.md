@@ -1,5 +1,5 @@
 # PATXANGA — FRONTEND CONTRACT: PENDING VOTE UX
-Version: 1.0
+Version: 1.2
 Status: ACTIVE OPERATIONAL BASELINE
 
 Base normativa:
@@ -51,6 +51,36 @@ A UI deve conseguir mostrar, no mínimo:
 - autor da jogada pendente
 - indicação clara de que a jogada está em avaliação
 - distinção visual entre estado oficial e estado pendente
+- palavra principal em formato legivel para jogador
+- explicacao clara quando o autor nao pode votar na propria palavra
+- explicacao clara quando o viewer pode votar por nao ser o autor
+- mensagem persistente de resultado apos aceite/rejeicao
+
+## 5.1 Baseline implementada no frontend
+
+Desde a tranche de 2026-06-22, a UI de `voting` exibe:
+
+- painel `Palavra em avaliação`
+- palavra principal em pecas visuais
+- coordenadas das pecas propostas
+- autor da jogada
+- aviso de que o tabuleiro oficial continua intacto
+- mensagem `Autor não vota na própria palavra` quando o viewer e o autor sao o
+  mesmo jogador
+- mensagem `Você pode votar porque não é o autor desta jogada.` quando o
+  viewer pode decidir a votacao
+- botoes de produto `Aceitar palavra` e `Rejeitar palavra`
+- mensagem pos-voto fora do painel de `voting`, incluindo aceite com
+  `Palavra aceita. O tabuleiro oficial foi atualizado.` e rejeicao com
+  `Palavra rejeitada. O turno voltou ao autor.`
+
+## 5.2 Regra de resultado pos-voto
+
+Quando a votacao resolver a jogada, a match deixa de estar em `voting`.
+Portanto, a mensagem de resultado nao pode depender do painel de votacao.
+
+O frontend deve manter uma mensagem de resolucao visivel na tela de jogo apos
+recarregar o bootstrap da partida.
 
 ## 6. Proibição
 

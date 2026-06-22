@@ -626,6 +626,50 @@ Validacao confirmada:
 
 - `cd frontend && npm run build`
 - `cd frontend && npm run lint`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+- `cd frontend && npm run test:e2e`
+- `zsh scripts/test-dictionary-import-tooling.sh`
+- `zsh scripts/test-libreoffice-dictionary-sample.sh`
+
+## 1.14 Atualizacao operacional de continuidade - 2026-06-22 tranche UX votacao
+
+Estado desta frente:
+
+- foco: transformar `pending_vote` em uma experiencia clara de produto
+- arquivos principais: `frontend/components/VotingSection.tsx`,
+  `frontend/components/GamePlayScreen.tsx`, `frontend/pages/index.tsx`,
+  `frontend/tests/browser-validation.spec.ts`,
+  `docs/frontend-contract-pending-vote-ux-v1.0.md`
+
+Implementado nesta tranche:
+
+- painel `Palavra em avaliação`
+- palavra principal renderizada como pecas visuais
+- coordenadas das pecas propostas no painel de votacao
+- explicacao explicita de que autor nao vota na propria palavra
+- botoes renomeados para `Aceitar palavra` e `Rejeitar palavra`
+- mensagem de resultado humanizada para aceite/rejeicao quando houver retorno
+  de voto
+- mensagem persistente de resolucao fora do painel de votacao, porque a match
+  sai de `voting` apos aceite/rejeicao
+- fluxos de outro jogador aceitando e rejeitando foram conectados ao produto
+
+Cobertura ampliada:
+
+- Playwright do fluxo `TS` em `pending_vote` passa a validar painel, palavra,
+  coordenadas e regra de autor sem voto
+- o mesmo fluxo alterna para o outro jogador, rejeita a palavra, valida a
+  mensagem `Palavra rejeitada. O turno voltou ao autor.` e confirma que o
+  painel de votacao saiu da tela
+- fluxo adicional aceita a palavra como outro jogador, valida a mensagem
+  `Palavra aceita. O tabuleiro oficial foi atualizado.`, confirma volta ao jogo
+  ativo e preserva a palavra no board
+
+Validacao confirmada:
+
+- `cd frontend && npm run build`
+- `cd frontend && npm run lint`
 - `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
 
 Observacao:
