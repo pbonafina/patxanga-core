@@ -1,5 +1,5 @@
 # PATXANGA — FRONTEND CONTRACT: RPCs
-Version: 1.1
+Version: 1.2
 Status: ACTIVE OPERATIONAL BASELINE
 Base normativa:
 - Context Snapshot Master v1.6
@@ -32,8 +32,32 @@ Ele não redefine engine, não substitui migrations e não altera a autoridade d
 - `submit_patxanga_pass_turn()`
 - `submit_patxanga_easy_bot_turn()`
 - `submit_patxanga_exchange_tiles()`
+- `get_patxanga_match_bootstrap()`
 
 ## 4. Contrato operacional por RPC
+
+### 4.0 `get_patxanga_match_bootstrap()`
+
+#### Finalidade
+Carregar o estado server-authoritative necessario para renderizar uma partida.
+
+#### Saida esperada
+- `match_id`
+- `language`
+- `status`
+- `board_state`
+- `current_turn_player_id`
+- `turn_number`
+- `winner_player_id`
+- `started_at`
+- `finished_at`
+- `player_context`
+- `players_summary`
+
+#### Regra de produto
+- `language` deve ser exibido pela UI como contexto do dicionario ativo
+- frontend nao escolhe dicionario localmente; ele apenas mostra o idioma da
+  partida e envia jogadas para validacao server-authoritative
 
 ### 4.1 `create_match()`
 

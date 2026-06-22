@@ -33,6 +33,7 @@ interface RpcPlayerContext {
 
 interface RpcMatchBootstrap {
   match_id: string;
+  language?: string;
   status: MatchBootstrap["status"];
   board_state: unknown[][];
   current_turn_player_id: string | null;
@@ -77,6 +78,7 @@ export const realMatchBootstrapService: MatchBootstrapService = {
 
     return {
       matchId: payload.match_id,
+      language: payload.language ?? "pt-BR",
       playerId: payload.player_context?.player_id ?? null,
       status: payload.status,
       currentTurnPlayerId: payload.current_turn_player_id,

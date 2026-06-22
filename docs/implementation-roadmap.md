@@ -389,6 +389,14 @@ cd frontend
 npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
 ```
 
+Atualizacao de execucao - 2026-06-22:
+
+- feedback do bot passou a diferenciar abertura de encaixe conectado
+- Playwright valida a mensagem `Bot jogou SOL como abertura.`
+- Playwright valida a mensagem `Bot jogou LUA conectando ao tabuleiro.`
+- painel da mesa exibe o idioma como dicionario ativo, conectando bot,
+  preview e votacao ao mesmo contrato lexical
+
 ---
 
 ## 9.1 Frente transversal - Dicionario e palavras reais
@@ -450,6 +458,8 @@ Estado atual:
 - `sql/tests/test_dictionary_imported_words_engine_path.sql` prova que palavras
   importadas alimentam `validate_word`, `preview_move` e `submit_move` sem
   exigir votacao
+- `get_patxanga_match_bootstrap(...)` agora retorna `language`, permitindo que
+  o frontend mostre o dicionario ativo da partida sem inferencia local
 
 Proximos passos:
 

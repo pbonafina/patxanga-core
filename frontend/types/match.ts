@@ -34,6 +34,7 @@ export interface MatchPlayerContext {
 
 export interface MatchBootstrap {
   matchId: string;
+  language: string;
   playerId: string | null;
   status: MatchStatus;
   currentTurnPlayerId: string | null;

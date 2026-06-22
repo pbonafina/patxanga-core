@@ -656,8 +656,14 @@ test.describe("browser validation scenarios", () => {
     await page.getByRole("button", { name: "Abrir partida" }).click();
 
     await expect(page.getByText("bot easy / balanced", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("dictionary-language-badge")).toContainText(
+      "dicionário pt-BR ativo"
+    );
     await expect(page.getByTestId("bot-action-message")).toContainText(
-      "Bot jogou SOL."
+      "Bot jogou SOL como abertura."
+    );
+    await expect(page.getByTestId("game-bot-action-message")).toContainText(
+      "Bot jogou SOL como abertura."
     );
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
     await expect(page.getByTestId("board-cell-7-7")).toContainText("S");
@@ -678,7 +684,10 @@ test.describe("browser validation scenarios", () => {
 
     await expect(page.getByText("bot easy / balanced", { exact: true })).toBeVisible();
     await expect(page.getByTestId("bot-action-message")).toContainText(
-      "Bot jogou LUA."
+      "Bot jogou LUA conectando ao tabuleiro."
+    );
+    await expect(page.getByTestId("game-bot-action-message")).toContainText(
+      "Bot jogou LUA conectando ao tabuleiro."
     );
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
     await expect(page.getByTestId("board-cell-7-9")).toContainText("L");

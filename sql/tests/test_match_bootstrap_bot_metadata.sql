@@ -33,6 +33,10 @@ begin
 
     v_bootstrap := public.get_patxanga_match_bootstrap(v_match_id, v_human_user_id);
 
+    if v_bootstrap->>'language' <> 'pt-BR' then
+        raise exception 'Expected bootstrap language pt-BR, got %', v_bootstrap;
+    end if;
+
     if coalesce((v_bootstrap->'player_context'->>'is_bot')::boolean, true) is not false then
         raise exception 'Expected human player_context.is_bot=false, got %', v_bootstrap;
     end if;

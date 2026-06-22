@@ -701,6 +701,45 @@ Validacao confirmada nesta tranche antes do commit intermediario:
 - `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
 - resultado browser: 10 cenarios passaram
 
+## 1.16 Atualizacao operacional de continuidade - 2026-06-22 tranches bot e dicionario
+
+Estado desta frente:
+
+- foco: executar as tranches 3 e 4 pedidas pelo operador apos o commit
+  intermediario das tranches 1 e 2
+- arquivos principais: `sql/rpc/get_match_bootstrap.sql`,
+  `supabase/migrations/20260622150000_29_match_bootstrap_language.sql`,
+  `frontend/components/GamePlayScreen.tsx`, `frontend/pages/index.tsx`,
+  `frontend/tests/browser-validation.spec.ts`, `docs/frontend-contract-rpcs-v1.0.md`,
+  `docs/07-bot-engine.md`, `docs/implementation-roadmap.md`
+
+Implementado nesta tranche:
+
+- bootstrap de partida passou a retornar `language`
+- frontend passou a carregar `language` no `MatchBootstrap`
+- mesa jogavel passou a exibir `dicionário pt-BR ativo` ou idioma equivalente
+- feedback do bot passou a diferenciar abertura de encaixe conectado:
+  `Bot jogou SOL como abertura.` e
+  `Bot jogou LUA conectando ao tabuleiro.`
+- contrato RPC documentado com `get_patxanga_match_bootstrap(...)` expondo
+  `language`
+- documento de bot atualizado para refletir que o bot `easy` ja tenta encaixe
+  conectado, embora ainda nao tenha repertorio amplo nem Edge Function
+- teste SQL de bootstrap passou a validar `language`
+- Playwright passou a validar badge de dicionario e mensagens de bot por
+  estrategia
+
+Validacao completa confirmada antes do segundo commit:
+
+- `cd frontend && npm run build`
+- `cd frontend && npm run lint`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+- `cd frontend && npm run test:e2e`
+- `zsh scripts/test-dictionary-import-tooling.sh`
+- `zsh scripts/test-libreoffice-dictionary-sample.sh`
+- resultado browser: 10 cenarios passaram
+
 ## 2. Matriz objetiva de avanco
 
 Percentual global estimado nesta leitura: `75%`

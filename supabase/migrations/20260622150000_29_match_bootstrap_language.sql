@@ -1,7 +1,6 @@
 -- ============================================================
 -- PATXANGA - RPC: get_patxanga_match_bootstrap()
--- Version: 1.1
--- Purpose: Return minimal server-authoritative bootstrap payload for frontend
+-- Purpose: expose match language for product dictionary status
 -- ============================================================
 
 create or replace function public.get_patxanga_match_bootstrap(

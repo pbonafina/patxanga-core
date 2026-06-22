@@ -1,5 +1,5 @@
 # PATXANGA — Room Baton Package (Current)
-Generated at: 2026-06-22 15:42:59
+Generated at: 2026-06-22 15:52:10
 
 ## PROMPT INTERNO DE ATIVACAO DE CONTINUIDADE
 
@@ -93,12 +93,21 @@ Resposta obrigatoria da IA apos a frase de retomada:
 
 ### git status --short --branch
 ```
-## develop...origin/develop [ahead 3]
+## develop...origin/develop [ahead 4]
+ M docs/07-bot-engine.md
  M docs/current-development-continuity-spec-v1.0.md
+ M docs/frontend-contract-rpcs-v1.0.md
  M docs/implementation-roadmap.md
  M frontend/components/GamePlayScreen.tsx
+ M frontend/hooks/useMatchBootstrap.ts
+ M frontend/lib/backend/matchBootstrap.mock.ts
+ M frontend/lib/backend/matchBootstrap.real.ts
  M frontend/pages/index.tsx
  M frontend/tests/browser-validation.spec.ts
+ M frontend/types/match.ts
+ M sql/rpc/get_match_bootstrap.sql
+ M sql/tests/test_match_bootstrap_bot_metadata.sql
+?? supabase/migrations/20260622150000_29_match_bootstrap_language.sql
 ```
 
 ### git remote -v
@@ -109,7 +118,8 @@ origin	https://github.com/pbonafina/patxanga-core.git (push)
 
 ### git log --oneline --decorate -n 15
 ```
-7a8e4b6 (HEAD -> develop) feat: complete pending vote player flow
+88054d0 (HEAD -> develop) feat: improve match state UX and long human flow
+7a8e4b6 feat: complete pending vote player flow
 20a59c1 feat: improve playable game experience
 49b5625 feat: add easy bot connected move policy
 7cfd46d (origin/develop, origin/HEAD) Merge pull request #15 from pbonafina/docs/test-program
@@ -123,7 +133,6 @@ f4ada51 test: cover slot submit browser flows
 2d415d9 Merge pull request #11 from pbonafina/feature/lexical-policy-voting-regression
 b71e1b0 test: cover lexical policy voting path
 ece4650 Merge pull request #10 from pbonafina/feature/offline-lexical-policy-boundaries
-c727200 test: cover offline lexical policy boundaries
 ```
 
 ### tail -n 60 ../project-log.md
@@ -2357,7 +2366,7 @@ Fim do documento.
 ## FILE: docs/frontend-contract-rpcs-v1.0.md
 
 # PATXANGA — FRONTEND CONTRACT: RPCs
-Version: 1.1
+Version: 1.2
 Status: ACTIVE OPERATIONAL BASELINE
 Base normativa:
 - Context Snapshot Master v1.6
@@ -2390,8 +2399,32 @@ Ele não redefine engine, não substitui migrations e não altera a autoridade d
 - `submit_patxanga_pass_turn()`
 - `submit_patxanga_easy_bot_turn()`
 - `submit_patxanga_exchange_tiles()`
+- `get_patxanga_match_bootstrap()`
 
 ## 4. Contrato operacional por RPC
+
+### 4.0 `get_patxanga_match_bootstrap()`
+
+#### Finalidade
+Carregar o estado server-authoritative necessario para renderizar uma partida.
+
+#### Saida esperada
+- `match_id`
+- `language`
+- `status`
+- `board_state`
+- `current_turn_player_id`
+- `turn_number`
+- `winner_player_id`
+- `started_at`
+- `finished_at`
+- `player_context`
+- `players_summary`
+
+#### Regra de produto
+- `language` deve ser exibido pela UI como contexto do dicionario ativo
+- frontend nao escolhe dicionario localmente; ele apenas mostra o idioma da
+  partida e envia jogadas para validacao server-authoritative
 
 ### 4.1 `create_match()`
 
@@ -4746,6 +4779,14 @@ cd frontend
 npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
 ```
 
+Atualizacao de execucao - 2026-06-22:
+
+- feedback do bot passou a diferenciar abertura de encaixe conectado
+- Playwright valida a mensagem `Bot jogou SOL como abertura.`
+- Playwright valida a mensagem `Bot jogou LUA conectando ao tabuleiro.`
+- painel da mesa exibe o idioma como dicionario ativo, conectando bot,
+  preview e votacao ao mesmo contrato lexical
+
 ---
 
 ## 9.1 Frente transversal - Dicionario e palavras reais
@@ -4807,6 +4848,8 @@ Estado atual:
 - `sql/tests/test_dictionary_imported_words_engine_path.sql` prova que palavras
   importadas alimentam `validate_word`, `preview_move` e `submit_move` sem
   exigir votacao
+- `get_patxanga_match_bootstrap(...)` agora retorna `language`, permitindo que
+  o frontend mostre o dicionario ativo da partida sem inferencia local
 
 Proximos passos:
 
@@ -5054,15 +5097,19 @@ Ja existe:
 - RPC `submit_patxanga_easy_bot_turn(...)`
 - acao automatica inicial do bot `easy`: tentar abertura valida por dicionario
   ativo antes de passar
+- acao automatica conectada do bot `easy`: tentar uma palavra reconhecida que
+  encaixe em peca ja existente no board antes de passar
 - fallback de passe quando nao ha palavra segura para abertura
-- regressao SQL para `place_word` real e fallback de passe do bot `easy`
-- regressao Playwright para criar humano contra bot e validar jogada real do bot
+- regressao SQL para `place_word` real, encaixe conectado e fallback de passe
+  do bot `easy`
+- regressao Playwright para criar humano contra bot, validar abertura real e
+  validar encaixe conectado do bot
 
 Ainda nao existe:
 
 - engine autonoma de bot
 - Edge Function de bot
-- bot que encaixe palavras em tabuleiro ja ocupado
+- repertorio amplo de encaixes ou selecao de melhor jogada
 
 ---
 
@@ -5932,6 +5979,45 @@ Validacao confirmada nesta tranche antes do commit intermediario:
 
 - `cd frontend && npm run build`
 - `cd frontend && npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium`
+- resultado browser: 10 cenarios passaram
+
+## 1.16 Atualizacao operacional de continuidade - 2026-06-22 tranches bot e dicionario
+
+Estado desta frente:
+
+- foco: executar as tranches 3 e 4 pedidas pelo operador apos o commit
+  intermediario das tranches 1 e 2
+- arquivos principais: `sql/rpc/get_match_bootstrap.sql`,
+  `supabase/migrations/20260622150000_29_match_bootstrap_language.sql`,
+  `frontend/components/GamePlayScreen.tsx`, `frontend/pages/index.tsx`,
+  `frontend/tests/browser-validation.spec.ts`, `docs/frontend-contract-rpcs-v1.0.md`,
+  `docs/07-bot-engine.md`, `docs/implementation-roadmap.md`
+
+Implementado nesta tranche:
+
+- bootstrap de partida passou a retornar `language`
+- frontend passou a carregar `language` no `MatchBootstrap`
+- mesa jogavel passou a exibir `dicionário pt-BR ativo` ou idioma equivalente
+- feedback do bot passou a diferenciar abertura de encaixe conectado:
+  `Bot jogou SOL como abertura.` e
+  `Bot jogou LUA conectando ao tabuleiro.`
+- contrato RPC documentado com `get_patxanga_match_bootstrap(...)` expondo
+  `language`
+- documento de bot atualizado para refletir que o bot `easy` ja tenta encaixe
+  conectado, embora ainda nao tenha repertorio amplo nem Edge Function
+- teste SQL de bootstrap passou a validar `language`
+- Playwright passou a validar badge de dicionario e mensagens de bot por
+  estrategia
+
+Validacao completa confirmada antes do segundo commit:
+
+- `cd frontend && npm run build`
+- `cd frontend && npm run lint`
+- `zsh scripts/run-sql-test-suite.sh all`
+- `zsh scripts/run-bot-simulation.sh all`
+- `cd frontend && npm run test:e2e`
+- `zsh scripts/test-dictionary-import-tooling.sh`
+- `zsh scripts/test-libreoffice-dictionary-sample.sh`
 - resultado browser: 10 cenarios passaram
 
 ## 2. Matriz objetiva de avanco
@@ -11070,6 +11156,10 @@ begin
     perform public.start_patxanga_match(v_match_id);
 
     v_bootstrap := public.get_patxanga_match_bootstrap(v_match_id, v_human_user_id);
+
+    if v_bootstrap->>'language' <> 'pt-BR' then
+        raise exception 'Expected bootstrap language pt-BR, got %', v_bootstrap;
+    end if;
 
     if coalesce((v_bootstrap->'player_context'->>'is_bot')::boolean, true) is not false then
         raise exception 'Expected human player_context.is_bot=false, got %', v_bootstrap;

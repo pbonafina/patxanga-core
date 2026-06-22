@@ -19,6 +19,7 @@ type BoardCell = {
 
 type GamePlayScreenProps = {
   stateLabel: string;
+  matchLanguage: string;
   isWaiting: boolean;
   isActive: boolean;
   isVoting: boolean;
@@ -111,6 +112,7 @@ function formatPlayerCount(value: number): string {
 
 export function GamePlayScreen({
   stateLabel,
+  matchLanguage,
   isWaiting,
   isActive,
   isVoting,
@@ -333,6 +335,20 @@ export function GamePlayScreen({
             </span>
 
             <span
+              data-testid="dictionary-language-badge"
+              style={{
+                padding: "6px 10px",
+                borderRadius: 999,
+                background: "#ecfdf5",
+                fontSize: 13,
+                color: "#166534",
+                fontWeight: 800,
+              }}
+            >
+              dicionário {matchLanguage} ativo
+            </span>
+
+            <span
               style={{
                 padding: "6px 10px",
                 borderRadius: 999,
@@ -460,6 +476,7 @@ export function GamePlayScreen({
 
       {botActionMessage || botActionError || isAutoPlayingBotTurn ? (
         <div
+          data-testid="game-bot-action-message"
           style={{
             marginBottom: 18,
             padding: 14,

@@ -92,6 +92,7 @@ type RpcInvitePlayerResult = {
 type RpcEasyBotTurnResult = {
   bot_action?: "place_word" | "pass";
   main_word?: string | null;
+  bot_strategy?: string | null;
   pass_reason?: string | null;
   status?: string;
 };
@@ -136,6 +137,23 @@ function formatVoteResolutionMessage(voteResult: unknown): string | null {
   }
 
   return null;
+}
+
+function formatBotTurnMessage(botTurnResult: RpcEasyBotTurnResult | null): string {
+  if (botTurnResult?.bot_action === "place_word") {
+    const word = botTurnResult.main_word ?? "uma palavra";
+    if (botTurnResult.bot_strategy === "easy_connected_dictionary_word") {
+      return `Bot jogou ${word} conectando ao tabuleiro.`;
+    }
+
+    return `Bot jogou ${word} como abertura.`;
+  }
+
+  const passReason = botTurnResult?.pass_reason
+    ? ` Motivo: ${botTurnResult.pass_reason}.`
+    : "";
+
+  return `Bot passou o turno automaticamente.${passReason}`;
 }
 
 function getDeclaredLetterPromptLabel(specialType?: string | null): string {
@@ -819,11 +837,7 @@ export default function HomePage() {
 
         const botTurnResult = data as RpcEasyBotTurnResult | null;
 
-        if (botTurnResult?.bot_action === "place_word") {
-          setBotActionMessage(`Bot jogou ${botTurnResult.main_word ?? "uma palavra"}.`);
-        } else {
-          setBotActionMessage("Bot passou o turno automaticamente.");
-        }
+        setBotActionMessage(formatBotTurnMessage(botTurnResult));
       } catch (error) {
         if (!cancelled) {
           setBotActionError(
@@ -2601,6 +2615,7 @@ export default function HomePage() {
 
       <GamePlayScreen
         stateLabel={stateLabel}
+        matchLanguage={resolvedBootstrap.language}
         isWaiting={isWaiting}
         isActive={isActive}
         isVoting={isVoting}

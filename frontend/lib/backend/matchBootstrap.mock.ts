@@ -22,6 +22,7 @@ export const mockMatchBootstrapService: MatchBootstrapService = {
 
     return {
       matchId: normalizedMatchId,
+      language: "pt-BR",
       playerId: normalizedPlayerId,
       status,
       currentTurnPlayerId:

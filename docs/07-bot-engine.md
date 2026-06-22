@@ -84,15 +84,19 @@ Ja existe:
 - RPC `submit_patxanga_easy_bot_turn(...)`
 - acao automatica inicial do bot `easy`: tentar abertura valida por dicionario
   ativo antes de passar
+- acao automatica conectada do bot `easy`: tentar uma palavra reconhecida que
+  encaixe em peca ja existente no board antes de passar
 - fallback de passe quando nao ha palavra segura para abertura
-- regressao SQL para `place_word` real e fallback de passe do bot `easy`
-- regressao Playwright para criar humano contra bot e validar jogada real do bot
+- regressao SQL para `place_word` real, encaixe conectado e fallback de passe
+  do bot `easy`
+- regressao Playwright para criar humano contra bot, validar abertura real e
+  validar encaixe conectado do bot
 
 Ainda nao existe:
 
 - engine autonoma de bot
 - Edge Function de bot
-- bot que encaixe palavras em tabuleiro ja ocupado
+- repertorio amplo de encaixes ou selecao de melhor jogada
 
 ---
 

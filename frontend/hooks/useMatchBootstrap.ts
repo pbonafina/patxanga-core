@@ -5,6 +5,7 @@ export function useMatchBootstrap(initialData?: Partial<MatchBootstrap>) {
   return useMemo<MatchBootstrap>(
     () => ({
       matchId: initialData?.matchId ?? "",
+      language: initialData?.language ?? "pt-BR",
       playerId: initialData?.playerId ?? null,
       status: initialData?.status ?? "waiting",
       currentTurnPlayerId: initialData?.currentTurnPlayerId ?? null,
