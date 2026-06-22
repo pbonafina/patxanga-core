@@ -829,6 +829,7 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("primary-product-actions")).toContainText("Jogar agora");
     await expect(page.getByTestId("primary-product-actions")).toContainText("Treinar contra bot");
     await expect(page.getByTestId("primary-product-actions")).toContainText("Retomar mesa");
+    await expect(page.getByTestId("auth-product-panel")).toContainText("Entre para jogar online");
     await expect(page.getByTestId("advanced-tools-toggle")).toContainText(
       "Mostrar ferramentas avançadas"
     );
@@ -873,6 +874,29 @@ test.describe("browser validation scenarios", () => {
     await page.getByRole("button", { name: "Carregar convites e partidas retomaveis" }).click();
     await page.getByRole("button", { name: "Recusar convite" }).click();
     await expect(page.getByText("Convite recusado com sucesso.")).toBeVisible();
+  });
+
+  test("creates an authenticated session and uses it as the product identity", async ({ page }) => {
+    const email = `patxanga-e2e-${Date.now()}@example.com`;
+
+    await page.goto("/");
+
+    await page.getByTestId("auth-mode-sign-up").click();
+    await page.getByTestId("auth-display-name").fill("Jogador Auth E2E");
+    await page.getByTestId("auth-email").fill(email);
+    await page.getByTestId("auth-password").fill("patxanga123");
+    await page.getByTestId("auth-submit").click();
+
+    await expect(page.getByTestId("auth-session-summary")).toContainText(
+      "Jogador Auth E2E"
+    );
+    await expect(page.getByTestId("auth-message")).toContainText("Conta criada");
+
+    const activeUserId = await page.getByTestId("auth-active-user-id").innerText();
+
+    await page.getByTestId("quick-match-create").click();
+    await expect(page.getByText(`host_user_id: ${activeUserId}`)).toBeVisible();
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
   });
 
   test("associates a local rack slot to the board without affecting gameplay state", async ({

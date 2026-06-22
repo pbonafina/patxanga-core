@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { useMatchBootstrap } from "../hooks/useMatchBootstrap";
 import { loadMatchBootstrap } from "../lib/backend/loadMatchBootstrap";
 import {
@@ -492,6 +493,14 @@ function renderCellBackground(cell: BoardCell, rowIndex: number, colIndex: numbe
 export default function HomePage() {
   const [matchIdInput, setMatchIdInput] = useState("");
   const [playerIdInput, setPlayerIdInput] = useState("");
+  const [authSession, setAuthSession] = useState<Session | null>(null);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authDisplayName, setAuthDisplayName] = useState("");
+  const [authMode, setAuthMode] = useState<"sign_in" | "sign_up">("sign_in");
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [bootstrapData, setBootstrapData] = useState<MatchBootstrap | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmittingMove, setIsSubmittingMove] = useState(false);
@@ -569,6 +578,14 @@ export default function HomePage() {
 
   const resolvedBootstrap = useMatchBootstrap(bootstrapData ?? undefined);
   const { isConfigured } = getSupabaseEnv();
+  const authenticatedUserId = authSession?.user.id ?? null;
+  const authenticatedEmail = authSession?.user.email ?? null;
+  const authenticatedDisplayName =
+    (authSession?.user.user_metadata?.display_name as string | undefined) ??
+    authenticatedEmail ??
+    null;
+  const effectiveProductUserId = authenticatedUserId ?? playerIdInput.trim();
+  const isAuthenticated = Boolean(authenticatedUserId);
 
   const isWaiting = resolvedBootstrap.status === "waiting";
   const isActive = resolvedBootstrap.status === "active";
@@ -906,6 +923,52 @@ export default function HomePage() {
       resetExchangeSelection();
     }
   }, [isPlayersTurn, isActive, isPlayerForfeited, resolvedBootstrap.matchId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateAuthSession() {
+      const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
+      const client = getSupabaseBrowserClient();
+
+      if (!client) {
+        return;
+      }
+
+      const { data } = await client.auth.getSession();
+
+      if (!cancelled) {
+        setAuthSession(data.session ?? null);
+      }
+
+      const {
+        data: { subscription },
+      } = client.auth.onAuthStateChange((_event, session) => {
+        setAuthSession(session);
+        if (session?.user.id) {
+          setPlayerIdInput(session.user.id);
+        }
+      });
+
+      return () => subscription.unsubscribe();
+    }
+
+    let unsubscribe: (() => void) | undefined;
+    void hydrateAuthSession().then((nextUnsubscribe) => {
+      unsubscribe = nextUnsubscribe;
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (authenticatedUserId) {
+      setPlayerIdInput(authenticatedUserId);
+    }
+  }, [authenticatedUserId]);
 
   useEffect(() => {
     if (
@@ -1449,6 +1512,85 @@ export default function HomePage() {
     }
   }
 
+  async function handleAuthSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsAuthLoading(true);
+    setAuthError(null);
+    setAuthMessage(null);
+
+    try {
+      const client = await getConfiguredBrowserClient();
+      const email = authEmail.trim();
+      const password = authPassword;
+
+      if (!email || !password) {
+        throw new Error("Informe email e senha para continuar.");
+      }
+
+      const result =
+        authMode === "sign_up"
+          ? await client.auth.signUp({
+              email,
+              password,
+              options: {
+                data: {
+                  display_name: authDisplayName.trim() || email,
+                },
+              },
+            })
+          : await client.auth.signInWithPassword({
+              email,
+              password,
+            });
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      if (result.data.session) {
+        setAuthSession(result.data.session);
+        setPlayerIdInput(result.data.session.user.id);
+      }
+
+      setAuthPassword("");
+      setAuthMessage(
+        authMode === "sign_up"
+          ? "Conta criada e sessão iniciada para jogar."
+          : "Sessão iniciada para jogar."
+      );
+    } catch (error) {
+      setAuthError(
+        error instanceof Error ? error.message : "Falha na autenticação."
+      );
+    } finally {
+      setIsAuthLoading(false);
+    }
+  }
+
+  async function handleSignOut() {
+    setIsAuthLoading(true);
+    setAuthError(null);
+    setAuthMessage(null);
+
+    try {
+      const client = await getConfiguredBrowserClient();
+      const { error } = await client.auth.signOut();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setAuthSession(null);
+      setAuthMessage("Sessão encerrada.");
+    } catch (error) {
+      setAuthError(
+        error instanceof Error ? error.message : "Falha ao encerrar sessão."
+      );
+    } finally {
+      setIsAuthLoading(false);
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await openMatchSession(matchIdInput, playerIdInput);
@@ -1462,12 +1604,12 @@ export default function HomePage() {
     try {
       const client = await getConfiguredBrowserClient();
 
-      const hostUserId = crypto.randomUUID();
+      const hostUserId = authenticatedUserId ?? crypto.randomUUID();
       const guestUserId = crypto.randomUUID();
 
       const { data: matchId, error: createError } = await client.rpc("create_patxanga_match", {
         p_host_user_id: hostUserId,
-        p_host_guest_name: "Host Local",
+        p_host_guest_name: authenticatedDisplayName ?? "Host Local",
         p_language: quickMatchLanguage,
         p_match_mode: "synchronous",
         p_max_players: 2,
@@ -1480,7 +1622,7 @@ export default function HomePage() {
       const { error: joinError } = await client.rpc("join_patxanga_match", {
         p_match_id: matchId,
         p_user_id: guestUserId,
-        p_guest_name: "Guest Local",
+        p_guest_name: authenticatedUserId ? "Convidado Local" : "Guest Local",
         p_is_bot: false,
         p_bot_level: null,
         p_bot_profile: null,
@@ -1532,12 +1674,12 @@ export default function HomePage() {
     try {
       const client = await getConfiguredBrowserClient();
 
-      const hostUserId = crypto.randomUUID();
+      const hostUserId = authenticatedUserId ?? crypto.randomUUID();
       const botUserId = crypto.randomUUID();
 
       const { data: matchId, error: createError } = await client.rpc("create_patxanga_match", {
         p_host_user_id: hostUserId,
-        p_host_guest_name: "Humano Local",
+        p_host_guest_name: authenticatedDisplayName ?? "Humano Local",
         p_language: quickMatchLanguage,
         p_match_mode: "synchronous",
         p_max_players: 2,
@@ -1661,10 +1803,10 @@ export default function HomePage() {
   }
 
   async function handleLoadSessionLists() {
-    const userId = playerIdInput.trim();
+    const userId = effectiveProductUserId;
 
     if (!userId) {
-      setSessionListsError("Informe um user_id para carregar convites e partidas retomaveis.");
+      setSessionListsError("Entre com sua conta ou informe um user_id em ferramentas avancadas.");
       setSessionListsLoaded(false);
       setPendingInvites([]);
       setResumableMatches([]);
@@ -1699,10 +1841,10 @@ export default function HomePage() {
   }
 
   async function handleResumeListedMatch(matchId: string) {
-    const userId = playerIdInput.trim();
+    const userId = effectiveProductUserId;
 
     if (!userId) {
-      setSessionListsError("Informe um user_id para retomar a partida.");
+      setSessionListsError("Entre com sua conta ou informe um user_id em ferramentas avancadas.");
       return;
     }
 
@@ -1734,10 +1876,10 @@ export default function HomePage() {
   }
 
   async function handleAcceptInvite(inviteId: string) {
-    const userId = playerIdInput.trim();
+    const userId = effectiveProductUserId;
 
     if (!userId) {
-      setSessionListsError("Informe um user_id para aceitar o convite.");
+      setSessionListsError("Entre com sua conta ou informe um user_id em ferramentas avancadas.");
       return;
     }
 
@@ -1765,10 +1907,10 @@ export default function HomePage() {
   }
 
   async function handleDeclineInvite(inviteId: string) {
-    const userId = playerIdInput.trim();
+    const userId = effectiveProductUserId;
 
     if (!userId) {
-      setSessionListsError("Informe um user_id para recusar o convite.");
+      setSessionListsError("Entre com sua conta ou informe um user_id em ferramentas avancadas.");
       return;
     }
 
@@ -2465,8 +2607,9 @@ export default function HomePage() {
               {isConfigured ? "Backend real conectado" : "Modo local de fallback"}
             </div>
             <div style={{ marginTop: 8, fontSize: 13, color: "#ffedd5", lineHeight: 1.45 }}>
-              A sessão ainda usa <strong>user_id</strong> para localizar o jogador correto da
-              partida.
+              {isAuthenticated
+                ? "Sessão autenticada pronta para convites, retomada e criação de mesas."
+                : "Entre para usar convites e retomada sem copiar identificadores."}
             </div>
             <button
               type="button"
@@ -2486,6 +2629,185 @@ export default function HomePage() {
             </button>
           </div>
         </div>
+      </section>
+
+      <section
+        data-testid="auth-product-panel"
+        style={{
+          marginTop: 24,
+          padding: 20,
+          border: "1px solid #c7d2fe",
+          borderRadius: 22,
+          background:
+            "radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 32%), linear-gradient(135deg, #eef2ff 0%, #ffffff 100%)",
+          boxShadow: "0 12px 30px rgba(30, 64, 175, 0.08)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ maxWidth: 620 }}>
+            <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 1.2, textTransform: "uppercase", color: "#3730a3" }}>
+              Conta Patxanga
+            </div>
+            <h2 style={{ margin: "8px 0 6px" }}>
+              {isAuthenticated ? "Sessão pronta para jogar" : "Entre para jogar online"}
+            </h2>
+            <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.5 }}>
+              A conta passa a ser a identidade principal para criar mesas, receber convites,
+              retomar partidas e substituir o uso manual de UUID no fluxo comum.
+            </p>
+          </div>
+
+          {isAuthenticated ? (
+            <div
+              style={{
+                minWidth: 280,
+                padding: 14,
+                borderRadius: 16,
+                border: "1px solid #a5b4fc",
+                background: "#ffffff",
+                color: "#1e1b4b",
+              }}
+            >
+              <div data-testid="auth-session-summary" style={{ fontWeight: 900 }}>
+                {authenticatedDisplayName ?? "Usuário autenticado"}
+              </div>
+              <div style={{ marginTop: 6, fontSize: 13, color: "#4338ca" }}>
+                user_id ativo: <code data-testid="auth-active-user-id">{authenticatedUserId}</code>
+              </div>
+              <button
+                type="button"
+                data-testid="auth-sign-out"
+                onClick={handleSignOut}
+                disabled={isAuthLoading}
+                style={{
+                  marginTop: 12,
+                  padding: "10px 14px",
+                  cursor: isAuthLoading ? "not-allowed" : "pointer",
+                }}
+              >
+                {isAuthLoading ? "Encerrando..." : "Sair"}
+              </button>
+            </div>
+          ) : (
+            <form
+              data-testid="auth-form"
+              onSubmit={handleAuthSubmit}
+              style={{
+                minWidth: 300,
+                display: "grid",
+                gap: 10,
+                padding: 14,
+                borderRadius: 16,
+                border: "1px solid #c7d2fe",
+                background: "#ffffff",
+              }}
+            >
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  data-testid="auth-mode-sign-in"
+                  onClick={() => setAuthMode("sign_in")}
+                  style={{
+                    padding: "8px 11px",
+                    borderRadius: 999,
+                    border: "1px solid #a5b4fc",
+                    background: authMode === "sign_in" ? "#3730a3" : "#ffffff",
+                    color: authMode === "sign_in" ? "#ffffff" : "#3730a3",
+                    cursor: "pointer",
+                    fontWeight: 800,
+                  }}
+                >
+                  Entrar
+                </button>
+                <button
+                  type="button"
+                  data-testid="auth-mode-sign-up"
+                  onClick={() => setAuthMode("sign_up")}
+                  style={{
+                    padding: "8px 11px",
+                    borderRadius: 999,
+                    border: "1px solid #a5b4fc",
+                    background: authMode === "sign_up" ? "#3730a3" : "#ffffff",
+                    color: authMode === "sign_up" ? "#ffffff" : "#3730a3",
+                    cursor: "pointer",
+                    fontWeight: 800,
+                  }}
+                >
+                  Criar conta
+                </button>
+              </div>
+
+              {authMode === "sign_up" ? (
+                <label style={{ display: "grid", gap: 5, fontSize: 13, fontWeight: 800 }}>
+                  Nome na mesa
+                  <input
+                    data-testid="auth-display-name"
+                    value={authDisplayName}
+                    onChange={(event) => setAuthDisplayName(event.target.value)}
+                    placeholder="ex: Paulo"
+                    style={{ padding: 9, borderRadius: 10, border: "1px solid #c7d2fe" }}
+                  />
+                </label>
+              ) : null}
+
+              <label style={{ display: "grid", gap: 5, fontSize: 13, fontWeight: 800 }}>
+                Email
+                <input
+                  data-testid="auth-email"
+                  type="email"
+                  value={authEmail}
+                  onChange={(event) => setAuthEmail(event.target.value)}
+                  placeholder="voce@example.com"
+                  style={{ padding: 9, borderRadius: 10, border: "1px solid #c7d2fe" }}
+                />
+              </label>
+
+              <label style={{ display: "grid", gap: 5, fontSize: 13, fontWeight: 800 }}>
+                Senha
+                <input
+                  data-testid="auth-password"
+                  type="password"
+                  value={authPassword}
+                  onChange={(event) => setAuthPassword(event.target.value)}
+                  placeholder="mínimo 6 caracteres"
+                  style={{ padding: 9, borderRadius: 10, border: "1px solid #c7d2fe" }}
+                />
+              </label>
+
+              <button
+                type="submit"
+                data-testid="auth-submit"
+                disabled={!isConfigured || isAuthLoading}
+                style={{
+                  padding: "10px 14px",
+                  cursor: !isConfigured || isAuthLoading ? "not-allowed" : "pointer",
+                  borderRadius: 12,
+                  border: "1px solid #3730a3",
+                  background: "#4f46e5",
+                  color: "#ffffff",
+                  fontWeight: 900,
+                }}
+              >
+                {isAuthLoading
+                  ? "Processando..."
+                  : authMode === "sign_up"
+                    ? "Criar conta e entrar"
+                    : "Entrar"}
+              </button>
+            </form>
+          )}
+        </div>
+
+        {authMessage ? (
+          <p data-testid="auth-message" style={{ margin: "12px 0 0", color: "#166534", fontWeight: 800 }}>
+            {authMessage}
+          </p>
+        ) : null}
+        {authError ? (
+          <p data-testid="auth-error" style={{ margin: "12px 0 0", color: "#b00020", fontWeight: 800 }}>
+            {authError}
+          </p>
+        ) : null}
       </section>
 
       <section
@@ -2512,7 +2834,7 @@ export default function HomePage() {
           },
           {
             title: "Retomar mesa",
-            body: "Use o user_id da sessão para listar convites e partidas retomáveis.",
+            body: "Entre com sua conta para listar convites e partidas retomáveis.",
             tone: "#9a3412",
             bg: "#fff7ed",
           },
