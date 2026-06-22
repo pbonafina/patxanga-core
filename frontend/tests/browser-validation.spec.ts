@@ -856,28 +856,29 @@ test.describe("browser validation scenarios", () => {
 
     await page.getByRole("button", { name: "Carregar convites e partidas retomaveis" }).click();
     await page.getByRole("button", { name: "Aceitar convite" }).click();
-    await expect(page.getByText("Convite aceito. A partida foi aberta nesta sessão.")).toBeVisible();
+    await expect(page.getByText("Convite aceito. A partida foi aberta nesta sessão.").first()).toBeVisible();
 
     await page.getByRole("button", { name: "Abrir como host" }).click();
     await page.getByRole("button", { name: "Iniciar partida do lobby" }).click();
-    await expect(page.getByText("Lobby iniciado com sucesso.")).toBeVisible();
+    await expect(page.getByText("Lobby iniciado com sucesso.").first()).toBeVisible();
 
     await page.getByRole("button", { name: "Abrir como guest" }).click();
     await page.getByRole("button", { name: "Carregar convites e partidas retomaveis" }).click();
     await page.getByRole("button", { name: "Retomar partida" }).click();
-    await expect(page.getByText("Partida retomada com sucesso.")).toBeVisible();
+    await expect(page.getByText("Partida retomada com sucesso.").first()).toBeVisible();
 
     await page.getByRole("button", { name: "Desistir da partida" }).click();
-    await expect(page.getByText("Desistência registrada com sucesso.")).toBeVisible();
+    await expect(page.getByText("Desistência registrada com sucesso.").first()).toBeVisible();
 
     await scenarioBCard.getByTestId("browser-scenario-declineInvite-use-guest").click();
     await page.getByRole("button", { name: "Carregar convites e partidas retomaveis" }).click();
     await page.getByRole("button", { name: "Recusar convite" }).click();
-    await expect(page.getByText("Convite recusado com sucesso.")).toBeVisible();
+    await expect(page.getByText("Convite recusado com sucesso.").first()).toBeVisible();
   });
 
   test("creates an authenticated session and uses it as the product identity", async ({ page }) => {
     const email = `patxanga-e2e-${Date.now()}@example.com`;
+    const invitedUserId = crypto.randomUUID();
 
     await page.goto("/");
 
@@ -894,9 +895,16 @@ test.describe("browser validation scenarios", () => {
 
     const activeUserId = await page.getByTestId("auth-active-user-id").innerText();
 
+    await page.getByTestId("invite-target-user-id").fill(invitedUserId);
+    await page.getByTestId("invite-lobby-create").click();
+    await expect(page.getByTestId("invite-lobby-message")).toContainText(
+      "Mesa criada e convite enviado"
+    );
+    await expect(page.getByText("Pré-jogo pronto para iniciar")).toBeVisible();
+
     await page.getByTestId("quick-match-create").click();
     await expect(page.getByText(`host_user_id: ${activeUserId}`)).toBeVisible();
-    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+    await expect(page.getByText("Partida ativa")).toBeVisible();
   });
 
   test("associates a local rack slot to the board without affecting gameplay state", async ({

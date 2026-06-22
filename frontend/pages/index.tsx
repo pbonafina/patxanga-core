@@ -536,6 +536,10 @@ export default function HomePage() {
     language: MatchLanguage;
   } | null>(null);
   const [quickMatchLanguage, setQuickMatchLanguage] = useState<MatchLanguage>("pt-BR");
+  const [inviteTargetUserId, setInviteTargetUserId] = useState("");
+  const [isCreatingInviteLobby, setIsCreatingInviteLobby] = useState(false);
+  const [inviteLobbyMessage, setInviteLobbyMessage] = useState<string | null>(null);
+  const [inviteLobbyError, setInviteLobbyError] = useState<string | null>(null);
   const [browserValidationScenarios, setBrowserValidationScenarios] = useState<
     BrowserValidationScenario[]
   >([]);
@@ -1757,6 +1761,95 @@ export default function HomePage() {
       );
     } finally {
       setIsCreatingBotMatch(false);
+    }
+  }
+
+  async function handleCreateInviteLobby() {
+    setInviteLobbyError(null);
+    setInviteLobbyMessage(null);
+    setQuickMatchError(null);
+
+    if (!authenticatedUserId) {
+      setInviteLobbyError("Entre com sua conta antes de criar uma mesa por convite.");
+      return;
+    }
+
+    const normalizedInviteUserId = inviteTargetUserId.trim();
+
+    if (!normalizedInviteUserId) {
+      setInviteLobbyError("Informe o user_id do convidado nesta fase.");
+      return;
+    }
+
+    if (normalizedInviteUserId === authenticatedUserId) {
+      setInviteLobbyError("Convide outro usuário; o host já está na mesa.");
+      return;
+    }
+
+    setIsCreatingInviteLobby(true);
+
+    try {
+      const client = await getConfiguredBrowserClient();
+
+      const { data: lobbyData, error: lobbyError } = await client.rpc(
+        "create_patxanga_my_match_lobby",
+        {
+          p_host_guest_name: authenticatedDisplayName ?? "Host Patxanga",
+          p_language: quickMatchLanguage,
+          p_match_mode: "synchronous",
+          p_max_players: 4,
+        }
+      );
+
+      if (lobbyError) {
+        throw new Error(lobbyError.message);
+      }
+
+      if (!lobbyData) {
+        throw new Error("Backend não retornou dados do lobby criado.");
+      }
+
+      const createResult = lobbyData as RpcCreateMatchLobbyResult;
+
+      const { data: inviteData, error: inviteError } = await client.rpc(
+        "invite_patxanga_my_player",
+        {
+          p_match_id: createResult.match_id,
+          p_invited_user_id: normalizedInviteUserId,
+          p_expires_at: null,
+        }
+      );
+
+      if (inviteError) {
+        throw new Error(inviteError.message);
+      }
+
+      if (!inviteData) {
+        throw new Error("Backend não retornou dados do convite criado.");
+      }
+
+      const nextQuickMatchSession = {
+        matchId: createResult.match_id,
+        hostUserId: authenticatedUserId,
+        guestUserId: normalizedInviteUserId,
+        opponentIsBot: false,
+        language: quickMatchLanguage,
+      };
+
+      setQuickMatchSession(nextQuickMatchSession);
+      setSessionSwitchDraft(nextQuickMatchSession);
+      setSessionSwitchError(null);
+      setMatchIdInput(createResult.match_id);
+      setPlayerIdInput(authenticatedUserId);
+      setInviteLobbyMessage("Mesa criada e convite enviado. Aguardando aceite do convidado.");
+      await openMatchSession(createResult.match_id, authenticatedUserId);
+      await handleLoadSessionLists();
+    } catch (error) {
+      setInviteLobbyError(
+        error instanceof Error ? error.message : "Falha ao criar mesa por convite."
+      );
+    } finally {
+      setIsCreatingInviteLobby(false);
     }
   }
 
@@ -3083,6 +3176,195 @@ export default function HomePage() {
           <p data-testid="bot-action-error" style={{ marginTop: 12, color: "#b00020" }}>
             <strong>Erro do bot:</strong> {botActionError}
           </p>
+        ) : null}
+      </section>
+
+      <section
+        data-testid="invite-lobby-product-panel"
+        style={{
+          marginTop: 24,
+          padding: 20,
+          border: "1px solid #bbf7d0",
+          borderRadius: 22,
+          background:
+            "radial-gradient(circle at top right, rgba(34, 197, 94, 0.12), transparent 30%), linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)",
+          boxShadow: "0 12px 30px rgba(21, 128, 61, 0.08)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ maxWidth: 650 }}>
+            <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 1.2, textTransform: "uppercase", color: "#166534" }}>
+              Multiplayer humano
+            </div>
+            <h2 style={{ margin: "8px 0 6px" }}>Criar mesa por convite</h2>
+            <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.5 }}>
+              Cria um lobby real, envia convite nominal e mantém a mesa aguardando o aceite do
+              convidado. Nesta fase o convite ainda usa <strong>user_id</strong>; a busca por
+              email/nome entra na próxima camada de diretório.
+            </p>
+          </div>
+          <div
+            style={{
+              alignSelf: "flex-start",
+              padding: "6px 10px",
+              borderRadius: 999,
+              background: isAuthenticated ? "#dcfce7" : "#fee2e2",
+              color: isAuthenticated ? "#166534" : "#991b1b",
+              fontSize: 13,
+              fontWeight: 900,
+            }}
+          >
+            {isAuthenticated ? "conta pronta" : "login necessário"}
+          </div>
+        </div>
+
+        <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <label style={{ display: "grid", gap: 6, minWidth: 320, fontSize: 13, fontWeight: 800 }}>
+            user_id do convidado
+            <input
+              data-testid="invite-target-user-id"
+              value={inviteTargetUserId}
+              onChange={(event) => setInviteTargetUserId(event.target.value)}
+              placeholder="UUID do usuário convidado"
+              style={{ padding: 10, borderRadius: 10, border: "1px solid #86efac" }}
+            />
+          </label>
+
+          <button
+            type="button"
+            data-testid="invite-lobby-create"
+            onClick={handleCreateInviteLobby}
+            disabled={!isAuthenticated || isCreatingInviteLobby}
+            style={{
+              padding: "11px 15px",
+              cursor: !isAuthenticated || isCreatingInviteLobby ? "not-allowed" : "pointer",
+              borderRadius: 12,
+              border: "1px solid #15803d",
+              background: "#16a34a",
+              color: "#ffffff",
+              fontWeight: 900,
+            }}
+          >
+            {isCreatingInviteLobby ? "Criando mesa..." : "Criar lobby e convidar"}
+          </button>
+        </div>
+
+        {inviteLobbyMessage ? (
+          <p data-testid="invite-lobby-message" style={{ margin: "12px 0 0", color: "#166534", fontWeight: 800 }}>
+            {inviteLobbyMessage}
+          </p>
+        ) : null}
+        {inviteLobbyError ? (
+          <p data-testid="invite-lobby-error" style={{ margin: "12px 0 0", color: "#b00020", fontWeight: 800 }}>
+            {inviteLobbyError}
+          </p>
+        ) : null}
+      </section>
+
+      <section
+        data-testid="product-session-center"
+        style={{
+          marginTop: 24,
+          padding: 20,
+          border: "1px solid #fed7aa",
+          borderRadius: 22,
+          background: "linear-gradient(135deg, #fff7ed 0%, #ffffff 100%)",
+          boxShadow: "0 12px 30px rgba(154, 52, 18, 0.08)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 1.2, textTransform: "uppercase", color: "#9a3412" }}>
+              Central de mesas
+            </div>
+            <h2 style={{ margin: "8px 0 6px" }}>Convites e partidas retomáveis</h2>
+            <p style={{ margin: 0, color: "#4b5563" }}>
+              Usa a conta autenticada para buscar o que precisa de ação do jogador.
+            </p>
+          </div>
+          <button
+            type="button"
+            data-testid="product-session-list-load"
+            onClick={handleLoadSessionLists}
+            disabled={!effectiveProductUserId || isLoadingSessionLists}
+            style={{
+              padding: "10px 14px",
+              cursor: !effectiveProductUserId || isLoadingSessionLists ? "not-allowed" : "pointer",
+              alignSelf: "flex-start",
+            }}
+          >
+            {isLoadingSessionLists ? "Atualizando..." : "Atualizar minha central"}
+          </button>
+        </div>
+
+        {sessionListsError ? (
+          <p style={{ marginTop: 12, color: "#b00020", fontWeight: 800 }}>
+            {sessionListsError}
+          </p>
+        ) : null}
+        {sessionActionMessage ? (
+          <p style={{ marginTop: 12, color: "#166534", fontWeight: 800 }}>
+            {sessionActionMessage}
+          </p>
+        ) : null}
+
+        {sessionListsLoaded ? (
+          <div style={{ marginTop: 14, display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+            <div
+              data-testid="product-pending-invites-summary"
+              style={{ padding: 14, borderRadius: 16, border: "1px solid #bbf7d0", background: "#f0fdf4" }}
+            >
+              <strong>{pendingInvites.length}</strong> convite{pendingInvites.length === 1 ? "" : "s"} pendente{pendingInvites.length === 1 ? "" : "s"}
+              <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+                {pendingInvites.slice(0, 3).map((invite) => (
+                  <div key={invite.inviteId} style={{ display: "grid", gap: 6, fontSize: 13 }}>
+                    <span>Mesa {invite.language} · {invite.lobbyStatus}</span>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        onClick={() => handleAcceptInvite(invite.inviteId)}
+                        disabled={inviteActionInFlightId === invite.inviteId || isLoading}
+                        style={{ padding: "8px 10px", cursor: "pointer" }}
+                      >
+                        Aceitar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeclineInvite(invite.inviteId)}
+                        disabled={inviteActionInFlightId === invite.inviteId || isLoading}
+                        style={{ padding: "8px 10px", cursor: "pointer" }}
+                      >
+                        Recusar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div
+              data-testid="product-resumable-matches-summary"
+              style={{ padding: 14, borderRadius: 16, border: "1px solid #bfdbfe", background: "#eff6ff" }}
+            >
+              <strong>{resumableMatches.length}</strong>{" "}
+              {resumableMatches.length === 1 ? "partida retomável" : "partidas retomáveis"}
+              <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+                {resumableMatches.slice(0, 3).map((match) => (
+                  <div key={`${match.matchId}-${match.playerId}`} style={{ display: "grid", gap: 6, fontSize: 13 }}>
+                    <span>{match.displayName} · turno {match.turnNumber} · {match.matchStatus}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleResumeListedMatch(match.matchId)}
+                      disabled={isLoading}
+                      style={{ width: 130, padding: "8px 10px", cursor: isLoading ? "not-allowed" : "pointer" }}
+                    >
+                      Retomar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         ) : null}
       </section>
 
