@@ -1033,6 +1033,8 @@ export default function HomePage() {
     setVoteResolutionMessage(null);
     setPendingVoteError(null);
     setBotActionError(null);
+    setBotActionMessage(null);
+    setIsAutoPlayingBotTurn(false);
     setTurnActionMessage(null);
     setSelectedTileId(null);
     setSelectedTileIds([]);
@@ -1045,6 +1047,8 @@ export default function HomePage() {
     setLocalRackSlotTileAssignments({});
     setLocalRackSlotAssociations({});
     setMovePreview(null);
+    botAutoActionInFlightRef.current = false;
+    botAutoActionKeyRef.current = null;
 
     try {
       const nextData = await loadMatchBootstrap({
