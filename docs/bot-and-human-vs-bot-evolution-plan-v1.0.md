@@ -279,6 +279,8 @@ Entregas:
   - tempo de decisao do bot
 - limite de seguranca para abortar loop infinito
 - relatorio textual por rodada
+- simulacao deterministica de metricas em
+  `sql/simulations/bot_simulation_metrics_report.sql`
 
 Criterios de aceite:
 
@@ -293,6 +295,15 @@ Validacao:
 zsh scripts/run-bot-simulation.sh long
 zsh scripts/run-bot-simulation.sh all
 ```
+
+Atualizacao de execucao:
+
+- o perfil `long` agora roda a partida multi-turno existente e a simulacao de
+  metricas
+- a simulacao de metricas valida abertura `SOL`, encaixe `LUA`, rejeicao de
+  palavra pendente por bot e fallback de passe
+- o relatorio textual registra totais de jogadas, palavras aceitas, palavras
+  rejeitadas, passes, trocas, votos e turno final
 
 ## 9. Tranche F - Dificuldade, perfis e personalidade de bot
 

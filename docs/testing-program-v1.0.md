@@ -284,6 +284,7 @@ Cenarios de `all`:
 - fim por todos passarem
 - erros esperados sem mutacao de estado
 - partida longa multi-turno
+- relatorio deterministico de metricas de bot
 
 Usar quando:
 

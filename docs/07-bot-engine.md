@@ -79,6 +79,8 @@ Ja existe:
 - simulacao de erros esperados sem mutacao de estado
 - simulacao multi-turno combinando jogada aceita, troca, passes,
   `pending_vote` em ponte com peca existente e rejeicao por voto
+- simulacao deterministica de metricas com abertura, encaixe, voto automatico,
+  passe e relatorio textual
 - bootstrap de partida expondo `is_bot`, `bot_level` e `bot_profile`
 - UI de partida rapida humano contra bot
 - RPC `submit_patxanga_easy_bot_turn(...)`
@@ -136,6 +138,7 @@ Implementacao inicial:
 - `sql/simulations/bot_simulation_all_passed_end.sql`
 - `sql/simulations/bot_simulation_invalid_move_expected_error.sql`
 - `sql/simulations/bot_simulation_long_multi_turn.sql`
+- `sql/simulations/bot_simulation_metrics_report.sql`
 - `scripts/run-bot-simulation.sh`
 - `supabase/migrations/20260620210000_20_persist_successful_place_word_moves.sql`
 

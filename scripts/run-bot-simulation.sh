@@ -10,6 +10,7 @@ typeset -a smoke_simulations=(
 
 typeset -a long_simulations=(
   "sql/simulations/bot_simulation_long_multi_turn.sql"
+  "sql/simulations/bot_simulation_metrics_report.sql"
 )
 
 typeset -a all_simulations=(
