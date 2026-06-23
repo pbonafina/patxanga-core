@@ -301,6 +301,7 @@ Usar quando:
 Comandos:
 
 ```bash
+zsh scripts/preflight-bot-dictionary-alpha.sh
 zsh scripts/test-dictionary-import-tooling.sh
 zsh scripts/test-libreoffice-dictionary-sample.sh
 zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --limit 25 --execute

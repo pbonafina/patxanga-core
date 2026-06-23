@@ -26,6 +26,9 @@ if [[ ! -s "$repo_dir/docs/09-deployment-plan.md" ]]; then
   exit 1
 fi
 
+echo "==> Running bot/dictionary alpha preflight"
+zsh "$repo_dir/scripts/preflight-bot-dictionary-alpha.sh"
+
 echo "==> Running frontend lint"
 (
   cd "$frontend_dir"

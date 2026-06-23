@@ -38,6 +38,7 @@ Rodar localmente:
 
 ```bash
 zsh scripts/preflight-alpha-deploy.sh
+zsh scripts/preflight-bot-dictionary-alpha.sh
 supabase db reset
 zsh scripts/run-sql-test-suite.sh all
 zsh scripts/run-bot-simulation.sh all
@@ -45,6 +46,14 @@ zsh scripts/test-dictionary-import-tooling.sh
 zsh scripts/test-libreoffice-dictionary-sample.sh
 cd frontend
 npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
+```
+
+Para alpha com dicionario amplo, elevar os minimos antes do preflight:
+
+```bash
+PATXANGA_PREFLIGHT_MIN_PT_BR_WORDS=1000 \
+PATXANGA_PREFLIGHT_MIN_PT_PT_WORDS=1000 \
+zsh scripts/preflight-bot-dictionary-alpha.sh
 ```
 
 ## 4. Smoke test depois de publicar
@@ -118,7 +127,16 @@ order by language;
 
 - confirmar turno atual em `patxanga_matches.current_turn_player_id`
 - conferir `patxanga_players.is_bot`
+- rodar `zsh scripts/preflight-bot-dictionary-alpha.sh`
 - rodar `zsh scripts/run-bot-simulation.sh all` localmente antes de novo deploy
+
+### Dicionario abaixo do minimo
+
+- confirmar `PATXANGA_PREFLIGHT_MIN_PT_BR_WORDS` e
+  `PATXANGA_PREFLIGHT_MIN_PT_PT_WORDS`
+- rodar importacao controlada com `--full` ou `--limit` apropriado
+- executar `zsh scripts/run-sql-test-suite.sh sql/tests/test_dictionary_import_pipeline.sql`
+- repetir `zsh scripts/preflight-bot-dictionary-alpha.sh`
 
 ## 7. Criterios para beta
 

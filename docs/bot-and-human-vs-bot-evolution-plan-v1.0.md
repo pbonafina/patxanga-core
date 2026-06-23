@@ -387,6 +387,18 @@ npm run build
 npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium
 ```
 
+Atualizacao de execucao:
+
+- criado `scripts/preflight-bot-dictionary-alpha.sh`
+- `scripts/preflight-alpha-deploy.sh` passa a chamar o preflight de
+  bot/dicionario antes de lint/build do frontend
+- o preflight confere arquivos/migrations/RPCs essenciais, modo `--full` dos
+  importadores LibreOffice, registro da simulacao de metricas e contagem ativa
+  de dicionario quando o banco local esta rodando
+- os minimos de dicionario sao configuraveis por
+  `PATXANGA_PREFLIGHT_MIN_PT_BR_WORDS` e
+  `PATXANGA_PREFLIGHT_MIN_PT_PT_WORDS`
+
 ## 11. Ordem recomendada de execucao
 
 Ordem pragmatica:
