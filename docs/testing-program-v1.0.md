@@ -204,6 +204,9 @@ Testes:
 - `sql/tests/test_dictionary_imported_words_engine_path.sql`
 - `sql/tests/test_dictionary_policy_voting_path.sql`
 - `sql/tests/test_easy_bot_turn_policy.sql`
+- `sql/tests/test_easy_bot_vote_verdict.sql`
+- `sql/tests/test_bot_policy_config.sql`
+- `sql/tests/test_multi_human_match_flows.sql`
 - `sql/tests/test_exchange_tiles.sql`
 - `sql/tests/test_pass_turn.sql`
 - `sql/tests/test_submit_move_auto.sql`

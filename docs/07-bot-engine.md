@@ -90,6 +90,8 @@ Ja existe:
   bot `easy` aceita ou rejeita uma palavra
 - RPC `submit_patxanga_easy_bot_vote(...)` para voto automatico de bot em
   `pending_vote`
+- RPC de leitura `get_patxanga_bot_policy_config(...)` para expor parametros
+  deterministas de dificuldade e perfil
 - acao automatica inicial do bot `easy`: tentar abertura valida por dicionario
   ativo antes de passar
 - acao automatica conectada do bot `easy`: tentar uma palavra reconhecida que
@@ -99,6 +101,8 @@ Ja existe:
   do bot `easy`, incluindo catalogo de candidatos antes da submissao oficial
 - regressao SQL de veredito: aceita palavra reconhecida no dicionario e rejeita
   palavra desconhecida em `pending_vote`
+- regressao SQL de configuracao de bot: diferencia `easy`, `medium`, `hard`,
+  `aggressive`, `balanced` e `defensive`
 - regressao Playwright para criar humano contra bot, validar abertura real e
   validar encaixe conectado do bot
 

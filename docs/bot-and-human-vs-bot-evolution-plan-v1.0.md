@@ -340,6 +340,17 @@ zsh scripts/run-sql-test-suite.sh sql/tests/test_easy_bot_turn_policy.sql
 zsh scripts/run-bot-simulation.sh all
 ```
 
+Atualizacao de execucao:
+
+- criado contrato SQL `get_patxanga_bot_policy_config(...)`
+- o contrato valida `easy`, `medium`, `hard`, `aggressive`, `balanced` e
+  `defensive`
+- o retorno expoe limites de candidatos, tamanho de palavra, uso de troca,
+  politica de voto de palavra desconhecida, pesos de score/rack/risco e atraso
+  de decisao
+- `sql/tests/test_bot_policy_config.sql` prova diferencas entre dificuldades e
+  perfis antes de acoplar esses parametros ao motor de decisao
+
 ## 10. Tranche G - Publicacao local/alpha do modo treino
 
 Objetivo:
