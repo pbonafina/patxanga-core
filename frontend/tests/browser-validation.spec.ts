@@ -39,6 +39,10 @@ type HumanVsBotExchangeScenario = HumanVsBotScenario & {
   tileIds: Record<"D" | "A", string>;
 };
 
+type HumanVsBotPendingVoteScenario = HumanVsBotScenario & {
+  tileIds: Record<"T" | "S", string>;
+};
+
 function runDatabaseJson<T>(sql: string): T {
   const containerName =
     process.env.PATXANGA_DB_CONTAINER ?? "supabase_db_patxanga-core";
@@ -725,6 +729,82 @@ select payload from e2e_human_vs_bot_exchange_result;
 `);
 }
 
+function createHumanVsBotPendingVoteScenario(): HumanVsBotPendingVoteScenario {
+  return runDatabaseJson<HumanVsBotPendingVoteScenario>(`
+create temp table e2e_human_vs_bot_pending_vote_result(payload text);
+
+do $setup$
+declare
+    v_human_user_id uuid := gen_random_uuid();
+    v_bot_user_id uuid := gen_random_uuid();
+    v_match_id uuid;
+    v_human_player_id uuid;
+    v_bot_player_id uuid;
+    v_tile_t_id uuid := gen_random_uuid();
+    v_tile_s_id uuid := gen_random_uuid();
+begin
+    v_match_id := public.create_patxanga_match(
+        p_host_user_id := v_human_user_id,
+        p_host_guest_name := 'Human Bot Vote E2E',
+        p_language := 'pt-BR',
+        p_match_mode := 'synchronous',
+        p_max_players := 2
+    );
+
+    select id
+    into v_human_player_id
+    from public.patxanga_players
+    where match_id = v_match_id
+      and user_id = v_human_user_id;
+
+    v_bot_player_id := public.join_patxanga_match(
+        p_match_id := v_match_id,
+        p_user_id := v_bot_user_id,
+        p_guest_name := 'Bot Voter E2E',
+        p_is_bot := true,
+        p_bot_level := 'easy',
+        p_bot_profile := 'balanced'
+    );
+
+    perform public.start_patxanga_match(v_match_id);
+
+    update public.patxanga_players
+    set rack_state = jsonb_build_array(
+            jsonb_build_object('id', v_tile_t_id::text, 'letter', 'T', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_tile_s_id::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'M', 'points', 2, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null)
+        ),
+        updated_at = now()
+    where id = v_human_player_id;
+
+    update public.patxanga_matches
+    set current_turn_player_id = v_human_player_id,
+        updated_at = now()
+    where id = v_match_id;
+
+    insert into e2e_human_vs_bot_pending_vote_result(payload)
+    values (
+        jsonb_build_object(
+            'matchId', v_match_id,
+            'humanUserId', v_human_user_id,
+            'botPlayerId', v_bot_player_id,
+            'tileIds', jsonb_build_object(
+                'T', v_tile_t_id,
+                'S', v_tile_s_id
+            )
+        )::text
+    );
+end
+$setup$;
+
+select payload from e2e_human_vs_bot_pending_vote_result;
+`);
+}
+
 async function openPreparedMatch(page: Page, scenario: SlotMoveScenario) {
   await page.goto("/");
   await openAdvancedTools(page);
@@ -1206,6 +1286,28 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByText(/turno 5/i)).toBeVisible();
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
     await expect(page.getByTestId("game-bot-action-message")).toContainText("Bot ");
+  });
+
+  test("auto-votes as bot when a human word enters pending vote", async ({ page }) => {
+    const scenario = createHumanVsBotPendingVoteScenario();
+
+    await page.goto("/");
+    await openMatchAsUser(page, scenario.matchId, scenario.humanUserId);
+
+    await expect(page.getByTestId("human-vs-bot-screen")).toBeVisible();
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+
+    await page.getByTestId(`rack-tile-${scenario.tileIds.T}`).click();
+    await page.getByTestId("board-cell-7-7").click();
+    await page.getByTestId(`rack-tile-${scenario.tileIds.S}`).click();
+    await page.getByTestId("board-cell-7-8").click();
+
+    await expect(page.getByTestId("local-composed-word")).toContainText("TS");
+    await page.getByRole("button", { name: "Confirmar jogada" }).click();
+
+    await expect(page.getByTestId("game-bot-action-message")).toContainText("Bot rejeitou TS");
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+    await expect(page.getByTestId("board-cell-7-7")).not.toContainText("T");
   });
 
   test("passes the turn on the current match without making a move", async ({ page }) => {

@@ -250,6 +250,14 @@ npm run build
 npm run test:e2e -- tests/browser-validation.spec.ts --project=chromium --grep "human versus bot|bot"
 ```
 
+Atualizacao de execucao:
+
+- o frontend detecta `voting` com bot elegivel e chama
+  `submit_patxanga_easy_bot_vote(...)`
+- a tela humano x bot mostra `Bot aceitou...` ou `Bot rejeitou...` com motivo
+- Playwright cobre palavra humana `TS` entrando em `pending_vote` e sendo
+  rejeitada automaticamente pelo bot
+
 ## 8. Tranche E - Simulacoes longas e metricas de qualidade do bot
 
 Objetivo:

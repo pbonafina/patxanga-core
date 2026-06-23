@@ -104,6 +104,14 @@ type RpcVoteResult = {
   status?: string;
 };
 
+type RpcEasyBotVoteResult = {
+  bot_action?: "vote";
+  bot_verdict?: "accept" | "reject";
+  bot_verdict_reason?: string | null;
+  main_word?: string | null;
+  status?: string;
+};
+
 type BotActionHistoryItem = {
   id: string;
   turnNumber: number;
@@ -187,6 +195,19 @@ function formatBotTurnMessage(botTurnResult: RpcEasyBotTurnResult | null): strin
     : "";
 
   return `Bot passou o turno automaticamente.${passReason}`;
+}
+
+function formatBotVoteMessage(botVoteResult: RpcEasyBotVoteResult | null): string {
+  const word = botVoteResult?.main_word ?? "a palavra";
+  const reason = botVoteResult?.bot_verdict_reason
+    ? ` Motivo: ${botVoteResult.bot_verdict_reason}.`
+    : "";
+
+  if (botVoteResult?.bot_verdict === "accept") {
+    return `Bot aceitou ${word}.${reason}`;
+  }
+
+  return `Bot rejeitou ${word}.${reason}`;
 }
 
 function getDeclaredLetterPromptLabel(specialType?: string | null): string {
@@ -580,6 +601,8 @@ export default function HomePage() {
   const [matchTimeline, setMatchTimeline] = useState<MatchTimelineItem[]>([]);
   const botAutoActionKeyRef = useRef<string | null>(null);
   const botAutoActionInFlightRef = useRef(false);
+  const botAutoVoteKeyRef = useRef<string | null>(null);
+  const botAutoVoteInFlightRef = useRef(false);
 
   const resolvedBootstrap = useMatchBootstrap(bootstrapData ?? undefined);
   const { isConfigured } = getSupabaseEnv();
@@ -1140,6 +1163,150 @@ export default function HomePage() {
 
   useEffect(() => {
     if (
+      !isVoting ||
+      !resolvedBootstrap.matchId ||
+      !pendingVoteMove?.move_id ||
+      botAutoVoteInFlightRef.current
+    ) {
+      return;
+    }
+
+    const botVoter =
+      resolvedBootstrap.playersSummary.find(
+        (player) => player.is_bot && player.player_id !== pendingVoteMove.player_id
+      ) ?? null;
+
+    if (!botVoter) {
+      return;
+    }
+
+    const botVoteKey = [
+      resolvedBootstrap.matchId,
+      pendingVoteMove.move_id,
+      botVoter.player_id,
+    ].join(":");
+
+    if (botAutoVoteKeyRef.current === botVoteKey) {
+      return;
+    }
+
+    botAutoVoteKeyRef.current = botVoteKey;
+    let cancelled = false;
+
+    async function submitEasyBotVote() {
+      botAutoVoteInFlightRef.current = true;
+      setIsAutoPlayingBotTurn(true);
+      setBotActionError(null);
+      setBotActionMessage(`${botVoter?.display_name ?? "Bot"} esta avaliando a palavra.`);
+      appendMatchTimelineItem({
+        turnNumber: resolvedBootstrap.turnNumber,
+        actorName: botVoter?.display_name ?? "Bot",
+        label: "Bot votando",
+        detail: `Avaliando ${pendingVoteMove?.main_word ?? "palavra pendente"}.`,
+        tone: "info",
+      });
+
+      try {
+        const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
+        const client = getSupabaseBrowserClient();
+
+        if (!client) {
+          throw new Error("Supabase client indisponivel para voto automatico do bot.");
+        }
+
+        const { data, error } = await client.rpc("submit_patxanga_easy_bot_vote", {
+          p_match_id: resolvedBootstrap.matchId,
+          p_player_id: botVoter?.player_id,
+        });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        const refreshedData = await loadMatchBootstrap({
+          matchId: resolvedBootstrap.matchId,
+          playerId: playerIdInput,
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        setBootstrapData(refreshedData);
+        await refreshPendingVoteContext(
+          refreshedData.matchId,
+          playerIdInput,
+          refreshedData.status
+        );
+
+        const botVoteResult = data as RpcEasyBotVoteResult | null;
+        const nextMessage = formatBotVoteMessage(botVoteResult);
+        setBotActionMessage(nextMessage);
+        appendMatchTimelineItem({
+          turnNumber: resolvedBootstrap.turnNumber,
+          actorName: botVoter?.display_name ?? "Bot",
+          label: botVoteResult?.bot_verdict === "accept" ? "Bot aceitou" : "Bot rejeitou",
+          detail: nextMessage,
+          tone: botVoteResult?.bot_verdict === "accept" ? "success" : "warning",
+        });
+        setBotActionHistory((current) => [
+          {
+            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            turnNumber: resolvedBootstrap.turnNumber,
+            playerName: botVoter?.display_name ?? "Bot",
+            message: nextMessage,
+            tone: botVoteResult?.bot_verdict === "accept" ? "success" as const : "error" as const,
+          },
+          ...current,
+        ].slice(0, 5));
+      } catch (error) {
+        if (!cancelled) {
+          const nextError =
+            error instanceof Error
+              ? error.message
+              : "Falha ao executar voto automatico do bot.";
+
+          setBotActionError(nextError);
+          setBotActionMessage(null);
+          appendMatchTimelineItem({
+            turnNumber: resolvedBootstrap.turnNumber,
+            actorName: botVoter?.display_name ?? "Bot",
+            label: "Falha no voto do bot",
+            detail: nextError,
+            tone: "error",
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsAutoPlayingBotTurn(false);
+        }
+        botAutoVoteInFlightRef.current = false;
+      }
+    }
+
+    const timer = window.setTimeout(() => {
+      void submitEasyBotVote();
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    isVoting,
+    pendingVoteMove,
+    playerIdInput,
+    resolvedBootstrap.matchId,
+    resolvedBootstrap.playersSummary,
+    resolvedBootstrap.turnNumber,
+  ]);
+
+  useEffect(() => {
+    if (
       !resolvedBootstrap.matchId ||
       !resolvedBootstrap.playerId ||
       !isPlayersTurn ||
@@ -1307,6 +1474,8 @@ export default function HomePage() {
     setMovePreview(null);
     botAutoActionInFlightRef.current = false;
     botAutoActionKeyRef.current = null;
+    botAutoVoteInFlightRef.current = false;
+    botAutoVoteKeyRef.current = null;
 
     try {
       const nextData = await loadMatchBootstrap({
