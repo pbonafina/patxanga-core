@@ -84,6 +84,10 @@ Ja existe:
 - RPC `submit_patxanga_easy_bot_turn(...)`
 - RPC de leitura `find_patxanga_easy_bot_candidate_moves(...)` para listar
   candidatos de abertura/encaixe sem mutar a partida
+- RPC de leitura `get_patxanga_easy_bot_word_verdict(...)` para decidir se o
+  bot `easy` aceita ou rejeita uma palavra
+- RPC `submit_patxanga_easy_bot_vote(...)` para voto automatico de bot em
+  `pending_vote`
 - acao automatica inicial do bot `easy`: tentar abertura valida por dicionario
   ativo antes de passar
 - acao automatica conectada do bot `easy`: tentar uma palavra reconhecida que
@@ -91,6 +95,8 @@ Ja existe:
 - fallback de passe quando nao ha palavra segura para abertura
 - regressao SQL para `place_word` real, encaixe conectado e fallback de passe
   do bot `easy`, incluindo catalogo de candidatos antes da submissao oficial
+- regressao SQL de veredito: aceita palavra reconhecida no dicionario e rejeita
+  palavra desconhecida em `pending_vote`
 - regressao Playwright para criar humano contra bot, validar abertura real e
   validar encaixe conectado do bot
 
