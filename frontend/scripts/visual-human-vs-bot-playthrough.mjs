@@ -187,7 +187,7 @@ begin
         v_candidates := public.find_patxanga_playable_bot_candidate_moves(
             v_match.id,
             v_player.id,
-            1
+            50
         );
 
         update public.patxanga_players
@@ -197,8 +197,25 @@ begin
             updated_at = now()
         where id = v_player.id;
 
-        if jsonb_array_length(v_candidates) > 0 then
-            v_candidate := v_candidates->0;
+        select candidate.value
+        into v_candidate
+        from jsonb_array_elements(v_candidates) as candidate(value)
+        where not exists (
+            select 1
+            from public.patxanga_moves existing_move
+            cross join lateral public.patxanga_move_words_for_replay_check(
+                existing_move.main_word,
+                existing_move.secondary_words
+            ) existing_words
+            where existing_move.match_id = v_match.id
+              and existing_move.move_type = 'place_word'
+              and existing_move.status = 'accepted'
+              and existing_words.word_normalized = public.normalize_patxanga_word(candidate.value->>'main_word')
+        )
+        order by coalesce((candidate.value->>'candidate_rank')::integer, 999999)
+        limit 1;
+
+        if v_candidate is not null then
             v_result := public.submit_patxanga_move(
                 v_match.id,
                 v_player.id,
@@ -266,7 +283,19 @@ select jsonb_build_object(
                     'is_bot', p.is_bot,
                     'rack_count', jsonb_array_length(p.rack_state),
                     'rack_letters', (
-                        select coalesce(string_agg(coalesce(tile->>'letter', '?'), '' order by ordinality), '')
+                        select coalesce(
+                            string_agg(
+                                case nullif(coalesce(tile->>'special_type', ''), '')
+                                    when 'skip_turn' then 'SKIP'
+                                    when 'patxanga_real' then 'PR'
+                                    when 'wildcard' then '*'
+                                    else coalesce(tile->>'letter', '?')
+                                end,
+                                ' '
+                                order by ordinality
+                            ),
+                            ''
+                        )
                         from jsonb_array_elements(p.rack_state) with ordinality as rack(tile, ordinality)
                     ),
                     'has_passed_last_cycle', p.has_passed_last_cycle
@@ -348,6 +377,12 @@ function renderHtml(snapshot, title) {
   const winner = players.find((player) => player.id === match.winner_player_id);
   const lastResult = snapshot.last_result ?? {};
   const boardRows = match.board_state ?? [];
+  const simulationStatus =
+    match.status !== "active"
+      ? `partida ${match.status}`
+      : match.bag_remaining <= 0
+        ? "simulação encerrada: saco vazio"
+        : "partida ativa";
 
   const board = boardRows
     .map((row, rowIndex) => {
@@ -544,12 +579,14 @@ function renderHtml(snapshot, title) {
       <div>
         <div class="eyebrow">Playthrough visual humano x bot</div>
         <h1>${title}</h1>
-        <div>${match.language} · partida ${match.status}${winner ? ` · vencedor: ${winner.name}` : ""}</div>
+        <div>${match.language} · ${simulationStatus}${winner ? ` · vencedor: ${winner.name}` : ""}</div>
       </div>
       <div class="summary">
         <div class="pill">Turno ${match.turn_number}</div>
         <div class="pill">Saco ${match.bag_remaining}</div>
-        <div class="pill">${match.status === "active" ? `Agora: ${currentPlayer?.name ?? "?"}` : "Encerrada"}</div>
+        <div class="pill">${
+          match.status === "active" && match.bag_remaining > 0 ? `Agora: ${currentPlayer?.name ?? "?"}` : "Encerrada"
+        }</div>
       </div>
     </header>
 
@@ -626,13 +663,19 @@ async function main() {
     outDir: OUT_DIR,
     maxTurns: MAX_TURNS,
     completed: finalSnapshot?.match?.status !== "active" || finalSnapshot?.match?.bag_remaining <= 0,
+    officialMatchCompleted: finalSnapshot?.match?.status !== "active",
+    stoppedForEvaluation: finalSnapshot?.match?.status === "active" && finalSnapshot?.match?.bag_remaining <= 0,
     stopReason:
       finalSnapshot?.match?.status !== "active"
         ? "match_finished"
         : finalSnapshot?.match?.bag_remaining <= 0
           ? "bag_empty"
           : "max_turns_reached",
-    finalStatus: finalSnapshot?.match?.status,
+    finalStatus:
+      finalSnapshot?.match?.status === "active" && finalSnapshot?.match?.bag_remaining <= 0
+        ? "simulation_stopped_bag_empty"
+        : finalSnapshot?.match?.status,
+    officialMatchStatus: finalSnapshot?.match?.status,
     finalTurn: finalSnapshot?.match?.turn_number,
     bagRemaining: finalSnapshot?.match?.bag_remaining,
     players: finalSnapshot?.players,

@@ -1,7 +1,6 @@
 -- ============================================================
--- PATXANGA - RPC: evaluate_patxanga_match_end()
--- Version: 1.1
--- Purpose: Evaluate and finalize match end conditions
+-- PATXANGA - MIGRATION 43: End blocked boards by pass cycle
+-- Purpose: all players passing closes the match even if the bag is not empty
 -- ============================================================
 
 create or replace function public.evaluate_patxanga_match_end(
@@ -71,7 +70,6 @@ begin
       and has_passed_last_cycle = true;
 
     v_all_passed := (v_player_count > 0 and v_passed_count = v_player_count);
-
     v_bag_remaining := coalesce((v_match.bag_state->>'remaining')::integer, 0);
 
     if v_bag_remaining > 0 and not v_all_passed then
@@ -87,10 +85,6 @@ begin
             'reason', 'no_end_condition_met'
         );
     end if;
-
-    -- =========================================
-    -- Final scoring adjustment by remaining tiles
-    -- =========================================
 
     for v_player in
         select *
@@ -117,7 +111,6 @@ begin
         end if;
     end loop;
 
-    -- Optional bonus to the player who emptied the rack
     if v_any_empty_rack and v_empty_rack_player_id is not null and v_total_penalties > 0 then
         update patxanga_players
         set score = score + v_total_penalties,
@@ -125,7 +118,6 @@ begin
         where id = v_empty_rack_player_id;
     end if;
 
-    -- Winner = highest adjusted score
     select id
     into v_winner_player_id
     from patxanga_players

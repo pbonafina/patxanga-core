@@ -28,6 +28,7 @@ typeset -a engine_regression_tests=(
   "sql/tests/test_bot_policy_config.sql"
   "sql/tests/test_playable_bot_word_quality.sql"
   "sql/tests/test_bot_lexical_specials_distribution.sql"
+  "sql/tests/test_replayed_word_policy.sql"
   "sql/tests/test_multi_human_match_flows.sql"
   "sql/tests/test_exchange_tiles.sql"
   "sql/tests/test_pass_turn.sql"

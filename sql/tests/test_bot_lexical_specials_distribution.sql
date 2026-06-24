@@ -11,6 +11,16 @@ declare
     v_policy_hard_kir boolean;
     v_policy_easy_casa boolean;
     v_policy_easy_queza boolean;
+    v_policy_easy_coi boolean;
+    v_policy_easy_ces boolean;
+    v_policy_easy_out boolean;
+    v_policy_easy_bits boolean;
+    v_policy_easy_des boolean;
+    v_policy_easy_net boolean;
+    v_policy_easy_adn boolean;
+    v_policy_easy_cia boolean;
+    v_policy_easy_ienes boolean;
+    v_policy_easy_atual boolean;
     v_user_id uuid;
     v_guest_id uuid;
     v_match_id uuid;
@@ -49,22 +59,62 @@ begin
         public.is_patxanga_bot_policy_word('KIR', 'pt-PT', 'easy'),
         public.is_patxanga_bot_policy_word('KIR', 'pt-PT', 'hard'),
         public.is_patxanga_bot_policy_word('CASA', 'pt-PT', 'easy'),
-        public.is_patxanga_bot_policy_word('QUEZA', 'pt-PT', 'easy')
+        public.is_patxanga_bot_policy_word('QUEZA', 'pt-PT', 'easy'),
+        public.is_patxanga_bot_policy_word('COI', 'pt-PT', 'easy'),
+        public.is_patxanga_bot_policy_word('CES', 'pt-PT', 'easy'),
+        public.is_patxanga_bot_policy_word('OUT', 'pt-PT', 'easy'),
+        public.is_patxanga_bot_policy_word('BITS', 'pt-PT', 'easy'),
+        public.is_patxanga_bot_policy_word('DES', 'pt-PT', 'easy'),
+        public.is_patxanga_bot_policy_word('NET', 'pt-PT', 'easy'),
+        public.is_patxanga_bot_policy_word('ADN', 'pt-PT', 'easy'),
+        public.is_patxanga_bot_policy_word('CIA', 'pt-PT', 'easy'),
+        public.is_patxanga_bot_policy_word('IENES', 'pt-PT', 'easy'),
+        public.is_patxanga_bot_policy_word('ATUAL', 'pt-PT', 'easy')
     into
         v_policy_easy_kir,
         v_policy_hard_kir,
         v_policy_easy_casa,
-        v_policy_easy_queza;
+        v_policy_easy_queza,
+        v_policy_easy_coi,
+        v_policy_easy_ces,
+        v_policy_easy_out,
+        v_policy_easy_bits,
+        v_policy_easy_des,
+        v_policy_easy_net,
+        v_policy_easy_adn,
+        v_policy_easy_cia,
+        v_policy_easy_ienes,
+        v_policy_easy_atual;
 
     if v_policy_easy_kir is not false
        or v_policy_hard_kir is not true
        or v_policy_easy_casa is not true
-       or v_policy_easy_queza is not false then
-        raise exception 'Unexpected lexical policy: easy_kir=%, hard_kir=%, easy_casa=%, easy_queza=%',
+       or v_policy_easy_queza is not false
+       or v_policy_easy_coi is not false
+       or v_policy_easy_ces is not false
+       or v_policy_easy_out is not false
+       or v_policy_easy_bits is not false
+       or v_policy_easy_des is not false
+       or v_policy_easy_net is not false
+       or v_policy_easy_adn is not false
+       or v_policy_easy_cia is not false
+       or v_policy_easy_ienes is not false
+       or v_policy_easy_atual is not true then
+        raise exception 'Unexpected lexical policy: easy_kir=%, hard_kir=%, easy_casa=%, easy_queza=%, easy_coi=%, easy_ces=%, easy_out=%, easy_bits=%, easy_des=%, easy_net=%, easy_adn=%, easy_cia=%, easy_ienes=%, easy_atual=%',
             v_policy_easy_kir,
             v_policy_hard_kir,
             v_policy_easy_casa,
-            v_policy_easy_queza;
+            v_policy_easy_queza,
+            v_policy_easy_coi,
+            v_policy_easy_ces,
+            v_policy_easy_out,
+            v_policy_easy_bits,
+            v_policy_easy_des,
+            v_policy_easy_net,
+            v_policy_easy_adn,
+            v_policy_easy_cia,
+            v_policy_easy_ienes,
+            v_policy_easy_atual;
     end if;
 
     -- Patxanga Real must double main-word score.

@@ -1,7 +1,94 @@
 -- ============================================================
--- PATXANGA - RPC: submit_patxanga_easy_bot_turn()
--- Purpose: easy bot submits the best playable catalog candidate or passes
+-- PATXANGA - MIGRATION 42: Playthrough quality regressions
+-- Purpose:
+--   - prevent replaying accepted words inside the same match
+--   - route easy bot turns through the playable bot candidate catalog
+--   - block acronym-like short words observed in visual playthroughs
 -- ============================================================
+
+insert into public.patxanga_bot_word_policy_overrides (
+    language,
+    word_normalized,
+    policy_status,
+    reason
+)
+values
+    ('pt-PT', 'COI', 'blocked_easy', 'acronym-like playthrough word')
+on conflict (language, word_normalized, policy_status) do update
+set reason = excluded.reason;
+
+create or replace function public.patxanga_move_words_for_replay_check(
+    p_main_word text,
+    p_secondary_words jsonb
+)
+returns table(word_normalized text)
+language sql
+stable
+set search_path = public
+as
+$$
+    select public.normalize_patxanga_word(p_main_word)
+    where nullif(public.normalize_patxanga_word(p_main_word), '') is not null
+
+    union
+
+    select public.normalize_patxanga_word(word_item.value->>'word')
+    from jsonb_array_elements(coalesce(p_secondary_words, '[]'::jsonb)) as word_item(value)
+    where nullif(public.normalize_patxanga_word(word_item.value->>'word'), '') is not null;
+$$;
+
+create or replace function public.reject_patxanga_replayed_accepted_word()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as
+$$
+begin
+    if new.move_type <> 'place_word'
+       or new.status <> 'accepted' then
+        return new;
+    end if;
+
+    if exists (
+        with new_words as (
+            select word_normalized
+            from public.patxanga_move_words_for_replay_check(
+                new.main_word,
+                new.secondary_words
+            )
+        ),
+        previous_words as (
+            select existing_words.word_normalized
+            from public.patxanga_moves existing_move
+            cross join lateral public.patxanga_move_words_for_replay_check(
+                existing_move.main_word,
+                existing_move.secondary_words
+            ) existing_words
+            where existing_move.match_id = new.match_id
+              and existing_move.id <> coalesce(new.id, '00000000-0000-0000-0000-000000000000'::uuid)
+              and existing_move.move_type = 'place_word'
+              and existing_move.status = 'accepted'
+        )
+        select 1
+        from new_words
+        join previous_words using (word_normalized)
+    ) then
+        raise exception 'Word already played in this match';
+    end if;
+
+    return new;
+end;
+$$;
+
+drop trigger if exists trg_reject_patxanga_replayed_accepted_word
+on public.patxanga_moves;
+
+create trigger trg_reject_patxanga_replayed_accepted_word
+before insert or update of status, main_word, secondary_words
+on public.patxanga_moves
+for each row
+execute function public.reject_patxanga_replayed_accepted_word();
 
 create or replace function public.submit_patxanga_easy_bot_turn(
     p_match_id uuid,
@@ -110,6 +197,15 @@ begin
     );
 end;
 $$;
+
+revoke all on function public.patxanga_move_words_for_replay_check(text, jsonb)
+from public, anon, authenticated;
+
+revoke all on function public.reject_patxanga_replayed_accepted_word()
+from public, anon, authenticated;
+
+grant execute on function public.patxanga_move_words_for_replay_check(text, jsonb)
+to authenticated, anon;
 
 grant execute on function public.submit_patxanga_easy_bot_turn(uuid, uuid)
 to authenticated, anon;

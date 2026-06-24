@@ -1,5 +1,5 @@
 -- ============================================================
--- PATXANGA - MATCH END TEST (bag empty + all passed)
+-- PATXANGA - MATCH END TEST (all passed, even with non-empty bag)
 -- Version: 1.0
 -- ============================================================
 
@@ -26,14 +26,6 @@ begin
     );
 
     perform public.start_patxanga_match(v_match_id);
-
-    -- Force bag empty
-    update patxanga_matches
-    set bag_state = jsonb_build_object(
-        'tiles', '[]'::jsonb,
-        'remaining', 0
-    )
-    where id = v_match_id;
 
     select current_turn_player_id
     into v_p1
@@ -72,4 +64,20 @@ begin
         from patxanga_matches
         where id = v_match_id
     );
+
+    if v_result1->'end_state'->>'reason' <> 'bag_not_empty' then
+        raise exception 'Expected first pass not to end because bag is not empty, got %', v_result1;
+    end if;
+
+    if coalesce((v_result2->'end_state'->>'finished')::boolean, false) is not true then
+        raise exception 'Expected second consecutive pass to finish match, got %', v_result2;
+    end if;
+
+    if coalesce((v_result2->'end_state'->>'ended_by_all_passed')::boolean, false) is not true then
+        raise exception 'Expected ended_by_all_passed true, got %', v_result2;
+    end if;
+
+    if (select status from patxanga_matches where id = v_match_id) <> 'finished' then
+        raise exception 'Expected finished match after all players passed';
+    end if;
 end $$;
