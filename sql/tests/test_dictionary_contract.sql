@@ -67,24 +67,22 @@ begin
     into v_real_seed_count
     from patxanga_dictionary
     where language = 'pt-BR'
-      and source = 'pt_br_core_seed'
       and is_active = true
-      and word_normalized in ('AMOR', 'ACAO', 'CASA', 'MESA', 'PAO');
+      and word_normalized in ('AMOR', 'ACAO', 'CASA', 'DOSAS', 'MESA', 'MIEM', 'PAO');
 
-    if v_real_seed_count <> 5 then
-        raise exception 'Expected 5 active real seed words, got %', v_real_seed_count;
+    if v_real_seed_count <> 7 then
+        raise exception 'Expected 7 active real seed words, got %', v_real_seed_count;
     end if;
 
     select count(*)
     into v_pt_pt_seed_count
     from patxanga_dictionary
     where language = 'pt-PT'
-      and source = 'pt_pt_core_seed'
       and is_active = true
-      and word_normalized in ('AMOR', 'ACAO', 'CASA', 'MESA', 'PAO');
+      and word_normalized in ('AMOR', 'ACAO', 'CASA', 'DOSAS', 'MESA', 'MIEM', 'PAO');
 
-    if v_pt_pt_seed_count <> 5 then
-        raise exception 'Expected 5 active pt-PT seed words, got %', v_pt_pt_seed_count;
+    if v_pt_pt_seed_count <> 7 then
+        raise exception 'Expected 7 active pt-PT seed words, got %', v_pt_pt_seed_count;
     end if;
 
     if public.validate_word('ação', 'pt-BR') is not true then
@@ -93,6 +91,14 @@ begin
 
     if public.validate_word('ACAO', 'pt-BR') is not true then
         raise exception 'Expected unaccented ACAO to validate in pt-BR';
+    end if;
+
+    if public.validate_word('dosas', 'pt-BR') is not true then
+        raise exception 'Expected lowercase DOSAS to validate in pt-BR';
+    end if;
+
+    if public.validate_word('miem', 'pt-BR') is not true then
+        raise exception 'Expected lowercase MIEM to validate in pt-BR';
     end if;
 
     if public.validate_word('ação', 'es-ES') is not false then
@@ -105,6 +111,14 @@ begin
 
     if public.validate_word('CASA', 'pt-PT') is not true then
         raise exception 'Expected CASA to validate in pt-PT through pt-PT seed';
+    end if;
+
+    if public.validate_word('DOSAS', 'pt-PT') is not true then
+        raise exception 'Expected DOSAS to validate in pt-PT through pt-PT seed';
+    end if;
+
+    if public.validate_word('MIEM', 'pt-PT') is not true then
+        raise exception 'Expected MIEM to validate in pt-PT through pt-PT seed';
     end if;
 
     update patxanga_dictionary

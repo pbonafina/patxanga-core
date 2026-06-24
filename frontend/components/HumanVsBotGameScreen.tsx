@@ -105,12 +105,18 @@ export function HumanVsBotGameScreen({
   const botPlayer = playersSummary.find((player) => player.is_bot) ?? null;
   const currentTurnPlayer =
     playersSummary.find((player) => player.player_id === currentTurnPlayerId) ?? null;
+  const isKnownBotTurn =
+    Boolean(currentTurnPlayerId) &&
+    Boolean(botPlayer?.player_id) &&
+    currentTurnPlayerId === botPlayer?.player_id &&
+    isActive;
   const isHumanTurn =
     Boolean(viewerPlayerId) &&
     Boolean(currentTurnPlayerId) &&
     viewerPlayerId === currentTurnPlayerId &&
     isActive;
-  const isBotTurn = Boolean(currentTurnPlayer?.is_bot);
+  const isBotTurn = (Boolean(currentTurnPlayer?.is_bot) || isKnownBotTurn) && isActive;
+  const canUseHumanTurnControls = isHumanTurn && canCurrentPlayerTakeTurnAction;
   const placedTileCount = placedTilesPreview.length;
   const winnerPlayer = playersSummary.find((player) => player.player_id === winnerPlayerId) ?? null;
   const statusLabel = isFinished
@@ -140,6 +146,7 @@ export function HumanVsBotGameScreen({
       style={{
         display: "grid",
         gap: 18,
+        paddingBottom: isHumanTurn ? 104 : 0,
       }}
     >
       <div
@@ -233,7 +240,7 @@ export function HumanVsBotGameScreen({
           style={{
             padding: 16,
             borderRadius: 20,
-            border: isBotTurn || isAutoPlayingBotTurn ? "1px solid #fcd34d" : "1px solid #bbf7d0",
+            border: isBotTurn || isAutoPlayingBotTurn ? "1px solid #f59e0b" : "1px solid #bbf7d0",
             background: isBotTurn || isAutoPlayingBotTurn ? "#fffbeb" : "#f0fdf4",
             color: "#111827",
           }}
@@ -287,6 +294,23 @@ export function HumanVsBotGameScreen({
           Próxima ação
         </div>
         <div style={{ marginTop: 8, fontSize: 18, fontWeight: 900 }}>{actionHint}</div>
+        {isBotTurn ? (
+          <div
+            data-testid="bot-turn-lock-panel"
+            style={{
+              marginTop: 12,
+              padding: 14,
+              borderRadius: 16,
+              border: "1px solid #f59e0b",
+              background: "#fffbeb",
+              color: "#78350f",
+              fontWeight: 900,
+            }}
+          >
+            {currentTurnPlayer?.display_name ?? botPlayer?.display_name ?? "Bot"} está com o turno.
+            Ações humanas ficam bloqueadas até a jogada automática terminar.
+          </div>
+        ) : null}
         {botActionMessage || botActionError || isAutoPlayingBotTurn ? (
           <div
             data-testid="game-bot-action-message"
@@ -372,7 +396,7 @@ export function HumanVsBotGameScreen({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(0, 720px) minmax(280px, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 520px), 1fr))",
             gap: 18,
             alignItems: "start",
           }}
@@ -503,19 +527,19 @@ export function HumanVsBotGameScreen({
                     <button
                       type="button"
                       onClick={onPassTurn}
-                      disabled={!canCurrentPlayerTakeTurnAction || isSubmittingPassTurn || isSubmittingExchange}
+                      disabled={!canUseHumanTurnControls || isSubmittingPassTurn || isSubmittingExchange}
                       data-testid="pass-turn-action"
                       style={{
                         padding: "11px 15px",
                         borderRadius: 12,
                         border: "1px solid #d97706",
                         background:
-                          !canCurrentPlayerTakeTurnAction || isSubmittingPassTurn || isSubmittingExchange
+                          !canUseHumanTurnControls || isSubmittingPassTurn || isSubmittingExchange
                             ? "#fde68a"
                             : "#f59e0b",
                         color: "#422006",
                         cursor:
-                          !canCurrentPlayerTakeTurnAction || isSubmittingPassTurn || isSubmittingExchange
+                          !canUseHumanTurnControls || isSubmittingPassTurn || isSubmittingExchange
                             ? "not-allowed"
                             : "pointer",
                         fontWeight: 900,
@@ -527,19 +551,19 @@ export function HumanVsBotGameScreen({
                     <button
                       type="button"
                       onClick={onToggleExchangeMode}
-                      disabled={!canCurrentPlayerTakeTurnAction || isSubmittingExchange || isSubmittingPassTurn}
+                      disabled={!canUseHumanTurnControls || isSubmittingExchange || isSubmittingPassTurn}
                       data-testid="exchange-turn-toggle"
                       style={{
                         padding: "11px 15px",
                         borderRadius: 12,
                         border: "1px solid #0f766e",
                         background:
-                          !canCurrentPlayerTakeTurnAction || isSubmittingExchange || isSubmittingPassTurn
+                          !canUseHumanTurnControls || isSubmittingExchange || isSubmittingPassTurn
                             ? "#99f6e4"
                             : "#14b8a6",
                         color: "#042f2e",
                         cursor:
-                          !canCurrentPlayerTakeTurnAction || isSubmittingExchange || isSubmittingPassTurn
+                          !canUseHumanTurnControls || isSubmittingExchange || isSubmittingPassTurn
                             ? "not-allowed"
                             : "pointer",
                         fontWeight: 900,
@@ -599,6 +623,62 @@ export function HumanVsBotGameScreen({
               </>
             ) : null}
           </div>
+        </div>
+      ) : null}
+
+      {isHumanTurn ? (
+        <div
+          data-testid="human-vs-bot-sticky-actions"
+          style={{
+            position: "fixed",
+            left: 12,
+            right: 12,
+            bottom: 12,
+            zIndex: 40,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+            padding: 12,
+            borderRadius: 18,
+            border: "1px solid rgba(29, 78, 216, 0.3)",
+            background: "rgba(255, 255, 255, 0.96)",
+            boxShadow: "0 18px 46px rgba(15, 23, 42, 0.22)",
+            color: "#111827",
+          }}
+        >
+          <div style={{ minWidth: 180 }}>
+            <div style={{ fontSize: 12, fontWeight: 900, textTransform: "uppercase", color: "#1d4ed8" }}>
+              Sua jogada
+            </div>
+            <div style={{ marginTop: 3, fontSize: 14, fontWeight: 800 }}>
+              {placedTileCount > 0
+                ? localComposedWord
+                  ? `${localComposedWord} · ${formatPreparedTileCoordinates(placedTilesPreview)}`
+                  : `${placedTileCount} peça(s) posicionada(s)`
+                : "Selecione peças e casas no tabuleiro"}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            data-testid="sticky-submit-move"
+            onClick={onSubmitMove}
+            disabled={!canSubmitMove || isSubmittingMove}
+            style={{
+              minWidth: 156,
+              padding: "12px 16px",
+              borderRadius: 14,
+              border: "1px solid #1d4ed8",
+              background: !canSubmitMove || isSubmittingMove ? "#bfdbfe" : "#2563eb",
+              color: "#ffffff",
+              cursor: !canSubmitMove || isSubmittingMove ? "not-allowed" : "pointer",
+              fontWeight: 900,
+            }}
+          >
+            {isSubmittingMove ? "Enviando..." : "Enviar jogada"}
+          </button>
         </div>
       ) : null}
     </section>

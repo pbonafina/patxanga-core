@@ -41,6 +41,10 @@ begin
     delete from public.patxanga_dictionary
     where source = 'import_pipeline_test';
 
+    delete from public.patxanga_dictionary
+    where language = 'pt-BR'
+      and word_normalized in ('RATO', 'ARVORE', 'PEIXE');
+
     delete from public.patxanga_dictionary_import_batches
     where source = 'import_pipeline_test';
 
@@ -193,6 +197,10 @@ begin
 
     delete from public.patxanga_dictionary
     where source = 'import_pipeline_test';
+
+    delete from public.patxanga_dictionary
+    where language = 'pt-BR'
+      and word_normalized in ('RATO', 'ARVORE', 'PEIXE');
 
     delete from public.patxanga_dictionary_import_batches
     where source = 'import_pipeline_test';

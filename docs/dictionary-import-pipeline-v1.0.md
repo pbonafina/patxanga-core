@@ -29,6 +29,56 @@ Antes de importar uma fonte real, registrar explicitamente:
 Nao importar fonte sem licenca clara. Na duvida, manter a palavra fora do seed
 amplo e deixar o fluxo de votacao cobrir o caso.
 
+## Fonte local operacional: Priberam StarDict para pt-PT
+
+Fonte local fornecida pelo operador para uso no ambiente de desenvolvimento:
+
+- arquivo local: `/Users/paulobonafina/Downloads/Priberam.rar`
+- formato extraido: StarDict `book_stardict.idx`, `book_stardict.syn`,
+  `book_stardict.ifo`
+- livro declarado no `.ifo`: `Dicionário Priberam da Língua Portuguesa (pt-pt)`
+- autor declarado: `Priberam`
+- data declarada: `2025-01-01`
+- validacao web oficial: o site do Dicionario Priberam permite escolher a
+  variedade `PT`/`BR`, indicando `PT` como `Norma europeia` e `BR` como
+  `Norma brasileira`; tambem declara consulta em portugues europeu ou do Brasil
+- SHA-256 do RAR local:
+  `a9bc9d7579e3f42709dc4139ad6df3dc6b4b45c71cd94bc3c11d992fafea5ccd`
+- licenca de redistribuicao: nao registrada no projeto
+
+Uso atual: importar como `pt-PT`, mantendo metadados de origem e sem versionar
+definicoes, CSV ou SQL gerados.
+
+Filtro aplicado por `scripts/prepare-priberam-stardict.py`:
+
+- le entradas de `.idx` e formas flexionadas de `.syn`
+- nao exporta definicoes do `.dict`
+- tamanho entre 2 e 15 letras apos normalizacao
+- somente letras apos normalizacao Unicode
+- deduplicacao por forma normalizada
+
+Preparar sem executar:
+
+```bash
+zsh scripts/import-priberam-pt-pt.sh
+```
+
+Preparar e executar contra o Supabase local:
+
+```bash
+zsh scripts/import-priberam-pt-pt.sh --execute
+```
+
+Resultado da primeira importacao local:
+
+- `source = priberam_stardict_pt_pt_full`
+- `total_rows = 744232`
+- `valid_rows = 744232`
+- `inserted_count = 744200`
+- `updated_count = 32`
+- validacoes diretas: `MIEM`, `DOSAS`, `GATOS`, `ABACAXI` e `CASA`
+  reconhecidas em `pt-PT`
+
 ## Fonte candidata validada tecnicamente: LibreOffice Hunspell pt-BR
 
 Fonte candidata para a primeira importacao controlada:

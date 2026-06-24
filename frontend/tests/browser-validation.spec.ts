@@ -1202,6 +1202,50 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("board-cell-7-9")).toContainText("L");
   });
 
+  test("captures bot-turn UI while automatic play is running", async ({ page }) => {
+    const scenario = createHumanVsBotScenarioWithBotTurn();
+    let delayedBotTurn = false;
+
+    await page.route("**/rest/v1/rpc/submit_patxanga_easy_bot_turn", async (route) => {
+      if (!delayedBotTurn) {
+        delayedBotTurn = true;
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+      }
+
+      await route.continue();
+    });
+
+    await page.goto("/");
+    await openMatchAsUser(page, scenario.matchId, scenario.humanUserId);
+
+    await expect(page.getByTestId("human-vs-bot-screen")).toBeVisible();
+    await expect(page.getByTestId("bot-turn-lock-panel")).toContainText(
+      "Ações humanas ficam bloqueadas"
+    );
+    await expect(page.getByTestId("pass-turn-action")).toBeDisabled();
+    await expect(page.getByTestId("exchange-turn-toggle")).toBeDisabled();
+    await expect(page.getByTestId("game-bot-action-message")).toContainText(
+      "Bot executando turno automático"
+    );
+
+    await page.screenshot({
+      path: "test-results/human-vs-bot-bot-turn-processing.png",
+      fullPage: true,
+    });
+
+    await expect(page.getByTestId("game-bot-action-message")).toContainText(
+      "Bot jogou SOL como abertura."
+    );
+    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
+    await expect(page.getByTestId("pass-turn-action")).toBeEnabled();
+    await expect(page.getByTestId("exchange-turn-toggle")).toBeEnabled();
+
+    await page.screenshot({
+      path: "test-results/human-vs-bot-after-auto-turn.png",
+      fullPage: true,
+    });
+  });
+
   test("auto-plays a connected bot word after the opening", async ({ page }) => {
     const scenario = createHumanVsBotScenarioWithConnectedBotTurn();
 

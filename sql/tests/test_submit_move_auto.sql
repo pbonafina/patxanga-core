@@ -13,6 +13,7 @@ declare
     v_forced_rack jsonb;
     v_tile1_id uuid := gen_random_uuid();
     v_tile2_id uuid := gen_random_uuid();
+    v_tile3_id uuid := gen_random_uuid();
     v_submit_result jsonb;
     v_accepted_move_count integer;
 begin
@@ -55,26 +56,26 @@ begin
 
     raise notice 'Current turn player_id: %', v_current_player_id;
 
-    -- 5. Force a deterministic rack with valid opening word "DA"
+    -- 5. Force a deterministic rack with valid opening word "SOL"
     v_forced_rack := jsonb_build_array(
         jsonb_build_object(
             'id', v_tile1_id::text,
-            'letter', 'D',
-            'points', 2,
+            'letter', 'S',
+            'points', 1,
             'is_special', false,
             'special_type', null
         ),
         jsonb_build_object(
             'id', v_tile2_id::text,
-            'letter', 'A',
+            'letter', 'O',
             'points', 1,
             'is_special', false,
             'special_type', null
         ),
         jsonb_build_object(
-            'id', gen_random_uuid()::text,
-            'letter', 'S',
-            'points', 1,
+            'id', v_tile3_id::text,
+            'letter', 'L',
+            'points', 2,
             'is_special', false,
             'special_type', null
         ),
@@ -94,7 +95,7 @@ begin
         ),
         jsonb_build_object(
             'id', gen_random_uuid()::text,
-            'letter', 'O',
+            'letter', 'A',
             'points', 1,
             'is_special', false,
             'special_type', null
@@ -115,7 +116,7 @@ begin
 
     raise notice 'Forced rack injected for current player';
 
-    -- 6. Submit valid opening word "DA"
+    -- 6. Submit valid opening word "SOL"
     v_submit_result := public.submit_patxanga_move(
         v_match_id,
         v_current_player_id,
@@ -130,6 +131,12 @@ begin
                 'tile_id', v_tile2_id::text,
                 'row', 8,
                 'col', 9,
+                'declared_letter', null
+            ),
+            jsonb_build_object(
+                'tile_id', v_tile3_id::text,
+                'row', 8,
+                'col', 10,
                 'declared_letter', null
             )
         )
@@ -152,8 +159,8 @@ begin
       and player_id = v_current_player_id
       and move_type = 'place_word'
       and status = 'accepted'
-      and main_word = 'DA'
-      and score_total = 6;
+      and main_word = 'SOL'
+      and score_total = 8;
 
     if v_accepted_move_count <> 1 then
         raise exception 'Expected exactly 1 accepted place_word move, got %', v_accepted_move_count;

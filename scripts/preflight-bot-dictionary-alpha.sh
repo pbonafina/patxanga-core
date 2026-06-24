@@ -14,6 +14,8 @@ typeset -a required_files=(
   "docs/07-bot-engine.md"
   "docs/bot-and-human-vs-bot-evolution-plan-v1.0.md"
   "docs/dictionary-import-pipeline-v1.0.md"
+  "scripts/prepare-priberam-stardict.py"
+  "scripts/import-priberam-pt-pt.sh"
   "sql/simulations/bot_simulation_metrics_report.sql"
   "sql/tests/test_bot_policy_config.sql"
   "supabase/migrations/20260623001000_34_easy_bot_candidate_move_catalog.sql"

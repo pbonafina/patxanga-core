@@ -36,15 +36,19 @@ begin
     delete from public.patxanga_dictionary
     where source = 'imported_words_engine_test';
 
+    delete from public.patxanga_dictionary
+    where (language = 'pt-BR' and word_normalized in ('QZXN', 'FALSO'))
+       or (language = 'pt-PT' and word_normalized = 'QZXAL');
+
     delete from public.patxanga_dictionary_import_batches
     where source = 'imported_words_engine_test';
 
-    if public.validate_word('NEXO', 'pt-BR') is true then
-        raise exception 'Fixture word NEXO unexpectedly validates before import';
+    if public.validate_word('QZXN', 'pt-BR') is true then
+        raise exception 'Fixture word QZXN unexpectedly validates before import';
     end if;
 
-    if public.validate_word('ABACO', 'pt-PT') is true then
-        raise exception 'Fixture word ABACO unexpectedly validates before import';
+    if public.validate_word('QZXAL', 'pt-PT') is true then
+        raise exception 'Fixture word QZXAL unexpectedly validates before import';
     end if;
 
     select public.import_patxanga_dictionary_entries(
@@ -52,7 +56,7 @@ begin
         p_source := 'imported_words_engine_test',
         p_license_name := 'Test Fixture License',
         p_entries := jsonb_build_array(
-            jsonb_build_object('word', 'NEXO'),
+            jsonb_build_object('word', 'QZXN'),
             jsonb_build_object('word', 'FALSO', 'is_active', false)
         ),
         p_source_version := 'fixture-v1',
@@ -72,7 +76,7 @@ begin
         p_source := 'imported_words_engine_test',
         p_license_name := 'Test Fixture License',
         p_entries := jsonb_build_array(
-            jsonb_build_object('word', 'ÁBACO')
+            jsonb_build_object('word', 'QZXÁL')
         ),
         p_source_version := 'fixture-v1',
         p_license_url := 'https://example.test/license',
@@ -96,24 +100,24 @@ begin
             v_pt_pt_import_result;
     end if;
 
-    if public.validate_word('NEXO', 'pt-BR') is not true then
-        raise exception 'Expected imported pt-BR NEXO to validate';
+    if public.validate_word('QZXN', 'pt-BR') is not true then
+        raise exception 'Expected imported pt-BR QZXN to validate';
     end if;
 
     if public.validate_word('FALSO', 'pt-BR') is not false then
         raise exception 'Expected inactive imported pt-BR FALSO not to validate';
     end if;
 
-    if public.validate_word('nexo', 'pt-PT') is not false then
-        raise exception 'Expected imported pt-BR NEXO not to leak into pt-PT';
+    if public.validate_word('qzxn', 'pt-PT') is not false then
+        raise exception 'Expected imported pt-BR QZXN not to leak into pt-PT';
     end if;
 
-    if public.validate_word('ABACO', 'pt-PT') is not true then
-        raise exception 'Expected imported pt-PT ABACO to validate from ÁBACO';
+    if public.validate_word('QZXAL', 'pt-PT') is not true then
+        raise exception 'Expected imported pt-PT QZXAL to validate from QZXÁL';
     end if;
 
-    if public.validate_word('ábaco', 'pt-PT') is not true then
-        raise exception 'Expected lowercase accented pt-PT ábaco to validate';
+    if public.validate_word('qzxál', 'pt-PT') is not true then
+        raise exception 'Expected lowercase accented pt-PT qzxál to validate';
     end if;
 
     select count(*)
@@ -121,7 +125,7 @@ begin
     from public.patxanga_dictionary
     where language = 'pt-BR'
       and source = 'imported_words_engine_test'
-      and word_normalized in ('NEXO', 'FALSO');
+      and word_normalized in ('QZXN', 'FALSO');
 
     if v_pt_br_source_row_count <> 2 then
         raise exception 'Expected 2 pt-BR imported source rows, got %',
@@ -133,7 +137,7 @@ begin
     from public.patxanga_dictionary
     where language = 'pt-PT'
       and source = 'imported_words_engine_test'
-      and word_normalized = 'ABACO';
+      and word_normalized = 'QZXAL';
 
     if v_pt_pt_source_row_count <> 1 then
         raise exception 'Expected 1 pt-PT imported source row, got %',
@@ -161,10 +165,10 @@ begin
 
     update public.patxanga_players
     set rack_state = jsonb_build_array(
-            jsonb_build_object('id', v_n_id::text, 'letter', 'N', 'points', 1, 'is_special', false, 'special_type', null),
-            jsonb_build_object('id', v_e_id::text, 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_n_id::text, 'letter', 'Q', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_e_id::text, 'letter', 'Z', 'points', 7, 'is_special', false, 'special_type', null),
             jsonb_build_object('id', v_x_id::text, 'letter', 'X', 'points', 6, 'is_special', false, 'special_type', null),
-            jsonb_build_object('id', v_o_id::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_o_id::text, 'letter', 'N', 'points', 1, 'is_special', false, 'special_type', null),
             jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
             jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null),
             jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null)
@@ -184,17 +188,17 @@ begin
     );
 
     if v_pt_br_preview_result->>'status' <> 'ok' then
-        raise exception 'Expected pt-BR imported NEXO preview ok, got %',
+        raise exception 'Expected pt-BR imported QZXN preview ok, got %',
             v_pt_br_preview_result;
     end if;
 
-    if v_pt_br_preview_result->>'main_word' <> 'NEXO' then
-        raise exception 'Expected pt-BR preview main_word NEXO, got %',
+    if v_pt_br_preview_result->>'main_word' <> 'QZXN' then
+        raise exception 'Expected pt-BR preview main_word QZXN, got %',
             v_pt_br_preview_result;
     end if;
 
     if coalesce((v_pt_br_preview_result->>'requires_vote')::boolean, true) is not false then
-        raise exception 'Expected imported pt-BR NEXO not to require vote, got %',
+        raise exception 'Expected imported pt-BR QZXN not to require vote, got %',
             v_pt_br_preview_result;
     end if;
 
@@ -210,7 +214,7 @@ begin
     );
 
     if v_pt_br_submit_result->>'status' <> 'success' then
-        raise exception 'Expected imported pt-BR NEXO submit success, got %',
+        raise exception 'Expected imported pt-BR QZXN submit success, got %',
             v_pt_br_submit_result;
     end if;
 
@@ -220,13 +224,13 @@ begin
     where id = (v_pt_br_submit_result->>'move_id')::uuid
       and match_id = v_pt_br_match_id
       and player_id = v_pt_br_player_id
-      and main_word = 'NEXO'
+      and main_word = 'QZXN'
       and status = 'accepted'
       and is_dictionary_recognized = true
       and requires_vote = false;
 
     if v_pt_br_accepted_move_count <> 1 then
-        raise exception 'Expected exactly 1 accepted imported pt-BR NEXO move, got %',
+        raise exception 'Expected exactly 1 accepted imported pt-BR QZXN move, got %',
             v_pt_br_accepted_move_count;
     end if;
 
@@ -251,11 +255,11 @@ begin
 
     update public.patxanga_players
     set rack_state = jsonb_build_array(
-            jsonb_build_object('id', v_a1_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
-            jsonb_build_object('id', v_b_id::text, 'letter', 'B', 'points', 3, 'is_special', false, 'special_type', null),
-            jsonb_build_object('id', v_a2_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
-            jsonb_build_object('id', v_c_id::text, 'letter', 'C', 'points', 2, 'is_special', false, 'special_type', null),
-            jsonb_build_object('id', v_o2_id::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_a1_id::text, 'letter', 'Q', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_b_id::text, 'letter', 'Z', 'points', 7, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_a2_id::text, 'letter', 'X', 'points', 6, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_c_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_o2_id::text, 'letter', 'L', 'points', 2, 'is_special', false, 'special_type', null),
             jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null),
             jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null)
         ),
@@ -275,17 +279,17 @@ begin
     );
 
     if v_pt_pt_preview_result->>'status' <> 'ok' then
-        raise exception 'Expected pt-PT imported ABACO preview ok, got %',
+        raise exception 'Expected pt-PT imported QZXAL preview ok, got %',
             v_pt_pt_preview_result;
     end if;
 
-    if v_pt_pt_preview_result->>'main_word' <> 'ABACO' then
-        raise exception 'Expected pt-PT preview main_word ABACO, got %',
+    if v_pt_pt_preview_result->>'main_word' <> 'QZXAL' then
+        raise exception 'Expected pt-PT preview main_word QZXAL, got %',
             v_pt_pt_preview_result;
     end if;
 
     if coalesce((v_pt_pt_preview_result->>'requires_vote')::boolean, true) is not false then
-        raise exception 'Expected imported pt-PT ABACO not to require vote, got %',
+        raise exception 'Expected imported pt-PT QZXAL not to require vote, got %',
             v_pt_pt_preview_result;
     end if;
 
@@ -302,7 +306,7 @@ begin
     );
 
     if v_pt_pt_submit_result->>'status' <> 'success' then
-        raise exception 'Expected imported pt-PT ABACO submit success, got %',
+        raise exception 'Expected imported pt-PT QZXAL submit success, got %',
             v_pt_pt_submit_result;
     end if;
 
@@ -312,13 +316,13 @@ begin
     where id = (v_pt_pt_submit_result->>'move_id')::uuid
       and match_id = v_pt_pt_match_id
       and player_id = v_pt_pt_player_id
-      and main_word = 'ABACO'
+      and main_word = 'QZXAL'
       and status = 'accepted'
       and is_dictionary_recognized = true
       and requires_vote = false;
 
     if v_pt_pt_accepted_move_count <> 1 then
-        raise exception 'Expected exactly 1 accepted imported pt-PT ABACO move, got %',
+        raise exception 'Expected exactly 1 accepted imported pt-PT QZXAL move, got %',
             v_pt_pt_accepted_move_count;
     end if;
 
@@ -332,6 +336,10 @@ begin
 
     delete from public.patxanga_dictionary
     where source = 'imported_words_engine_test';
+
+    delete from public.patxanga_dictionary
+    where (language = 'pt-BR' and word_normalized in ('QZXN', 'FALSO'))
+       or (language = 'pt-PT' and word_normalized = 'QZXAL');
 
     delete from public.patxanga_dictionary_import_batches
     where source = 'imported_words_engine_test';

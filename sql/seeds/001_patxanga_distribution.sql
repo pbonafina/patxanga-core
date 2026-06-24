@@ -44,8 +44,8 @@ insert into patxanga_letter_distribution (language, letter, quantity, points)
 values
 ('pt-BR','A',14,1),
 ('pt-BR','E',11,1),
-('pt-BR','O',9,1),
-('pt-BR','I',7,1),
+('pt-BR','O',10,1),
+('pt-BR','I',8,1),
 ('pt-BR','U',5,2);
 
 -- =============================
@@ -60,7 +60,7 @@ values
 ('pt-BR','D',4,2),
 ('pt-BR','M',4,2),
 ('pt-BR','T',4,2),
-('pt-BR','C',4,2);
+('pt-BR','C',5,2);
 
 -- =============================
 -- CONSOANTES INTERMEDIÁRIAS
@@ -85,10 +85,7 @@ insert into patxanga_letter_distribution (language, letter, quantity, points)
 values
 ('pt-BR','Q',2,6),
 ('pt-BR','X',2,6),
-('pt-BR','Z',2,7),
-('pt-BR','K',1,7),
-('pt-BR','Y',1,7),
-('pt-BR','W',1,7);
+('pt-BR','Z',2,7);
 
 -- =============================
 -- PEÇAS ESPECIAIS

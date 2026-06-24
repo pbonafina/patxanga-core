@@ -86,6 +86,9 @@ Ja existe:
 - RPC `submit_patxanga_easy_bot_turn(...)`
 - RPC de leitura `find_patxanga_easy_bot_candidate_moves(...)` para listar
   candidatos de abertura/encaixe sem mutar a partida
+- RPC de leitura `find_patxanga_playable_bot_candidate_moves(...)` para listar
+  candidatos jogaveis, excluindo entradas fracas como `AA`, `EE` e palavras de
+  duas letras
 - RPC de leitura `get_patxanga_easy_bot_word_verdict(...)` para decidir se o
   bot `easy` aceita ou rejeita uma palavra
 - RPC `submit_patxanga_easy_bot_vote(...)` para voto automatico de bot em
@@ -103,6 +106,8 @@ Ja existe:
   palavra desconhecida em `pending_vote`
 - regressao SQL de configuracao de bot: diferencia `easy`, `medium`, `hard`,
   `aggressive`, `balanced` e `defensive`
+- regressao SQL de qualidade lexical do bot jogavel: palavras curtas/fracas nao
+  entram no catalogo de candidatos
 - regressao Playwright para criar humano contra bot, validar abertura real e
   validar encaixe conectado do bot
 

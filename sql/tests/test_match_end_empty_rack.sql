@@ -12,6 +12,7 @@ declare
     v_forced_rack jsonb;
     v_tile1_id uuid := gen_random_uuid();
     v_tile2_id uuid := gen_random_uuid();
+    v_tile3_id uuid := gen_random_uuid();
     v_result jsonb;
     v_bootstrap jsonb;
 begin
@@ -42,10 +43,11 @@ begin
     )
     where id = v_match_id;
 
-    -- Force rack with exactly DA
+    -- Force rack with exactly SOL
     v_forced_rack := jsonb_build_array(
-        jsonb_build_object('id', v_tile1_id::text, 'letter', 'D', 'points', 2, 'is_special', false, 'special_type', null),
-        jsonb_build_object('id', v_tile2_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null)
+        jsonb_build_object('id', v_tile1_id::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_tile2_id::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_tile3_id::text, 'letter', 'L', 'points', 2, 'is_special', false, 'special_type', null)
     );
 
     update patxanga_players
@@ -57,7 +59,8 @@ begin
         v_current_player_id,
         jsonb_build_array(
             jsonb_build_object('tile_id', v_tile1_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
-            jsonb_build_object('tile_id', v_tile2_id::text, 'row', 8, 'col', 9, 'declared_letter', null)
+            jsonb_build_object('tile_id', v_tile2_id::text, 'row', 8, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_tile3_id::text, 'row', 8, 'col', 10, 'declared_letter', null)
         )
     );
 

@@ -13,8 +13,9 @@ declare
     v_bot_count integer;
     v_current_player_id uuid;
     v_next_player_id uuid;
-    v_tile_d_id uuid := gen_random_uuid();
-    v_tile_a_id uuid := gen_random_uuid();
+    v_tile_s_id uuid := gen_random_uuid();
+    v_tile_o_id uuid := gen_random_uuid();
+    v_tile_l_id uuid := gen_random_uuid();
     v_forced_rack jsonb;
     v_submit_result jsonb;
     v_pass_result jsonb;
@@ -83,23 +84,23 @@ begin
 
     v_forced_rack := jsonb_build_array(
         jsonb_build_object(
-            'id', v_tile_d_id::text,
-            'letter', 'D',
-            'points', 2,
-            'is_special', false,
-            'special_type', null
-        ),
-        jsonb_build_object(
-            'id', v_tile_a_id::text,
-            'letter', 'A',
+            'id', v_tile_s_id::text,
+            'letter', 'S',
             'points', 1,
             'is_special', false,
             'special_type', null
         ),
-        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object(
+            'id', v_tile_o_id::text,
+            'letter', 'O',
+            'points', 1,
+            'is_special', false,
+            'special_type', null
+        ),
+        jsonb_build_object('id', v_tile_l_id::text, 'letter', 'L', 'points', 2, 'is_special', false, 'special_type', null),
         jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
         jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'M', 'points', 2, 'is_special', false, 'special_type', null),
-        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
         jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null)
     );
 
@@ -113,15 +114,21 @@ begin
         v_current_player_id,
         jsonb_build_array(
             jsonb_build_object(
-                'tile_id', v_tile_d_id::text,
+                'tile_id', v_tile_s_id::text,
                 'row', 8,
                 'col', 8,
                 'declared_letter', null
             ),
             jsonb_build_object(
-                'tile_id', v_tile_a_id::text,
+                'tile_id', v_tile_o_id::text,
                 'row', 8,
                 'col', 9,
+                'declared_letter', null
+            ),
+            jsonb_build_object(
+                'tile_id', v_tile_l_id::text,
+                'row', 8,
+                'col', 10,
                 'declared_letter', null
             )
         )
@@ -137,8 +144,8 @@ begin
 
     v_total_score := (v_submit_result->'score'->>'total_score')::integer;
 
-    if v_total_score <> 6 then
-        raise exception 'Expected opening DA score 6, got % from %', v_total_score, v_submit_result;
+    if v_total_score <> 8 then
+        raise exception 'Expected opening SOL score 8, got % from %', v_total_score, v_submit_result;
     end if;
 
     select current_turn_player_id
@@ -167,8 +174,8 @@ begin
       and player_id = v_current_player_id
       and move_type = 'place_word'
       and status = 'accepted'
-      and main_word = 'DA'
-      and score_total = 6;
+      and main_word = 'SOL'
+      and score_total = 8;
 
     if v_accepted_place_word_count <> 1 then
         raise exception 'Expected exactly 1 accepted bot place_word move, got %', v_accepted_place_word_count;

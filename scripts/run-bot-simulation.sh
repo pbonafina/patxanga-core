@@ -20,6 +20,7 @@ typeset -a all_simulations=(
   "sql/simulations/bot_simulation_empty_rack_end.sql"
   "sql/simulations/bot_simulation_all_passed_end.sql"
   "sql/simulations/bot_simulation_invalid_move_expected_error.sql"
+  "sql/simulations/bot_simulation_complete_playable_match.sql"
   "${long_simulations[@]}"
 )
 

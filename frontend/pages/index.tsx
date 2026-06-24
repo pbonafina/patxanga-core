@@ -183,7 +183,15 @@ function formatVoteResolutionMessage(voteResult: unknown): string | null {
 function formatBotTurnMessage(botTurnResult: RpcEasyBotTurnResult | null): string {
   if (botTurnResult?.bot_action === "place_word") {
     const word = botTurnResult.main_word ?? "uma palavra";
-    if (botTurnResult.bot_strategy === "easy_connected_dictionary_word") {
+    const connectedStrategies = new Set([
+      "easy_connected_dictionary_word",
+      "playable_connected_dictionary_word",
+    ]);
+
+    if (
+      botTurnResult.bot_strategy &&
+      connectedStrategies.has(botTurnResult.bot_strategy)
+    ) {
       return `Bot jogou ${word} conectando ao tabuleiro.`;
     }
 
@@ -557,7 +565,7 @@ export default function HomePage() {
     opponentIsBot: boolean;
     language: MatchLanguage;
   } | null>(null);
-  const [quickMatchLanguage, setQuickMatchLanguage] = useState<MatchLanguage>("pt-BR");
+  const [quickMatchLanguage, setQuickMatchLanguage] = useState<MatchLanguage>("pt-PT");
   const [inviteTargetUserId, setInviteTargetUserId] = useState("");
   const [isCreatingInviteLobby, setIsCreatingInviteLobby] = useState(false);
   const [inviteLobbyMessage, setInviteLobbyMessage] = useState<string | null>(null);

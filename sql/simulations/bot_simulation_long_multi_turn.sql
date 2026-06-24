@@ -13,8 +13,9 @@ declare
     v_second_player_id uuid;
     v_bot_count integer;
 
-    v_opening_tile_d_id uuid := gen_random_uuid();
-    v_opening_tile_a_id uuid := gen_random_uuid();
+    v_opening_tile_s_id uuid := gen_random_uuid();
+    v_opening_tile_o_id uuid := gen_random_uuid();
+    v_opening_tile_l_id uuid := gen_random_uuid();
     v_exchange_tile_s_id uuid := gen_random_uuid();
     v_exchange_tile_e_id uuid := gen_random_uuid();
     v_bridge_tile_x_id uuid := gen_random_uuid();
@@ -116,12 +117,12 @@ begin
     end if;
 
     v_first_rack := jsonb_build_array(
-        jsonb_build_object('id', v_opening_tile_d_id::text, 'letter', 'D', 'points', 2, 'is_special', false, 'special_type', null),
-        jsonb_build_object('id', v_opening_tile_a_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
-        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_opening_tile_s_id::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_opening_tile_o_id::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_opening_tile_l_id::text, 'letter', 'L', 'points', 2, 'is_special', false, 'special_type', null),
         jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
         jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'M', 'points', 2, 'is_special', false, 'special_type', null),
-        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null),
         jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null)
     );
 
@@ -134,8 +135,9 @@ begin
         v_match_id,
         v_first_player_id,
         jsonb_build_array(
-            jsonb_build_object('tile_id', v_opening_tile_d_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
-            jsonb_build_object('tile_id', v_opening_tile_a_id::text, 'row', 8, 'col', 9, 'declared_letter', null)
+            jsonb_build_object('tile_id', v_opening_tile_s_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_opening_tile_o_id::text, 'row', 8, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_opening_tile_l_id::text, 'row', 8, 'col', 10, 'declared_letter', null)
         )
     );
 
@@ -147,8 +149,8 @@ begin
         raise exception 'Expected opening move_id, got %', v_opening_result;
     end if;
 
-    if (v_opening_result->'score'->>'total_score')::integer <> 6 then
-        raise exception 'Expected opening DA score 6, got %', v_opening_result;
+    if (v_opening_result->'score'->>'total_score')::integer <> 8 then
+        raise exception 'Expected opening SOL score 8, got %', v_opening_result;
     end if;
 
     if (v_opening_result->>'next_player')::uuid <> v_second_player_id then
@@ -164,16 +166,20 @@ begin
     from patxanga_matches
     where id = v_match_id;
 
-    if v_bag_after_opening <> v_bag_after_start - 2 then
-        raise exception 'Expected bag remaining % after opening, got %', v_bag_after_start - 2, v_bag_after_opening;
+    if v_bag_after_opening <> v_bag_after_start - 3 then
+        raise exception 'Expected bag remaining % after opening, got %', v_bag_after_start - 3, v_bag_after_opening;
     end if;
 
-    if (select board_state #>> '{7,7,tile,letter}' from patxanga_matches where id = v_match_id) <> 'D' then
-        raise exception 'Expected D at board center after opening';
+    if (select board_state #>> '{7,7,tile,letter}' from patxanga_matches where id = v_match_id) <> 'S' then
+        raise exception 'Expected S at board center after opening';
     end if;
 
-    if (select board_state #>> '{7,8,tile,letter}' from patxanga_matches where id = v_match_id) <> 'A' then
-        raise exception 'Expected A next to board center after opening';
+    if (select board_state #>> '{7,8,tile,letter}' from patxanga_matches where id = v_match_id) <> 'O' then
+        raise exception 'Expected O next to board center after opening';
+    end if;
+
+    if (select board_state #>> '{7,9,tile,letter}' from patxanga_matches where id = v_match_id) <> 'L' then
+        raise exception 'Expected L after O after opening';
     end if;
 
     v_second_exchange_rack := jsonb_build_array(
@@ -275,8 +281,8 @@ begin
         raise exception 'Expected bridge move pending_vote, got %', v_bridge_result;
     end if;
 
-    if v_bridge_result->>'main_word' <> 'XAZ' then
-        raise exception 'Expected bridge main_word XAZ, got %', v_bridge_result;
+    if v_bridge_result->>'main_word' <> 'XOZ' then
+        raise exception 'Expected bridge main_word XOZ, got %', v_bridge_result;
     end if;
 
     if v_bridge_result->>'match_status' <> 'voting' then
@@ -383,8 +389,8 @@ begin
     from patxanga_players
     where id = v_second_player_id;
 
-    if v_first_score <> 6 then
-        raise exception 'Expected first bot score 6, got %', v_first_score;
+    if v_first_score <> 8 then
+        raise exception 'Expected first bot score 8, got %', v_first_score;
     end if;
 
     if v_second_score <> 0 then
@@ -410,11 +416,11 @@ begin
     where match_id = v_match_id
       and move_type = 'place_word'
       and status = 'accepted'
-      and main_word = 'DA'
-      and score_total = 6;
+      and main_word = 'SOL'
+      and score_total = 8;
 
     if v_accepted_place_word_count <> 1 then
-        raise exception 'Expected exactly 1 accepted DA move, got %', v_accepted_place_word_count;
+        raise exception 'Expected exactly 1 accepted SOL move, got %', v_accepted_place_word_count;
     end if;
 
     select count(*)
@@ -425,13 +431,13 @@ begin
       and player_id = v_second_player_id
       and move_type = 'place_word'
       and status = 'rejected'
-      and main_word = 'XAZ'
+      and main_word = 'XOZ'
       and score_total = 0
       and is_dictionary_recognized = false
       and requires_vote = true;
 
     if v_rejected_place_word_count <> 1 then
-        raise exception 'Expected exactly 1 rejected XAZ move, got %', v_rejected_place_word_count;
+        raise exception 'Expected exactly 1 rejected XOZ move, got %', v_rejected_place_word_count;
     end if;
 
     select count(*)

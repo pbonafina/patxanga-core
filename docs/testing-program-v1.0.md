@@ -206,6 +206,7 @@ Testes:
 - `sql/tests/test_easy_bot_turn_policy.sql`
 - `sql/tests/test_easy_bot_vote_verdict.sql`
 - `sql/tests/test_bot_policy_config.sql`
+- `sql/tests/test_playable_bot_word_quality.sql`
 - `sql/tests/test_multi_human_match_flows.sql`
 - `sql/tests/test_exchange_tiles.sql`
 - `sql/tests/test_pass_turn.sql`
@@ -288,6 +289,7 @@ Cenarios de `all`:
 - erros esperados sem mutacao de estado
 - partida longa multi-turno
 - relatorio deterministico de metricas de bot
+- partida completa bot-vs-bot com palavras jogaveis e fim oficial
 
 Usar quando:
 
@@ -304,6 +306,7 @@ Comandos:
 zsh scripts/preflight-bot-dictionary-alpha.sh
 zsh scripts/test-dictionary-import-tooling.sh
 zsh scripts/test-libreoffice-dictionary-sample.sh
+zsh scripts/import-priberam-pt-pt.sh --limit 100
 zsh scripts/import-libreoffice-pt-br-sample.sh --skip-download --limit 25 --execute
 zsh scripts/import-libreoffice-pt-pt-sample.sh --skip-download --limit 25 --execute
 ```
@@ -312,7 +315,9 @@ Usar quando:
 
 - `scripts/prepare-dictionary-import.py` mudar
 - `scripts/prepare-libreoffice-dictionary-sample.py` mudar
+- `scripts/prepare-priberam-stardict.py` mudar
 - scripts `import-libreoffice-*` mudarem
+- script `scripts/import-priberam-pt-pt.sh` mudar
 - contrato de `import_patxanga_dictionary_entries(...)` mudar
 - politica lexical mudar
 

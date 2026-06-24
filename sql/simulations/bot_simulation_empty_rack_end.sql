@@ -11,8 +11,9 @@ declare
     v_host_player_id uuid;
     v_empty_rack_player_id uuid;
     v_other_player_id uuid;
-    v_tile_d_id uuid := gen_random_uuid();
-    v_tile_a_id uuid := gen_random_uuid();
+    v_tile_s_id uuid := gen_random_uuid();
+    v_tile_o_id uuid := gen_random_uuid();
+    v_tile_l_id uuid := gen_random_uuid();
     v_emptying_rack jsonb;
     v_other_rack jsonb;
     v_result jsonb;
@@ -90,8 +91,9 @@ begin
     where id = v_match_id;
 
     v_emptying_rack := jsonb_build_array(
-        jsonb_build_object('id', v_tile_d_id::text, 'letter', 'D', 'points', 2, 'is_special', false, 'special_type', null),
-        jsonb_build_object('id', v_tile_a_id::text, 'letter', 'A', 'points', 1, 'is_special', false, 'special_type', null)
+        jsonb_build_object('id', v_tile_s_id::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_tile_o_id::text, 'letter', 'O', 'points', 1, 'is_special', false, 'special_type', null),
+        jsonb_build_object('id', v_tile_l_id::text, 'letter', 'L', 'points', 2, 'is_special', false, 'special_type', null)
     );
 
     v_other_rack := jsonb_build_array(
@@ -115,8 +117,9 @@ begin
         v_match_id,
         v_empty_rack_player_id,
         jsonb_build_array(
-            jsonb_build_object('tile_id', v_tile_d_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
-            jsonb_build_object('tile_id', v_tile_a_id::text, 'row', 8, 'col', 9, 'declared_letter', null)
+            jsonb_build_object('tile_id', v_tile_s_id::text, 'row', 8, 'col', 8, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_tile_o_id::text, 'row', 8, 'col', 9, 'declared_letter', null),
+            jsonb_build_object('tile_id', v_tile_l_id::text, 'row', 8, 'col', 10, 'declared_letter', null)
         )
     );
 
@@ -176,8 +179,8 @@ begin
     from patxanga_players
     where id = v_other_player_id;
 
-    if v_empty_player_score <> 10 then
-        raise exception 'Expected empty rack player final score 10, got %', v_empty_player_score;
+    if v_empty_player_score <> 12 then
+        raise exception 'Expected empty rack player final score 12, got %', v_empty_player_score;
     end if;
 
     if v_other_player_score <> -4 then
@@ -200,11 +203,11 @@ begin
       and player_id = v_empty_rack_player_id
       and move_type = 'place_word'
       and status = 'accepted'
-      and main_word = 'DA'
-      and score_total = 6;
+      and main_word = 'SOL'
+      and score_total = 8;
 
     if v_accepted_move_count <> 1 then
-        raise exception 'Expected exactly 1 accepted DA move, got %', v_accepted_move_count;
+        raise exception 'Expected exactly 1 accepted SOL move, got %', v_accepted_move_count;
     end if;
 
     select count(*)

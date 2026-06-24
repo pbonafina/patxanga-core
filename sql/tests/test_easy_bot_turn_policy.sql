@@ -267,7 +267,7 @@ begin
             v_connected_bot_result;
     end if;
 
-    if v_connected_bot_result->>'bot_strategy' <> 'easy_connected_dictionary_word' then
+    if v_connected_bot_result->>'bot_strategy' <> 'playable_connected_dictionary_word' then
         raise exception 'Expected connected bot strategy, got %',
             v_connected_bot_result;
     end if;
@@ -371,8 +371,8 @@ begin
             v_fallback_result;
     end if;
 
-    if v_fallback_result->>'pass_reason' <> 'no_opening_word' then
-        raise exception 'Expected fallback reason no_opening_word, got %',
+    if v_fallback_result->>'pass_reason' <> 'no_playable_word' then
+        raise exception 'Expected fallback reason no_playable_word, got %',
             v_fallback_result;
     end if;
 

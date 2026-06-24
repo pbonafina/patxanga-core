@@ -278,11 +278,16 @@ Um dos ramos operacionais abaixo:
 - `bot_action = pass`, quando nao encontrou jogada segura e caiu no fallback de passe
 
 Campos adicionais esperados em `place_word`:
-- `bot_strategy = easy_opening_dictionary_word` para abertura em board vazio
-- `bot_strategy = easy_connected_dictionary_word` para encaixe simples em board
+- `bot_strategy = playable_opening_dictionary_word` para abertura em board vazio
+- `bot_strategy = playable_connected_dictionary_word` para encaixe simples em board
   ja ocupado
 - `main_word` com a palavra jogada
 - `placed_tiles` com apenas as pecas novas enviadas ao backend
+
+Campos adicionais esperados em `pass`:
+- `bot_strategy = playable_dictionary_word`
+- `pass_reason = no_playable_word`, quando nao ha palavra de qualidade lexical
+  que caiba no rack/tabuleiro atual
 
 #### Estados relevantes para UI
 - `active`
