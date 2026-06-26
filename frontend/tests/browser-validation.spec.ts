@@ -925,11 +925,13 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("tunnel-human-match-panel")).toHaveCount(0);
 
     await page.getByTestId("play-mode-select-human_human").click();
-    await expect(page.getByTestId("tunnel-human-match-panel")).toContainText(
-      "Mesa online"
+    await expect(page.getByTestId("human-human-guided-flow")).toContainText(
+      "Login necessário"
     );
-    await expect(page.getByTestId("tunnel-public-url")).toBeVisible();
-    await expect(page.getByTestId("tunnel-create-open-join-lobby")).toBeDisabled();
+    await expect(page.getByTestId("human-human-guided-flow")).toContainText(
+      "Depois clique novamente em Humano x humano"
+    );
+    await expect(page.getByTestId("tunnel-human-match-panel")).toHaveCount(0);
     await expect(page.getByTestId("auth-product-panel")).toContainText("Entre para salvar e jogar online");
     await expect(page.getByTestId("advanced-tools-toggle")).toHaveCount(0);
     await openAdvancedTools(page);

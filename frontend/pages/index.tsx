@@ -696,6 +696,7 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
   const botAutoActionInFlightRef = useRef(false);
   const botAutoVoteKeyRef = useRef<string | null>(null);
   const botAutoVoteInFlightRef = useRef(false);
+  const humanHumanAutoCreateRequestedRef = useRef(false);
 
   const resolvedBootstrap = useMatchBootstrap(bootstrapData ?? undefined);
   const { isConfigured } = getSupabaseEnv();
@@ -1094,6 +1095,23 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
       setPlayerIdInput(authenticatedUserId);
     }
   }, [authenticatedUserId]);
+
+  useEffect(() => {
+    if (
+      selectedPlayMode !== "human_human" ||
+      !authenticatedUserId ||
+      lastJoinLink ||
+      isCreatingInviteLobby ||
+      humanHumanAutoCreateRequestedRef.current
+    ) {
+      return;
+    }
+
+    humanHumanAutoCreateRequestedRef.current = true;
+    void handleCreateOpenJoinLobby();
+    // A criação automática deve reagir apenas ao estado da jornada, não recriar por mudança de identidade visual.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authenticatedUserId, isCreatingInviteLobby, lastJoinLink, selectedPlayMode]);
 
   useEffect(() => {
     if (!tunnelPublicUrl && typeof window !== "undefined") {
@@ -2477,6 +2495,31 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
     } finally {
       setIsCreatingInviteLobby(false);
     }
+  }
+
+  function handleSelectPlayMode(mode: PlayMode, enabled: boolean) {
+    if (!enabled) {
+      return;
+    }
+
+    setSelectedPlayMode(mode);
+
+    if (mode !== "human_human") {
+      return;
+    }
+
+    if (!authenticatedUserId) {
+      setInviteLobbyMessage(null);
+      setInviteLobbyError("Entre com sua conta para gerar automaticamente o link humano x humano.");
+      return;
+    }
+
+    if (lastJoinLink || isCreatingInviteLobby) {
+      return;
+    }
+
+    humanHumanAutoCreateRequestedRef.current = true;
+    void handleCreateOpenJoinLobby();
   }
 
   async function handleOpenQuickMatch(userId: string) {
@@ -4021,7 +4064,7 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
               <article
                 key={mode.id}
                 data-testid={`play-mode-${mode.id}`}
-                onClick={() => setSelectedPlayMode(mode.id)}
+                onClick={() => handleSelectPlayMode(mode.id, mode.enabled)}
                 style={{
                   display: "grid",
                   gap: 12,
@@ -4048,7 +4091,11 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
                   <button
                     type="button"
                     data-testid={`play-mode-select-${mode.id}`}
-                    onClick={() => setSelectedPlayMode(mode.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleSelectPlayMode(mode.id, mode.enabled);
+                    }}
+                    disabled={!mode.enabled}
                     style={{
                       alignSelf: "flex-start",
                       padding: "7px 10px",
@@ -4056,7 +4103,7 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
                       border: `1px solid ${mode.accent}`,
                       background: isSelected ? mode.accent : "#ffffff",
                       color: isSelected ? "#ffffff" : mode.accent,
-                      cursor: "pointer",
+                      cursor: mode.enabled ? "pointer" : "not-allowed",
                       fontWeight: 900,
                     }}
                   >
@@ -4112,13 +4159,214 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
           ) : null}
 
           {selectedPlayMode === "human_human" ? (
-            <div style={{ display: "grid", gap: 10 }}>
-              <h3 style={{ margin: 0, fontSize: 22 }}>Partida humano x humano</h3>
-              <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.45 }}>
-                Entre com sua conta, gere um link e envie ao convidado. Quando ele entrar, inicie a mesa.
-              </p>
+            <div data-testid="human-human-guided-flow" style={{ display: "grid", gap: 14 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 22 }}>Partida humano x humano</h3>
+                  <p style={{ margin: "6px 0 0", color: "#4b5563", lineHeight: 1.45 }}>
+                    Ao escolher este modo, a mesa e o link são gerados automaticamente. Envie o link ao outro jogador.
+                  </p>
+                </div>
+                <div
+                  data-testid="human-human-flow-status"
+                  style={{
+                    padding: "9px 12px",
+                    borderRadius: 999,
+                    background: lastJoinLink ? "#dcfce7" : isCreatingInviteLobby ? "#dbeafe" : isAuthenticated ? "#fef3c7" : "#ffedd5",
+                    color: lastJoinLink ? "#166534" : isCreatingInviteLobby ? "#1d4ed8" : "#9a3412",
+                    fontWeight: 950,
+                  }}
+                >
+                  {lastJoinLink
+                    ? "Link pronto"
+                    : isCreatingInviteLobby
+                      ? "Gerando link..."
+                      : isAuthenticated
+                        ? "Clique para gerar"
+                        : "Login necessário"}
+                </div>
+              </div>
+
               {!isAuthenticated ? (
-                <strong style={{ color: "#9a3412" }}>Faça login acima para criar o link.</strong>
+                <div
+                  style={{
+                    padding: 14,
+                    borderRadius: 16,
+                    background: "#fff7ed",
+                    border: "1px solid #fed7aa",
+                    color: "#9a3412",
+                    fontWeight: 900,
+                  }}
+                >
+                  Entre ou crie conta no bloco acima. Depois clique novamente em Humano x humano e o link será gerado sem outros passos.
+                </div>
+              ) : null}
+
+              {isAuthenticated && !lastJoinLink ? (
+                <div
+                  style={{
+                    padding: 14,
+                    borderRadius: 16,
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    color: "#1e40af",
+                    fontWeight: 900,
+                  }}
+                >
+                  {isCreatingInviteLobby
+                    ? "Criando a mesa online e preparando o link para envio..."
+                    : "Clique no cartão Humano x humano para gerar o link automaticamente."}
+                </div>
+              ) : null}
+
+              {lastJoinLink ? (
+                <div
+                  data-testid="human-human-link-ready"
+                  style={{
+                    display: "grid",
+                    gap: 12,
+                    padding: 16,
+                    borderRadius: 18,
+                    background: "#f0fdfa",
+                    border: "1px solid #99f6e4",
+                  }}
+                >
+                  <strong style={{ color: "#115e59", fontSize: 18 }}>Link pronto para enviar</strong>
+                  <div
+                    data-testid="human-human-join-link"
+                    style={{
+                      padding: 12,
+                      borderRadius: 12,
+                      background: "#ffffff",
+                      border: "1px solid #99f6e4",
+                      wordBreak: "break-all",
+                      color: "#134e4a",
+                      fontWeight: 850,
+                    }}
+                  >
+                    {lastJoinLink}
+                  </div>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      data-testid="human-human-copy-link"
+                      onClick={() => handleCopyTunnelText("link humano x humano", lastJoinLink)}
+                      style={{
+                        padding: "12px 16px",
+                        borderRadius: 14,
+                        border: "1px solid #0f766e",
+                        background: "#0f766e",
+                        color: "#ffffff",
+                        cursor: "pointer",
+                        fontWeight: 950,
+                      }}
+                    >
+                      Copiar link para enviar
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="human-human-refresh-table"
+                      onClick={handleRefreshCurrentMatch}
+                      disabled={!effectiveProductUserId || isLoading}
+                      style={{
+                        padding: "12px 16px",
+                        borderRadius: 14,
+                        border: "1px solid #1d4ed8",
+                        background: "#ffffff",
+                        color: "#1d4ed8",
+                        cursor: !effectiveProductUserId || isLoading ? "not-allowed" : "pointer",
+                        fontWeight: 950,
+                      }}
+                    >
+                      {isLoading ? "Atualizando..." : "Ver se convidado entrou"}
+                    </button>
+                    {isWaiting && resolvedBootstrap.playerId && !resolvedBootstrap.playerContext?.has_forfeited ? (
+                      <button
+                        type="button"
+                        data-testid="human-human-start-match"
+                        onClick={handleStartCurrentLobby}
+                        disabled={isStartingCurrentLobby || isLoading}
+                        style={{
+                          padding: "12px 16px",
+                          borderRadius: 14,
+                          border: "1px solid #166534",
+                          background: "#16a34a",
+                          color: "#ffffff",
+                          cursor: isStartingCurrentLobby || isLoading ? "not-allowed" : "pointer",
+                          fontWeight: 950,
+                        }}
+                      >
+                        {isStartingCurrentLobby ? "Iniciando..." : "Iniciar partida"}
+                      </button>
+                    ) : null}
+                  </div>
+                  <p style={{ margin: 0, color: "#115e59", lineHeight: 1.45 }}>
+                    Envie este link. O convidado abre, entra com a conta dele e entra na mesa. Depois use “Ver se convidado entrou” e “Iniciar partida”.
+                  </p>
+                </div>
+              ) : null}
+
+              {inviteLobbyMessage ? (
+                <div
+                  data-testid="human-human-flow-message"
+                  style={{
+                    padding: 12,
+                    borderRadius: 14,
+                    background: "#ecfdf5",
+                    border: "1px solid #bbf7d0",
+                    color: "#166534",
+                    fontWeight: 900,
+                  }}
+                >
+                  {inviteLobbyMessage}
+                </div>
+              ) : null}
+
+              {sessionActionMessage ? (
+                <div
+                  style={{
+                    padding: 12,
+                    borderRadius: 14,
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    color: "#1d4ed8",
+                    fontWeight: 900,
+                  }}
+                >
+                  {sessionActionMessage}
+                </div>
+              ) : null}
+
+              {tunnelCopyMessage ? (
+                <div
+                  data-testid="human-human-copy-message"
+                  style={{
+                    padding: 12,
+                    borderRadius: 14,
+                    background: "#ecfdf5",
+                    border: "1px solid #bbf7d0",
+                    color: "#166534",
+                    fontWeight: 900,
+                  }}
+                >
+                  {tunnelCopyMessage}
+                </div>
+              ) : null}
+
+              {inviteLobbyError || tunnelCopyError ? (
+                <div
+                  data-testid="human-human-flow-error"
+                  style={{
+                    padding: 12,
+                    borderRadius: 14,
+                    background: "#fff1f2",
+                    border: "1px solid #fecdd3",
+                    color: "#b00020",
+                    fontWeight: 900,
+                  }}
+                >
+                  {inviteLobbyError ?? tunnelCopyError}
+                </div>
               ) : null}
             </div>
           ) : null}
@@ -4134,7 +4382,7 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
         </div>
       </section>
 
-      {selectedPlayMode === "human_human" || incomingInviteId || incomingJoinMatchId || lastJoinLink ? (
+      {(showAdvancedTools && selectedPlayMode === "human_human") || incomingInviteId || incomingJoinMatchId ? (
       <section
         data-testid="tunnel-human-match-panel"
         style={{
