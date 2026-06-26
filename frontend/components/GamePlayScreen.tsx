@@ -147,6 +147,15 @@ function getSlotShortLabel(slotId: string): string {
   return `S${suffix}`;
 }
 
+function isRackSlotItem(item: unknown): item is { kind: "slot"; slotId: string } {
+  return Boolean(
+    item &&
+      typeof item === "object" &&
+      (item as { kind?: unknown }).kind === "slot" &&
+      typeof (item as { slotId?: unknown }).slotId === "string"
+  );
+}
+
 function formatFinishedAt(value: string | null): string {
   if (!value) return "(não disponível)";
   return value;
@@ -277,6 +286,7 @@ export function GamePlayScreen({
   const totalPlayers = playersSummary.length;
   const placedTileCount = placedTilesPreview.length;
   const associatedSlotCount = Object.keys(rackSlotAssociations).length;
+  const rackSlotCount = playerRackState.filter(isRackSlotItem).length;
   const preparedTileCoordinates = formatPreparedTileCoordinates(placedTilesPreview);
   const isPlayersTurn =
     Boolean(viewerPlayerId) &&
@@ -1051,6 +1061,7 @@ export function GamePlayScreen({
                 slotAssociationLabels={rackSlotAssociationLabels}
                 previewTileIds={previewTileIds}
                 showDebug={showDebug}
+                showGuidance={false}
                 isPlayersTurn={isPlayersTurn}
                 onToggleTile={onToggleTile}
                 onToggleSlot={onToggleRackSlot}
@@ -1218,6 +1229,44 @@ export function GamePlayScreen({
                       ? "Confirmar jogada"
                       : "Aguardar turno"}
                 </button>
+              </div>
+
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: 14,
+                  borderRadius: 16,
+                  border: isPlayersTurn ? "2px solid #2563eb" : "1px solid #e5e7eb",
+                  background: isPlayersTurn ? "#eff6ff" : "#ffffff",
+                  boxShadow: isPlayersTurn ? "0 0 0 3px rgba(59, 130, 246, 0.12)" : "none",
+                }}
+              >
+                <div style={{ marginTop: 6, fontSize: 14, color: "#4b5563" }}>
+                  {isPlayersTurn
+                    ? "É sua vez de montar e enviar a jogada."
+                    : "Você pode reorganizar as peças enquanto aguarda sua vez."}
+                </div>
+                <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
+                  Selecione uma peça e clique no tabuleiro para preparar a jogada.
+                </div>
+                <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
+                  Use os slots para montar a palavra com calma antes de confirmar.
+                </div>
+                {selectedGroupCount > 0 ? (
+                  <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
+                    {selectedGroupCount} peça{selectedGroupCount === 1 ? "" : "s"} selecionada{selectedGroupCount === 1 ? "" : "s"}
+                  </div>
+                ) : null}
+                {rackSlotCount > 0 ? (
+                  <div style={{ marginTop: 6, fontSize: 13, color: "#7c3aed", fontWeight: 700 }}>
+                    {rackSlotCount} slot{rackSlotCount === 1 ? "" : "s"} local{rackSlotCount === 1 ? "" : "is"} permanente{rackSlotCount === 1 ? "" : "s"} no rack
+                  </div>
+                ) : null}
+                {selectedRackSlotId ? (
+                  <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
+                    {getSlotShortLabel(selectedRackSlotId)} selecionado. Clique numa peça para vinculá-la ao slot ou clique no tabuleiro para associar essa composição ao board.
+                  </div>
+                ) : null}
               </div>
             </div>
           ) : null}

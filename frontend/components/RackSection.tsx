@@ -26,6 +26,7 @@ type RackSectionProps = {
   slotAssociationLabels: Record<string, string>;
   previewTileIds: string[];
   showDebug: boolean;
+  showGuidance?: boolean;
   isPlayersTurn: boolean;
   onToggleTile: (tileId: string) => void;
   onToggleSlot: (slotId: string) => void;
@@ -210,6 +211,7 @@ export function RackSection({
   slotAssociationLabels,
   previewTileIds,
   showDebug,
+  showGuidance = true,
   isPlayersTurn,
   onToggleTile,
   onToggleSlot,
@@ -289,107 +291,109 @@ export function RackSection({
 
   return (
     <section style={{ padding: 0, border: "none", borderRadius: 0 }}>
-      <div
-        style={{
-          marginBottom: 14,
-          padding: 14,
-          borderRadius: 16,
-          ...rackFrameStyle,
-        }}
-      >
+      {showGuidance ? (
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            flexWrap: "wrap",
+            marginBottom: 14,
+            padding: 14,
+            borderRadius: 16,
+            ...rackFrameStyle,
           }}
         >
-          <div>
-            {/* Item "Seu rack" suspenso temporariamente da UI executável. */}
-            <div style={{ marginTop: 6, fontSize: 14, color: "#4b5563" }}>
-              {isPlayersTurn
-                ? "É sua vez de montar e enviar a jogada."
-                : "Você pode reorganizar as peças enquanto aguarda sua vez."}
-            </div>
-            <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
-              Selecione uma peça e clique no tabuleiro para preparar a jogada.
-            </div>
-            <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
-              Use os slots para montar a palavra com calma antes de confirmar.
-            </div>
-            {selectedCount > 0 ? (
-              <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
-                {selectedCount} peça{selectedCount === 1 ? "" : "s"} selecionada{selectedCount === 1 ? "" : "s"}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              {/* Item "Seu rack" suspenso temporariamente da UI executável. */}
+              <div style={{ marginTop: 6, fontSize: 14, color: "#4b5563" }}>
+                {isPlayersTurn
+                  ? "É sua vez de montar e enviar a jogada."
+                  : "Você pode reorganizar as peças enquanto aguarda sua vez."}
               </div>
-            ) : null}
-            {slotCount > 0 ? (
-              <div style={{ marginTop: 6, fontSize: 13, color: "#7c3aed", fontWeight: 700 }}>
-                {slotCount} slot{slotCount === 1 ? "" : "s"} local{slotCount === 1 ? "" : "is"} permanente{slotCount === 1 ? "" : "s"} no rack
+              <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
+                Selecione uma peça e clique no tabuleiro para preparar a jogada.
               </div>
-            ) : null}
-            {activeSlotId ? (
-              <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
-                {getSlotShortLabel(activeSlotId)} selecionado. Clique numa peça para vinculá-la ao slot ou clique no tabuleiro para associar essa composição ao board.
+              <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
+                Use os slots para montar a palavra com calma antes de confirmar.
               </div>
-            ) : null}
+              {selectedCount > 0 ? (
+                <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
+                  {selectedCount} peça{selectedCount === 1 ? "" : "s"} selecionada{selectedCount === 1 ? "" : "s"}
+                </div>
+              ) : null}
+              {slotCount > 0 ? (
+                <div style={{ marginTop: 6, fontSize: 13, color: "#7c3aed", fontWeight: 700 }}>
+                  {slotCount} slot{slotCount === 1 ? "" : "s"} local{slotCount === 1 ? "" : "is"} permanente{slotCount === 1 ? "" : "s"} no rack
+                </div>
+              ) : null}
+              {activeSlotId ? (
+                <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
+                  {getSlotShortLabel(activeSlotId)} selecionado. Clique numa peça para vinculá-la ao slot ou clique no tabuleiro para associar essa composição ao board.
+                </div>
+              ) : null}
+            </div>
+
+            {/*
+              Relógio do turno e box visual suspensos temporariamente da UI executável.
+
+              <div
+                style={{
+                  opacity: isPlayersTurn ? (isAlert && !blinkVisible ? 0.35 : 1) : 0.55,
+                  transition: "opacity 0.18s ease",
+                }}
+              >
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#6b7280", marginBottom: 6, textAlign: "right" }}>
+                  {isPlayersTurn ? "Tempo do turno" : "Aguardando turno"}
+                </div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  {digits.map((digit, index) =>
+                    digit === ":" ? (
+                      <div
+                        key={`sep-${index}`}
+                        style={{
+                          width: 12,
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 4,
+                            height: 4,
+                            borderRadius: 999,
+                            background: isAlert ? "#f87171" : "#fb7185",
+                            opacity: isPlayersTurn ? 1 : 0.4,
+                          }}
+                        />
+                        <div
+                          style={{
+                            width: 4,
+                            height: 4,
+                            borderRadius: 999,
+                            background: isAlert ? "#f87171" : "#fb7185",
+                            opacity: isPlayersTurn ? 1 : 0.4,
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <SevenSegmentDigit key={`digit-${index}`} value={digit} alert={isAlert} />
+                    )
+                  )}
+                </div>
+              </div>
+            */}
           </div>
-
-          {/*
-            Relógio do turno e box visual suspensos temporariamente da UI executável.
-
-            <div
-              style={{
-                opacity: isPlayersTurn ? (isAlert && !blinkVisible ? 0.35 : 1) : 0.55,
-                transition: "opacity 0.18s ease",
-              }}
-            >
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#6b7280", marginBottom: 6, textAlign: "right" }}>
-                {isPlayersTurn ? "Tempo do turno" : "Aguardando turno"}
-              </div>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                {digits.map((digit, index) =>
-                  digit === ":" ? (
-                    <div
-                      key={`sep-${index}`}
-                      style={{
-                        width: 12,
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 4,
-                          height: 4,
-                          borderRadius: 999,
-                          background: isAlert ? "#f87171" : "#fb7185",
-                          opacity: isPlayersTurn ? 1 : 0.4,
-                        }}
-                      />
-                      <div
-                        style={{
-                          width: 4,
-                          height: 4,
-                          borderRadius: 999,
-                          background: isAlert ? "#f87171" : "#fb7185",
-                          opacity: isPlayersTurn ? 1 : 0.4,
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <SevenSegmentDigit key={`digit-${index}`} value={digit} alert={isAlert} />
-                  )
-                )}
-              </div>
-            </div>
-          */}
         </div>
-      </div>
+      ) : null}
 
       {showDebug ? (
         <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end", gap: 12, flexWrap: "wrap" }}>
