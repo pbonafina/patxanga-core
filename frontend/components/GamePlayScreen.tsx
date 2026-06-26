@@ -1041,17 +1041,31 @@ export function GamePlayScreen({
           {isActive ? (
             <div
               style={{
-                marginTop: 10,
-                padding: 18,
-                borderRadius: 16,
-                border: "1px solid #e5e7eb",
-                background: "#ffffff",
+                marginTop: 6,
               }}
             >
+              <RackSection
+                rackTiles={playerRackState}
+                selectedTileIds={selectedTileIds}
+                activeSlotId={selectedRackSlotId}
+                slotAssociationLabels={rackSlotAssociationLabels}
+                previewTileIds={previewTileIds}
+                showDebug={showDebug}
+                isPlayersTurn={isPlayersTurn}
+                onToggleTile={onToggleTile}
+                onToggleSlot={onToggleRackSlot}
+                onClearSlotAssignment={onClearRackSlotAssignment}
+                onClearSlotAssociation={onClearRackSlotAssociation}
+                onClearPreview={onClearPreview}
+                onReorderTile={onReorderTile}
+                onChangeSlotDraft={onChangeRackSlotDraft}
+              />
+
               {placedTileCount > 0 ? (
                 <div
                   style={{
-                    marginBottom: 14,
+                    marginTop: 8,
+                    marginBottom: 10,
                     padding: 12,
                     borderRadius: 12,
                     border:
@@ -1147,7 +1161,8 @@ export function GamePlayScreen({
                 <div
                   data-testid="move-composition-warning"
                   style={{
-                    marginBottom: 14,
+                    marginTop: 8,
+                    marginBottom: 10,
                     padding: 12,
                     borderRadius: 12,
                     border: "1px solid #f59e0b",
@@ -1160,26 +1175,13 @@ export function GamePlayScreen({
                 </div>
               ) : null}
 
-              <RackSection
-                rackTiles={playerRackState}
-                selectedTileIds={selectedTileIds}
-                activeSlotId={selectedRackSlotId}
-                slotAssociationLabels={rackSlotAssociationLabels}
-                previewTileIds={previewTileIds}
-                showDebug={showDebug}
-                isPlayersTurn={isPlayersTurn}
-                onToggleTile={onToggleTile}
-                onToggleSlot={onToggleRackSlot}
-                onClearSlotAssignment={onClearRackSlotAssignment}
-                onClearSlotAssociation={onClearRackSlotAssociation}
-                onClearPreview={onClearPreview}
-                onReorderTile={onReorderTile}
-                onChangeSlotDraft={onChangeRackSlotDraft}
-              />
-
               <div
                 style={{
-                  marginTop: 18,
+                  marginTop: 8,
+                  padding: 12,
+                  borderRadius: 14,
+                  border: "1px solid #e5e7eb",
+                  background: "#ffffff",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
