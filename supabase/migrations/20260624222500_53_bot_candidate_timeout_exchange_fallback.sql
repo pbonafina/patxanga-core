@@ -1,6 +1,7 @@
 -- ============================================================
--- PATXANGA - RPC: submit_patxanga_easy_bot_turn()
--- Purpose: easy bot submits the best playable catalog candidate or passes
+-- PATXANGA - MIGRATION 53: Bot candidate timeout fallback
+-- Purpose: if dense-board candidate search times out, exchange tiles instead
+-- of surfacing a bot error to the UI.
 -- ============================================================
 
 create or replace function public.submit_patxanga_easy_bot_turn(
@@ -145,7 +146,7 @@ begin
             return v_result || jsonb_build_object(
                 'bot_action', 'exchange_tiles',
                 'bot_strategy', 'playable_dictionary_word',
-                'exchange_reason', 'no_playable_word',
+                'exchange_reason', 'no_playable_word_or_candidate_timeout',
                 'exchanged_tile_ids', v_exchange_tile_ids
             );
         end if;
@@ -159,10 +160,13 @@ begin
     return v_result || jsonb_build_object(
         'bot_action', 'pass',
         'bot_strategy', 'playable_dictionary_word',
-        'pass_reason', 'no_playable_word'
+        'pass_reason', 'no_playable_word_and_no_exchange_available'
     );
 end;
 $$;
+
+revoke all on function public.submit_patxanga_easy_bot_turn(uuid, uuid)
+from public, anon, authenticated;
 
 grant execute on function public.submit_patxanga_easy_bot_turn(uuid, uuid)
 to authenticated, anon;

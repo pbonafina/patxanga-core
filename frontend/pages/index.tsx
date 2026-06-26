@@ -11,6 +11,7 @@ import {
   resumeMatch,
   startMatchFromLobby,
 } from "../lib/backend/matchOperations";
+import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import { getSupabaseEnv } from "../lib/supabase/env";
 import type { MatchBootstrap, PendingInvite, ResumableMatch } from "../types/match";
 import { BoardSection } from "../components/BoardSection";
@@ -55,6 +56,7 @@ type RackTileState = {
 
 type SessionRole = "host" | "guest";
 type MatchLanguage = "pt-BR" | "pt-PT";
+type PlayMode = "human_bot" | "human_human" | "multi_human";
 
 type SessionSwitchDraft = {
   matchId: string;
@@ -93,12 +95,24 @@ type RpcInvitePlayerResult = {
 };
 
 type RpcEasyBotTurnResult = {
-  bot_action?: "place_word" | "pass";
+  bot_action?: "place_word" | "pass" | "exchange_tiles";
   main_word?: string | null;
   bot_strategy?: string | null;
   pass_reason?: string | null;
+  exchange_reason?: string | null;
+  exchanged_count?: number | null;
   status?: string;
 };
+
+type BotTurnApiResponse =
+  | {
+      ok: true;
+      result: RpcEasyBotTurnResult | null;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
 
 type RpcVoteResult = {
   status?: string;
@@ -198,11 +212,63 @@ function formatBotTurnMessage(botTurnResult: RpcEasyBotTurnResult | null): strin
     return `Bot jogou ${word} como abertura.`;
   }
 
+  if (botTurnResult?.bot_action === "exchange_tiles") {
+    const exchangedCount = botTurnResult.exchanged_count ?? 0;
+    const reason = botTurnResult.exchange_reason
+      ? ` Motivo: ${botTurnResult.exchange_reason}.`
+      : "";
+
+    return `Bot trocou ${exchangedCount} peça${exchangedCount === 1 ? "" : "s"}.${reason}`;
+  }
+
   const passReason = botTurnResult?.pass_reason
     ? ` Motivo: ${botTurnResult.pass_reason}.`
     : "";
 
   return `Bot passou o turno automaticamente.${passReason}`;
+}
+
+function normalizePublicUrl(value: string) {
+  return value.trim().replace(/\/+$/, "");
+}
+
+function buildInviteLink(publicUrl: string, inviteId: string) {
+  const baseUrl = normalizePublicUrl(publicUrl);
+  if (!baseUrl) {
+    return "";
+  }
+
+  return `${baseUrl}/?inviteId=${encodeURIComponent(inviteId)}`;
+}
+
+function buildJoinLink(publicUrl: string, matchId: string) {
+  const baseUrl = normalizePublicUrl(publicUrl);
+  if (!baseUrl) {
+    return "";
+  }
+
+  return `${baseUrl}/?joinMatchId=${encodeURIComponent(matchId)}`;
+}
+
+async function submitEasyBotTurnViaApi(
+  matchId: string,
+  playerId: string
+): Promise<RpcEasyBotTurnResult | null> {
+  const response = await fetch("/api/bot-turn", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ matchId, playerId }),
+  });
+
+  const payload = (await response.json()) as BotTurnApiResponse;
+
+  if (!response.ok || !payload.ok) {
+    throw new Error(payload.ok ? "Falha ao executar turno automatico do bot." : payload.error);
+  }
+
+  return payload.result;
 }
 
 function formatBotVoteMessage(botVoteResult: RpcEasyBotVoteResult | null): string {
@@ -558,6 +624,7 @@ export default function HomePage() {
   >({});
   const [showDebug, setShowDebug] = useState(false);
   const [showAdvancedTools, setShowAdvancedTools] = useState(false);
+  const [selectedPlayMode, setSelectedPlayMode] = useState<PlayMode>("human_bot");
   const [quickMatchSession, setQuickMatchSession] = useState<{
     matchId: string;
     hostUserId: string;
@@ -570,6 +637,18 @@ export default function HomePage() {
   const [isCreatingInviteLobby, setIsCreatingInviteLobby] = useState(false);
   const [inviteLobbyMessage, setInviteLobbyMessage] = useState<string | null>(null);
   const [inviteLobbyError, setInviteLobbyError] = useState<string | null>(null);
+  const [tunnelPublicUrl, setTunnelPublicUrl] = useState("");
+  const [tunnelCopyMessage, setTunnelCopyMessage] = useState<string | null>(null);
+  const [tunnelCopyError, setTunnelCopyError] = useState<string | null>(null);
+  const [lastInviteId, setLastInviteId] = useState<string | null>(null);
+  const [lastInviteLink, setLastInviteLink] = useState<string | null>(null);
+  const [lastJoinLink, setLastJoinLink] = useState<string | null>(null);
+  const [incomingInviteId, setIncomingInviteId] = useState<string | null>(null);
+  const [incomingJoinMatchId, setIncomingJoinMatchId] = useState<string | null>(null);
+  const [isAcceptingIncomingInvite, setIsAcceptingIncomingInvite] = useState(false);
+  const [isJoiningIncomingMatch, setIsJoiningIncomingMatch] = useState(false);
+  const incomingInviteHandledRef = useRef<string | null>(null);
+  const incomingJoinHandledRef = useRef<string | null>(null);
   const [browserValidationScenarios, setBrowserValidationScenarios] = useState<
     BrowserValidationScenario[]
   >([]);
@@ -607,6 +686,8 @@ export default function HomePage() {
   const [lastTurnActionSummary, setLastTurnActionSummary] =
     useState<TurnActionSummary | null>(null);
   const [matchTimeline, setMatchTimeline] = useState<MatchTimelineItem[]>([]);
+  const [isDirectMatchLaunch, setIsDirectMatchLaunch] = useState(false);
+  const directMatchLaunchKeyRef = useRef<string | null>(null);
   const botAutoActionKeyRef = useRef<string | null>(null);
   const botAutoActionInFlightRef = useRef(false);
   const botAutoVoteKeyRef = useRef<string | null>(null);
@@ -622,6 +703,8 @@ export default function HomePage() {
     null;
   const effectiveProductUserId = authenticatedUserId ?? playerIdInput.trim();
   const isAuthenticated = Boolean(authenticatedUserId);
+  const tunnelUrlLooksLocal =
+    tunnelPublicUrl.includes("localhost") || tunnelPublicUrl.includes("127.0.0.1");
 
   const isWaiting = resolvedBootstrap.status === "waiting";
   const isActive = resolvedBootstrap.status === "active";
@@ -967,7 +1050,6 @@ export default function HomePage() {
     let cancelled = false;
 
     async function hydrateAuthSession() {
-      const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
       const client = getSupabaseBrowserClient();
 
       if (!client) {
@@ -1010,6 +1092,295 @@ export default function HomePage() {
   }, [authenticatedUserId]);
 
   useEffect(() => {
+    if (!tunnelPublicUrl && typeof window !== "undefined") {
+      setTunnelPublicUrl(window.location.origin);
+    }
+  }, [tunnelPublicUrl]);
+
+  useEffect(() => {
+    if (!lastInviteId) {
+      return;
+    }
+
+    const nextInviteLink = buildInviteLink(tunnelPublicUrl, lastInviteId);
+    setLastInviteLink(nextInviteLink || null);
+  }, [lastInviteId, tunnelPublicUrl]);
+
+  useEffect(() => {
+    const matchId = quickMatchSession?.matchId ?? matchIdInput.trim();
+
+    if (!matchId || lastInviteId) {
+      return;
+    }
+
+    const nextJoinLink = buildJoinLink(tunnelPublicUrl, matchId);
+    setLastJoinLink(nextJoinLink || null);
+  }, [lastInviteId, matchIdInput, quickMatchSession?.matchId, tunnelPublicUrl]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const inviteId = params.get("inviteId")?.trim() ?? "";
+    const joinMatchId = params.get("joinMatchId")?.trim() ?? "";
+
+    if (inviteId) {
+      setIncomingInviteId(inviteId);
+      setSessionActionMessage(
+        authenticatedUserId
+          ? "Link de convite detectado. Tentando aceitar o convite..."
+          : "Link de convite detectado. Entre com a conta convidada para aceitar."
+      );
+    }
+
+    if (joinMatchId) {
+      setIncomingJoinMatchId(joinMatchId);
+      setSessionActionMessage(
+        authenticatedUserId
+          ? "Link de entrada detectado. Tentando entrar na mesa..."
+          : "Link de entrada detectado. Entre ou crie conta para aderir à mesa."
+      );
+    }
+  }, [authenticatedUserId]);
+
+  useEffect(() => {
+    if (!incomingInviteId || !authenticatedUserId) {
+      return;
+    }
+
+    if (incomingInviteHandledRef.current === incomingInviteId) {
+      return;
+    }
+
+    const inviteId = incomingInviteId;
+    const userId = authenticatedUserId;
+    let cancelled = false;
+    incomingInviteHandledRef.current = inviteId;
+
+    async function acceptIncomingInvite() {
+      setIsAcceptingIncomingInvite(true);
+      setSessionListsError(null);
+      setSessionActionMessage("Aceitando convite recebido pelo link...");
+
+      try {
+        const result = await acceptInvite({
+          inviteId,
+          userId,
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        setMatchIdInput(result.matchId);
+        setPlayerIdInput(userId);
+        await openMatchSession(result.matchId, userId);
+        await handleLoadSessionLists();
+        setSessionActionMessage("Convite aceito. A mesa foi aberta nesta sessão.");
+
+        if (typeof window !== "undefined") {
+          const nextUrl = new URL(window.location.href);
+          nextUrl.searchParams.delete("inviteId");
+          window.history.replaceState({}, "", `${nextUrl.pathname}${nextUrl.search}`);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          incomingInviteHandledRef.current = null;
+          setSessionListsError(
+            error instanceof Error
+              ? error.message
+              : "Falha ao aceitar o convite recebido pelo link."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsAcceptingIncomingInvite(false);
+        }
+      }
+    }
+
+    void acceptIncomingInvite();
+
+    return () => {
+      cancelled = true;
+    };
+    // The handlers are intentionally omitted; this effect is keyed by the link token.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authenticatedUserId, incomingInviteId]);
+
+  useEffect(() => {
+    if (!incomingJoinMatchId || !authenticatedUserId) {
+      return;
+    }
+
+    if (incomingJoinHandledRef.current === incomingJoinMatchId) {
+      return;
+    }
+
+    const matchId = incomingJoinMatchId;
+    const userId = authenticatedUserId;
+    let cancelled = false;
+    incomingJoinHandledRef.current = matchId;
+
+    async function joinIncomingMatch() {
+      setIsJoiningIncomingMatch(true);
+      setSessionListsError(null);
+      setSessionActionMessage("Entrando na mesa recebida pelo link...");
+
+      try {
+        const resumeResult = await resumeMatch({
+          matchId,
+          userId,
+        });
+
+        if (!resumeResult.canResume) {
+          const client = await getConfiguredBrowserClient();
+          const { error } = await client.rpc("join_patxanga_match", {
+            p_match_id: matchId,
+            p_user_id: userId,
+            p_guest_name: authenticatedDisplayName ?? "Convidado Patxanga",
+            p_is_bot: false,
+            p_bot_level: null,
+            p_bot_profile: null,
+          });
+
+          if (error) {
+            throw new Error(error.message);
+          }
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setMatchIdInput(matchId);
+        setPlayerIdInput(userId);
+        await openMatchSession(matchId, userId);
+        await handleLoadSessionLists();
+        setSessionActionMessage("Você entrou na mesa. Aguarde o host iniciar a partida.");
+
+        if (typeof window !== "undefined") {
+          const nextUrl = new URL(window.location.href);
+          nextUrl.searchParams.delete("joinMatchId");
+          window.history.replaceState({}, "", `${nextUrl.pathname}${nextUrl.search}`);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          incomingJoinHandledRef.current = null;
+          setSessionListsError(
+            error instanceof Error
+              ? error.message
+              : "Falha ao entrar na mesa recebida pelo link."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsJoiningIncomingMatch(false);
+        }
+      }
+    }
+
+    void joinIncomingMatch();
+
+    return () => {
+      cancelled = true;
+    };
+    // The handlers are intentionally omitted; this effect is keyed by the link token.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authenticatedDisplayName, authenticatedUserId, incomingJoinMatchId]);
+
+  useEffect(() => {
+    if (!resolvedBootstrap.matchId || !playerIdInput || resolvedBootstrap.status !== "active") {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function refreshActiveMatchSnapshot() {
+      if (
+        isSubmittingMove ||
+        isSubmittingExchange ||
+        isSubmittingVote ||
+        isCreatingBotMatch ||
+        botAutoActionInFlightRef.current
+      ) {
+        return;
+      }
+
+      try {
+        const refreshedData = await loadMatchBootstrap({
+          matchId: resolvedBootstrap.matchId,
+          playerId: playerIdInput,
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        setBootstrapData(refreshedData);
+        await refreshPendingVoteContext(
+          refreshedData.matchId,
+          playerIdInput,
+          refreshedData.status
+        );
+
+        const refreshedTurnPlayer =
+          refreshedData.playersSummary.find(
+            (player) => player.player_id === refreshedData.currentTurnPlayerId
+          ) ?? null;
+
+        if (!refreshedTurnPlayer?.is_bot && !botAutoActionInFlightRef.current) {
+          setIsAutoPlayingBotTurn(false);
+        }
+      } catch {
+        // Background sync must not block the player's manual actions.
+      }
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshActiveMatchSnapshot();
+    }, 2500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [
+    isCreatingBotMatch,
+    isSubmittingExchange,
+    isSubmittingMove,
+    isSubmittingVote,
+    playerIdInput,
+    resolvedBootstrap.matchId,
+    resolvedBootstrap.status,
+  ]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const directMatchId = params.get("matchId")?.trim() ?? "";
+    const directUserId = params.get("userId")?.trim() ?? "";
+
+    if (!directMatchId || !directUserId) {
+      return;
+    }
+
+    const launchKey = `${directMatchId}:${directUserId}`;
+    if (directMatchLaunchKeyRef.current === launchKey) {
+      return;
+    }
+
+    directMatchLaunchKeyRef.current = launchKey;
+    setIsDirectMatchLaunch(true);
+    setMatchIdInput(directMatchId);
+    setPlayerIdInput(directUserId);
+    void openMatchSession(directMatchId, directUserId);
+    // Direct URL bootstrap must run once per page load; the ref prevents duplicate launches.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     if (
       !isActive ||
       !resolvedBootstrap.matchId ||
@@ -1020,9 +1391,11 @@ export default function HomePage() {
       return;
     }
 
+    const matchId = resolvedBootstrap.matchId;
+    const currentTurnPlayerId = resolvedBootstrap.currentTurnPlayerId;
     const botActionKey = [
-      resolvedBootstrap.matchId,
-      resolvedBootstrap.currentTurnPlayerId,
+      matchId,
+      currentTurnPlayerId,
       resolvedBootstrap.turnNumber,
     ].join(":");
 
@@ -1030,10 +1403,17 @@ export default function HomePage() {
       return;
     }
 
-    botAutoActionKeyRef.current = botActionKey;
     let cancelled = false;
 
     async function submitEasyBotTurn() {
+      if (
+        botAutoActionKeyRef.current === botActionKey ||
+        botAutoActionInFlightRef.current
+      ) {
+        return;
+      }
+
+      botAutoActionKeyRef.current = botActionKey;
       botAutoActionInFlightRef.current = true;
       setIsAutoPlayingBotTurn(true);
       setBotActionError(null);
@@ -1059,28 +1439,17 @@ export default function HomePage() {
       ].slice(0, 5));
 
       try {
-        const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
-        const client = getSupabaseBrowserClient();
-
-        if (!client) {
-          throw new Error("Supabase client indisponivel para acao automatica do bot.");
-        }
-
-        const { data, error } = await client.rpc("submit_patxanga_easy_bot_turn", {
-          p_match_id: resolvedBootstrap.matchId,
-          p_player_id: resolvedBootstrap.currentTurnPlayerId,
-        });
-
-        if (error) {
-          throw new Error(error.message);
-        }
+        const botTurnResult = await submitEasyBotTurnViaApi(
+          matchId,
+          currentTurnPlayerId
+        );
 
         if (cancelled) {
           return;
         }
 
         const refreshedData = await loadMatchBootstrap({
-          matchId: resolvedBootstrap.matchId,
+          matchId,
           playerId: playerIdInput,
         });
 
@@ -1094,8 +1463,6 @@ export default function HomePage() {
           playerIdInput,
           refreshedData.status
         );
-
-        const botTurnResult = data as RpcEasyBotTurnResult | null;
 
         const nextMessage = formatBotTurnMessage(botTurnResult);
         setBotActionMessage(nextMessage);
@@ -1118,6 +1485,7 @@ export default function HomePage() {
         ].slice(0, 5));
       } catch (error) {
         if (!cancelled) {
+          botAutoActionKeyRef.current = null;
           const nextError =
             error instanceof Error
               ? error.message
@@ -1198,10 +1566,17 @@ export default function HomePage() {
       return;
     }
 
-    botAutoVoteKeyRef.current = botVoteKey;
     let cancelled = false;
 
     async function submitEasyBotVote() {
+      if (
+        botAutoVoteKeyRef.current === botVoteKey ||
+        botAutoVoteInFlightRef.current
+      ) {
+        return;
+      }
+
+      botAutoVoteKeyRef.current = botVoteKey;
       botAutoVoteInFlightRef.current = true;
       setIsAutoPlayingBotTurn(true);
       setBotActionError(null);
@@ -1215,7 +1590,6 @@ export default function HomePage() {
       });
 
       try {
-        const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
         const client = getSupabaseBrowserClient();
 
         if (!client) {
@@ -1273,6 +1647,7 @@ export default function HomePage() {
         ].slice(0, 5));
       } catch (error) {
         if (!cancelled) {
+          botAutoVoteKeyRef.current = null;
           const nextError =
             error instanceof Error
               ? error.message
@@ -1299,10 +1674,14 @@ export default function HomePage() {
     const timer = window.setTimeout(() => {
       void submitEasyBotVote();
     }, 350);
+    const retryTimer = window.setInterval(() => {
+      void submitEasyBotVote();
+    }, 2500);
 
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
+      window.clearInterval(retryTimer);
     };
   }, [
     isVoting,
@@ -1330,7 +1709,6 @@ export default function HomePage() {
       setIsLoadingMovePreview(true);
 
       try {
-        const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
         const client = getSupabaseBrowserClient();
 
         if (!client) {
@@ -1590,7 +1968,6 @@ export default function HomePage() {
   }
 
   async function getConfiguredBrowserClient() {
-    const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
     const client = getSupabaseBrowserClient();
 
     if (!client) {
@@ -2006,6 +2383,8 @@ export default function HomePage() {
         throw new Error("Backend não retornou dados do convite criado.");
       }
 
+      const inviteResult = inviteData as RpcInvitePlayerResult;
+      const nextInviteLink = buildInviteLink(tunnelPublicUrl, inviteResult.invite_id);
       const nextQuickMatchSession = {
         matchId: createResult.match_id,
         hostUserId: authenticatedUserId,
@@ -2019,12 +2398,77 @@ export default function HomePage() {
       setSessionSwitchError(null);
       setMatchIdInput(createResult.match_id);
       setPlayerIdInput(authenticatedUserId);
-      setInviteLobbyMessage("Mesa criada e convite enviado. Aguardando aceite do convidado.");
+      setLastInviteId(inviteResult.invite_id);
+      setLastInviteLink(nextInviteLink || null);
+      setInviteLobbyMessage(
+        nextInviteLink
+          ? "Mesa criada. Copie o link de convite e envie ao convidado."
+          : "Mesa criada e convite enviado. Informe a URL do túnel para gerar o link."
+      );
       await openMatchSession(createResult.match_id, authenticatedUserId);
       await handleLoadSessionLists();
     } catch (error) {
       setInviteLobbyError(
         error instanceof Error ? error.message : "Falha ao criar mesa por convite."
+      );
+    } finally {
+      setIsCreatingInviteLobby(false);
+    }
+  }
+
+  async function handleCreateOpenJoinLobby() {
+    setInviteLobbyError(null);
+    setInviteLobbyMessage(null);
+    setQuickMatchError(null);
+    setLastInviteId(null);
+    setLastInviteLink(null);
+
+    if (!authenticatedUserId) {
+      setInviteLobbyError("Entre com sua conta antes de criar uma mesa por link.");
+      return;
+    }
+
+    setIsCreatingInviteLobby(true);
+
+    try {
+      const client = await getConfiguredBrowserClient();
+
+      const { data: lobbyData, error: lobbyError } = await client.rpc(
+        "create_patxanga_my_match_lobby",
+        {
+          p_host_guest_name: authenticatedDisplayName ?? "Host Patxanga",
+          p_language: quickMatchLanguage,
+          p_match_mode: "synchronous",
+          p_max_players: 2,
+        }
+      );
+
+      if (lobbyError) {
+        throw new Error(lobbyError.message);
+      }
+
+      if (!lobbyData) {
+        throw new Error("Backend não retornou dados do lobby criado.");
+      }
+
+      const createResult = lobbyData as RpcCreateMatchLobbyResult;
+      const nextJoinLink = buildJoinLink(tunnelPublicUrl, createResult.match_id);
+
+      setQuickMatchSession(null);
+      setSessionSwitchError(null);
+      setMatchIdInput(createResult.match_id);
+      setPlayerIdInput(authenticatedUserId);
+      setLastJoinLink(nextJoinLink || null);
+      setInviteLobbyMessage(
+        nextJoinLink
+          ? "Mesa criada. Copie o link aberto e envie ao convidado."
+          : "Mesa criada. Informe a URL do túnel para gerar o link aberto."
+      );
+      await openMatchSession(createResult.match_id, authenticatedUserId);
+      await handleLoadSessionLists();
+    } catch (error) {
+      setInviteLobbyError(
+        error instanceof Error ? error.message : "Falha ao criar mesa por link."
       );
     } finally {
       setIsCreatingInviteLobby(false);
@@ -2038,6 +2482,42 @@ export default function HomePage() {
 
     handlePrepareSession(quickMatchSession.matchId, userId);
     await openMatchSession(quickMatchSession.matchId, userId);
+  }
+
+  async function handleCopyTunnelText(label: string, value: string | null | undefined) {
+    const normalizedValue = value?.trim();
+
+    setTunnelCopyMessage(null);
+    setTunnelCopyError(null);
+
+    if (!normalizedValue) {
+      setTunnelCopyError(`Nada para copiar em ${label}.`);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(normalizedValue);
+      setTunnelCopyMessage(`${label} copiado.`);
+    } catch {
+      setTunnelCopyError(`Não consegui copiar ${label}. Selecione o texto e copie manualmente.`);
+    }
+  }
+
+  async function handleRefreshCurrentMatch() {
+    const normalizedMatchId = resolvedBootstrap.matchId ?? matchIdInput.trim();
+    const normalizedUserId = playerIdInput.trim();
+
+    if (!normalizedMatchId || !normalizedUserId) {
+      setSessionListsError("Abra uma mesa ou entre com sua conta antes de atualizar.");
+      return;
+    }
+
+    setSessionListsError(null);
+    setSessionActionMessage(null);
+
+    await openMatchSession(normalizedMatchId, normalizedUserId);
+    await handleLoadSessionLists();
+    setSessionActionMessage("Mesa e central atualizadas.");
   }
 
   function handleChangeSessionSwitchDraft(
@@ -2346,9 +2826,11 @@ export default function HomePage() {
         (player) => player.player_id === resolvedBootstrap.playerId
       )?.display_name ?? "Jogador";
     const preparedWord = localComposedWord ?? movePreview?.main_word ?? "palavra preparada";
+    const submittedUsedSkipTile = placedTilesPreview.some((tile) => {
+      return normalizeSpecialType(rackTilesById.get(tile.tile_id)?.special_type) === "skip_turn";
+    });
 
     try {
-      const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
       const client = getSupabaseBrowserClient();
 
       if (!client) {
@@ -2377,9 +2859,84 @@ export default function HomePage() {
         playerId: playerIdInput,
       });
 
-      setBootstrapData(refreshedData);
+      const nextTurnPlayer =
+        refreshedData.playersSummary.find(
+          (player) => player.player_id === refreshedData.currentTurnPlayerId
+        ) ?? null;
+      const skippedTurnReturnedToViewer =
+        submittedUsedSkipTile &&
+        refreshedData.status === "active" &&
+        Boolean(refreshedData.currentTurnPlayerId) &&
+        refreshedData.currentTurnPlayerId === resolvedBootstrap.playerId;
+      const skippedPlayerName =
+        refreshedData.playersSummary.find((player) => {
+          return (
+            player.player_id !== refreshedData.currentTurnPlayerId &&
+            player.has_forfeited === false
+          );
+        })?.display_name ?? "o adversario";
+      const postSubmitTurnActionMessage = skippedTurnReturnedToViewer
+        ? `Pula a vez aplicado: ${skippedPlayerName} perdeu o turno. Sua vez novamente.`
+        : "Jogada enviada com sucesso.";
 
-      await refreshPendingVoteContext(refreshedData.matchId, playerIdInput, refreshedData.status);
+      if (refreshedData.status === "active" && nextTurnPlayer?.is_bot) {
+        const botActionKey = [
+          refreshedData.matchId,
+          nextTurnPlayer.player_id,
+          refreshedData.turnNumber,
+        ].join(":");
+
+        botAutoActionKeyRef.current = botActionKey;
+        botAutoActionInFlightRef.current = true;
+        setIsAutoPlayingBotTurn(true);
+        setBotActionError(null);
+        setBotActionMessage(`${nextTurnPlayer.display_name} esta tentando uma jogada.`);
+
+        const botTurnResult = await submitEasyBotTurnViaApi(
+          refreshedData.matchId,
+          nextTurnPlayer.player_id
+        );
+
+        const afterBotData = await loadMatchBootstrap({
+          matchId: refreshedData.matchId,
+          playerId: playerIdInput,
+        });
+        const nextBotMessage = formatBotTurnMessage(botTurnResult);
+
+        setBootstrapData(afterBotData);
+        await refreshPendingVoteContext(
+          afterBotData.matchId,
+          playerIdInput,
+          afterBotData.status
+        );
+        setBotActionMessage(nextBotMessage);
+        setBotActionHistory((current) => [
+          {
+            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            turnNumber: refreshedData.turnNumber,
+            playerName: nextTurnPlayer.display_name,
+            message: nextBotMessage,
+            tone: "success" as const,
+          },
+          ...current,
+        ].slice(0, 5));
+        botAutoActionInFlightRef.current = false;
+        setIsAutoPlayingBotTurn(false);
+      } else {
+        setBootstrapData(refreshedData);
+        await refreshPendingVoteContext(
+          refreshedData.matchId,
+          playerIdInput,
+          refreshedData.status
+        );
+        if (skippedTurnReturnedToViewer) {
+          setBotActionError(null);
+          setBotActionMessage(null);
+          botAutoActionKeyRef.current = null;
+          botAutoActionInFlightRef.current = false;
+        }
+      }
+
       clearMoveCompositionPreview();
       resetExchangeSelection();
       setLastTurnActionSummary(
@@ -2388,17 +2945,77 @@ export default function HomePage() {
       appendMatchTimelineItem({
         turnNumber: before.turnNumber,
         actorName,
-        label: "Jogada enviada",
-        detail: `Jogada ${preparedWord} enviada para validação.`,
+        label: skippedTurnReturnedToViewer ? "Pula a vez aplicado" : "Jogada enviada",
+        detail: skippedTurnReturnedToViewer
+          ? `Jogada ${preparedWord} enviada; ${skippedPlayerName} perdeu o turno.`
+          : `Jogada ${preparedWord} enviada para validação.`,
         tone: refreshedData.status === "voting" ? "warning" : "success",
       });
-      setTurnActionMessage("Jogada enviada com sucesso.");
+      setTurnActionMessage(postSubmitTurnActionMessage);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Falha ao enviar jogada."
       );
     } finally {
+      setIsAutoPlayingBotTurn(false);
+      botAutoActionInFlightRef.current = false;
       setIsSubmittingMove(false);
+    }
+  }
+
+  async function handleForceBotTurn() {
+    if (!resolvedBootstrap.matchId || !resolvedBootstrap.currentTurnPlayerId) {
+      setBotActionError("Partida sem turno atual para executar bot.");
+      return;
+    }
+
+    if (!isCurrentTurnBot) {
+      setBotActionError("O turno atual não pertence ao bot.");
+      return;
+    }
+
+    setIsAutoPlayingBotTurn(true);
+    setBotActionError(null);
+    setBotActionMessage("Bot executando turno agora.");
+
+    try {
+      const botTurnResult = await submitEasyBotTurnViaApi(
+        resolvedBootstrap.matchId,
+        resolvedBootstrap.currentTurnPlayerId
+      );
+
+      const refreshedData = await loadMatchBootstrap({
+        matchId: resolvedBootstrap.matchId,
+        playerId: playerIdInput,
+      });
+
+      setBootstrapData(refreshedData);
+      await refreshPendingVoteContext(
+        refreshedData.matchId,
+        playerIdInput,
+        refreshedData.status
+      );
+
+      const nextMessage = formatBotTurnMessage(botTurnResult);
+      setBotActionMessage(nextMessage);
+      setBotActionHistory((current) => [
+        {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          turnNumber: resolvedBootstrap.turnNumber,
+          playerName: currentTurnPlayerSummary?.display_name ?? "Bot",
+          message: nextMessage,
+          tone: "success" as const,
+        },
+        ...current,
+      ].slice(0, 5));
+    } catch (error) {
+      setBotActionError(
+        error instanceof Error ? error.message : "Falha ao executar turno automatico do bot."
+      );
+      setBotActionMessage(null);
+      botAutoActionKeyRef.current = null;
+    } finally {
+      setIsAutoPlayingBotTurn(false);
     }
   }
 
@@ -2429,7 +3046,7 @@ export default function HomePage() {
       )?.display_name ?? "Jogador";
 
     try {
-      const client = (await import("../lib/supabase/client")).getSupabaseBrowserClient();
+      const client = getSupabaseBrowserClient();
       if (!client) {
         throw new Error("Supabase client not configured in frontend environment.");
       }
@@ -2513,7 +3130,7 @@ export default function HomePage() {
       )?.display_name ?? "Jogador";
 
     try {
-      const client = (await import("../lib/supabase/client")).getSupabaseBrowserClient();
+      const client = getSupabaseBrowserClient();
       if (!client) {
         throw new Error("Supabase client not configured in frontend environment.");
       }
@@ -2587,7 +3204,6 @@ export default function HomePage() {
       return;
     }
 
-    const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
     const client = getSupabaseBrowserClient();
 
     if (!client) {
@@ -2644,7 +3260,6 @@ export default function HomePage() {
     setVoteResolutionMessage(null);
 
     try {
-      const { getSupabaseBrowserClient } = await import("../lib/supabase/client");
       const client = getSupabaseBrowserClient();
 
       if (!client) {
@@ -2869,6 +3484,42 @@ export default function HomePage() {
 
   const hasBotPlayer = resolvedBootstrap.playersSummary.some((player) => player.is_bot);
 
+  if (isDirectMatchLaunch && !resolvedBootstrap.matchId) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          padding: 24,
+          fontFamily: '"Avenir Next", "Trebuchet MS", sans-serif',
+          color: "#1f2933",
+          background:
+            "radial-gradient(circle at 10% 0%, rgba(187, 247, 208, 0.42), transparent 30%), radial-gradient(circle at 95% 12%, rgba(254, 243, 199, 0.5), transparent 32%), #f8fafc",
+        }}
+      >
+        <section
+          style={{
+            width: "min(560px, 100%)",
+            padding: 24,
+            borderRadius: 24,
+            border: "1px solid #d7d0bf",
+            background: "rgba(255,255,255,0.92)",
+            boxShadow: "0 18px 50px rgba(61, 46, 24, 0.12)",
+          }}
+        >
+          <p style={{ margin: 0, fontSize: 13, letterSpacing: "0.08em", textTransform: "uppercase", color: "#64748b" }}>
+            Patxanga local
+          </p>
+          <h1 style={{ margin: "8px 0 10px", fontSize: 28 }}>Abrindo partida contra bot</h1>
+          <p style={{ margin: 0, color: "#475569" }}>
+            {errorMessage ?? "Carregando o tabuleiro e o rack do jogador..."}
+          </p>
+        </section>
+      </main>
+    );
+  }
+
   if (resolvedBootstrap.matchId && hasBotPlayer) {
     return (
       <main
@@ -2958,6 +3609,7 @@ export default function HomePage() {
           onPassTurn={handlePassTurn}
           onToggleExchangeMode={handleToggleExchangeMode}
           onSubmitExchange={handleSubmitExchange}
+          onForceBotTurn={handleForceBotTurn}
           onCreateNewBotMatch={handleCreateHumanVsBotMatch}
           isCreatingBotMatch={isCreatingBotMatch}
         />
@@ -3256,48 +3908,769 @@ export default function HomePage() {
         data-testid="primary-product-actions"
         style={{
           marginTop: 24,
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: 14,
+          padding: 20,
+          borderRadius: 26,
+          border: "1px solid #d6c7a8",
+          background:
+            "radial-gradient(circle at 12% 8%, rgba(245, 158, 11, 0.16), transparent 28%), linear-gradient(135deg, #fffaf0 0%, #f8fafc 62%, #eef6f0 100%)",
+          boxShadow: "0 18px 42px rgba(56, 45, 31, 0.1)",
         }}
       >
-        {[
-          {
-            title: "Jogar agora",
-            body: "Crie uma partida humano contra humano usando o dicionário escolhido.",
-            tone: "#1d4ed8",
-            bg: "#eff6ff",
-          },
-          {
-            title: "Treinar contra bot",
-            body: "Abra uma mesa humano contra bot easy com histórico visual de ações.",
-            tone: "#166534",
-            bg: "#ecfdf5",
-          },
-          {
-            title: "Retomar mesa",
-            body: "Entre com sua conta para listar convites e partidas retomáveis.",
-            tone: "#9a3412",
-            bg: "#fff7ed",
-          },
-        ].map((card) => (
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 18, flexWrap: "wrap" }}>
+          <div style={{ maxWidth: 720 }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 900,
+                letterSpacing: 1.3,
+                textTransform: "uppercase",
+                color: "#92400e",
+              }}
+            >
+              Escolha o modo
+            </div>
+            <h2 style={{ margin: "8px 0 6px", fontSize: 32, lineHeight: 1.05 }}>
+              Painel de controle da partida
+            </h2>
+            <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.5 }}>
+              Selecione como quer jogar. Só ficam acionáveis os fluxos que já temos
+              implementados com backend real neste momento.
+            </p>
+          </div>
+
           <div
-            key={card.title}
             style={{
-              padding: 16,
+              minWidth: 230,
+              padding: 14,
               borderRadius: 18,
-              border: "1px solid rgba(120, 113, 108, 0.2)",
-              background: card.bg,
-              color: card.tone,
-              boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
+              border: "1px solid #d6c7a8",
+              background: "rgba(255,255,255,0.84)",
             }}
           >
-            <div style={{ fontSize: 18, fontWeight: 900 }}>{card.title}</div>
-            <div style={{ marginTop: 6, fontSize: 14, lineHeight: 1.45, color: "#374151" }}>
-              {card.body}
+            <div style={{ fontSize: 12, fontWeight: 900, textTransform: "uppercase", color: "#78716c" }}>
+              Estado
+            </div>
+            <div style={{ marginTop: 6, fontSize: 18, fontWeight: 900, color: isConfigured ? "#166534" : "#991b1b" }}>
+              {isConfigured ? "Backend conectado" : "Backend indisponível"}
+            </div>
+            <div style={{ marginTop: 6, fontSize: 13, color: "#57534e", lineHeight: 1.4 }}>
+              Conta: {isAuthenticated ? "autenticada" : "não autenticada"} · idioma {quickMatchLanguage}
             </div>
           </div>
-        ))}
+        </div>
+
+        <div
+          style={{
+            marginTop: 18,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: 14,
+          }}
+        >
+          {[
+            {
+              id: "human_bot" as const,
+              title: "Humano x bot",
+              status: "Disponível agora",
+              body: "Cria uma mesa contra Bot Easy. O bot joga automaticamente no próprio turno.",
+              enabled: isConfigured,
+              accent: "#166534",
+              background: "#ecfdf5",
+              action: isCreatingBotMatch ? "Criando..." : "Iniciar contra bot",
+            },
+            {
+              id: "human_human" as const,
+              title: "Humano x humano",
+              status: "Disponível local",
+              body: "Cria uma mesa rápida com host e convidado. Útil para dois navegadores ou dois dispositivos.",
+              enabled: isConfigured,
+              accent: "#1d4ed8",
+              background: "#eff6ff",
+              action: isCreatingQuickMatch ? "Criando..." : "Criar mesa 1x1",
+            },
+            {
+              id: "multi_human" as const,
+              title: "Múltiplos humanos",
+              status: "Planejado",
+              body: "Mesa 3+ precisa de UX de convites múltiplos, presença e controle de assentos. Backend parcial existe, fluxo final ainda não.",
+              enabled: false,
+              accent: "#9a3412",
+              background: "#fff7ed",
+              action: "Ainda não habilitado",
+            },
+          ].map((mode) => {
+            const isSelected = selectedPlayMode === mode.id;
+            const isBusy =
+              (mode.id === "human_bot" && isCreatingBotMatch) ||
+              (mode.id === "human_human" && isCreatingQuickMatch);
+
+            return (
+              <article
+                key={mode.id}
+                data-testid={`play-mode-${mode.id}`}
+                style={{
+                  display: "grid",
+                  gap: 12,
+                  padding: 16,
+                  borderRadius: 22,
+                  border: isSelected ? `2px solid ${mode.accent}` : "1px solid rgba(120, 113, 108, 0.22)",
+                  background: mode.background,
+                  boxShadow: isSelected
+                    ? "0 16px 34px rgba(15, 23, 42, 0.16)"
+                    : "0 8px 20px rgba(15, 23, 42, 0.05)",
+                  opacity: mode.enabled ? 1 : 0.72,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 20, fontWeight: 950, color: mode.accent }}>
+                      {mode.title}
+                    </div>
+                    <div style={{ marginTop: 5, fontSize: 12, fontWeight: 900, color: mode.accent }}>
+                      {mode.status}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    data-testid={`play-mode-select-${mode.id}`}
+                    onClick={() => setSelectedPlayMode(mode.id)}
+                    style={{
+                      alignSelf: "flex-start",
+                      padding: "7px 10px",
+                      borderRadius: 999,
+                      border: `1px solid ${mode.accent}`,
+                      background: isSelected ? mode.accent : "#ffffff",
+                      color: isSelected ? "#ffffff" : mode.accent,
+                      cursor: "pointer",
+                      fontWeight: 900,
+                    }}
+                  >
+                    {isSelected ? "Selecionado" : "Selecionar"}
+                  </button>
+                </div>
+
+                <p style={{ margin: 0, minHeight: 62, color: "#374151", lineHeight: 1.45 }}>
+                  {mode.body}
+                </p>
+
+                <button
+                  type="button"
+                  data-testid={`play-mode-action-${mode.id}`}
+                  onClick={() => {
+                    if (mode.id === "human_bot") {
+                      void handleCreateHumanVsBotMatch();
+                    } else if (mode.id === "human_human") {
+                      void handleCreateQuickMatch();
+                    }
+                  }}
+                  disabled={!mode.enabled || isBusy}
+                  style={{
+                    padding: "11px 14px",
+                    borderRadius: 14,
+                    border: `1px solid ${mode.accent}`,
+                    background: mode.enabled && !isBusy ? mode.accent : "#e7e5e4",
+                    color: mode.enabled && !isBusy ? "#ffffff" : "#78716c",
+                    cursor: mode.enabled && !isBusy ? "pointer" : "not-allowed",
+                    fontWeight: 950,
+                  }}
+                >
+                  {mode.action}
+                </button>
+              </article>
+            );
+          })}
+        </div>
+
+        <div
+          data-testid="mode-control-panel"
+          style={{
+            marginTop: 16,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+            gap: 10,
+          }}
+        >
+          <div style={{ padding: 12, borderRadius: 16, background: "#ffffff", border: "1px solid #e7e5e4" }}>
+            <strong>Modo ativo</strong>
+            <div style={{ marginTop: 4, color: "#57534e" }}>
+              {selectedPlayMode === "human_bot"
+                ? "Humano x bot"
+                : selectedPlayMode === "human_human"
+                  ? "Humano x humano"
+                  : "Múltiplos humanos"}
+            </div>
+          </div>
+          <div style={{ padding: 12, borderRadius: 16, background: "#ffffff", border: "1px solid #e7e5e4" }}>
+            <strong>Dicionário</strong>
+            <div style={{ marginTop: 4, color: "#57534e" }}>{quickMatchLanguage}</div>
+          </div>
+          <div style={{ padding: 12, borderRadius: 16, background: "#ffffff", border: "1px solid #e7e5e4" }}>
+            <strong>Disponibilidade</strong>
+            <div style={{ marginTop: 4, color: "#57534e" }}>
+              {selectedPlayMode === "multi_human"
+                ? "Bloqueado: falta UX de mesa 3+"
+                : isConfigured
+                  ? "Pronto para iniciar"
+                  : "Backend necessário"}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        data-testid="tunnel-human-match-panel"
+        style={{
+          marginTop: 24,
+          padding: 22,
+          borderRadius: 28,
+          border: "1px solid #99c2b0",
+          background:
+            "radial-gradient(circle at 8% 10%, rgba(20, 184, 166, 0.18), transparent 30%), radial-gradient(circle at 92% 18%, rgba(245, 158, 11, 0.18), transparent 28%), linear-gradient(135deg, #f5fbf7 0%, #ffffff 58%, #fff8ed 100%)",
+          boxShadow: "0 18px 46px rgba(36, 67, 53, 0.12)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ maxWidth: 720 }}>
+            <div style={{ fontSize: 12, fontWeight: 950, letterSpacing: 1.4, textTransform: "uppercase", color: "#0f766e" }}>
+              Partida online por túnel
+            </div>
+            <h2 style={{ margin: "8px 0 6px", fontSize: 32, lineHeight: 1.05 }}>
+              Humano x humano em dois dispositivos
+            </h2>
+            <p style={{ margin: 0, color: "#46534d", lineHeight: 1.55 }}>
+              Use este painel quando o Mac estiver servindo o jogo por Cloudflare Tunnel.
+              O host cria o convite, o convidado aceita na própria sessão e o host inicia a mesa.
+            </p>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gap: 8,
+              minWidth: 230,
+              padding: 14,
+              borderRadius: 20,
+              background: "#ffffff",
+              border: "1px solid #c9dfd2",
+            }}
+          >
+            <strong style={{ color: "#14532d" }}>Estado operacional</strong>
+            <span>Backend: {isConfigured ? "conectado" : "indisponível"}</span>
+            <span>Conta: {isAuthenticated ? "autenticada" : "login necessário"}</span>
+            <span>Mesa: {resolvedBootstrap.matchId ? stateLabel : "nenhuma aberta"}</span>
+          </div>
+        </div>
+
+        <div
+          style={{
+            marginTop: 18,
+            display: "grid",
+            gap: 14,
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          }}
+        >
+          {incomingInviteId || incomingJoinMatchId ? (
+            <div
+              data-testid="incoming-invite-link-panel"
+              style={{
+                gridColumn: "1 / -1",
+                padding: 16,
+                borderRadius: 20,
+                background: isAuthenticated ? "#ecfdf5" : "#fff7ed",
+                border: isAuthenticated ? "1px solid #86efac" : "1px solid #fed7aa",
+                color: isAuthenticated ? "#14532d" : "#9a3412",
+              }}
+            >
+              <strong>{incomingJoinMatchId ? "Link de entrada aberto" : "Link de convite aberto"}</strong>
+              <div style={{ marginTop: 6, lineHeight: 1.45 }}>
+                {isAcceptingIncomingInvite || isJoiningIncomingMatch
+                  ? "Processando o link e abrindo a mesa..."
+                  : incomingJoinMatchId
+                    ? isAuthenticated
+                      ? "Conta autenticada. Você entrará na mesa automaticamente se ela ainda estiver aberta."
+                      : "Entre ou crie conta para aderir a esta mesa."
+                    : isAuthenticated
+                      ? "Conta autenticada. Se o convite pertence a esta conta, ele será aceito automaticamente."
+                      : "Entre ou crie conta com o email do convidado para aceitar este convite."}
+              </div>
+            </div>
+          ) : null}
+
+          <div style={{ padding: 16, borderRadius: 20, background: "#ffffff", border: "1px solid #c9dfd2" }}>
+            <div style={{ fontSize: 13, fontWeight: 950, color: "#0f766e", textTransform: "uppercase" }}>
+              1. Endereço do túnel
+            </div>
+            <p style={{ margin: "8px 0 10px", color: "#4b5563", lineHeight: 1.45 }}>
+              Cole aqui a URL pública do Cloudflare e envie para o outro jogador abrir no navegador dele.
+            </p>
+            <input
+              data-testid="tunnel-public-url"
+              value={tunnelPublicUrl}
+              onChange={(event) => setTunnelPublicUrl(event.target.value)}
+              placeholder="https://seu-tunel.trycloudflare.com"
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: 10,
+                borderRadius: 12,
+                border: "1px solid #99c2b0",
+                fontWeight: 800,
+              }}
+            />
+            {tunnelUrlLooksLocal ? (
+              <div style={{ marginTop: 8, color: "#92400e", fontSize: 13, fontWeight: 800 }}>
+                Esta URL parece local. Para outro dispositivo, use a URL https do túnel.
+              </div>
+            ) : null}
+            <button
+              type="button"
+              data-testid="tunnel-copy-public-url"
+              onClick={() => handleCopyTunnelText("URL do túnel", tunnelPublicUrl)}
+              style={{
+                marginTop: 10,
+                padding: "10px 13px",
+                borderRadius: 12,
+                border: "1px solid #0f766e",
+                background: "#0f766e",
+                color: "#ffffff",
+                cursor: "pointer",
+                fontWeight: 950,
+              }}
+            >
+              Copiar URL para convidado
+            </button>
+          </div>
+
+          <div style={{ padding: 16, borderRadius: 20, background: "#ffffff", border: "1px solid #c9dfd2" }}>
+            <div style={{ fontSize: 13, fontWeight: 950, color: "#0f766e", textTransform: "uppercase" }}>
+              2. Identidade deste jogador
+            </div>
+            {isAuthenticated ? (
+              <>
+                <p style={{ margin: "8px 0 10px", color: "#4b5563", lineHeight: 1.45 }}>
+                  Envie este código ao host se você for o convidado. Se você for o host, use-o apenas
+                  para confirmar que está logado.
+                </p>
+                <div
+                  data-testid="tunnel-active-user-id"
+                  style={{
+                    padding: 10,
+                    borderRadius: 12,
+                    background: "#f8fafc",
+                    border: "1px solid #d1d5db",
+                    fontFamily: "monospace",
+                    fontSize: 13,
+                    wordBreak: "break-all",
+                  }}
+                >
+                  {authenticatedUserId}
+                </div>
+                <button
+                  type="button"
+                  data-testid="tunnel-copy-user-id"
+                  onClick={() => handleCopyTunnelText("user_id", authenticatedUserId)}
+                  style={{
+                    marginTop: 10,
+                    padding: "10px 13px",
+                    borderRadius: 12,
+                    border: "1px solid #0f766e",
+                    background: "#ffffff",
+                    color: "#0f766e",
+                    cursor: "pointer",
+                    fontWeight: 950,
+                  }}
+                >
+                  Copiar meu user_id
+                </button>
+              </>
+            ) : (
+              <p style={{ margin: "8px 0 0", color: "#991b1b", fontWeight: 850, lineHeight: 1.45 }}>
+                Faça login ou crie conta no painel Conta Patxanga acima. Depois volte aqui e copie seu user_id.
+              </p>
+            )}
+          </div>
+
+          <div style={{ padding: 16, borderRadius: 20, background: "#ffffff", border: "1px solid #c9dfd2" }}>
+            <div style={{ fontSize: 13, fontWeight: 950, color: "#0f766e", textTransform: "uppercase" }}>
+              3. Host cria o convite
+            </div>
+            <p style={{ margin: "8px 0 10px", color: "#4b5563", lineHeight: 1.45 }}>
+              Para não depender do UUID do convidado, crie um link aberto. Se quiser convite
+              nominal, cole o user_id do convidado e use o convite direto.
+            </p>
+            <div style={{ display: "grid", gap: 10 }}>
+              <label style={{ display: "grid", gap: 6, fontSize: 13, fontWeight: 850 }}>
+                Dicionário
+                <select
+                  data-testid="tunnel-match-language"
+                  value={quickMatchLanguage}
+                  onChange={(event) => setQuickMatchLanguage(event.target.value as MatchLanguage)}
+                  disabled={isCreatingInviteLobby}
+                  style={{ padding: 10, borderRadius: 12, border: "1px solid #99c2b0", fontWeight: 850 }}
+                >
+                  <option value="pt-BR">pt-BR</option>
+                  <option value="pt-PT">pt-PT</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                data-testid="tunnel-create-open-join-lobby"
+                onClick={handleCreateOpenJoinLobby}
+                disabled={!isAuthenticated || isCreatingInviteLobby}
+                style={{
+                  padding: "11px 14px",
+                  borderRadius: 14,
+                  border: "1px solid #0f766e",
+                  background: !isAuthenticated || isCreatingInviteLobby ? "#d1d5db" : "#0f766e",
+                  color: !isAuthenticated || isCreatingInviteLobby ? "#6b7280" : "#ffffff",
+                  cursor: !isAuthenticated || isCreatingInviteLobby ? "not-allowed" : "pointer",
+                  fontWeight: 950,
+                }}
+              >
+                {isCreatingInviteLobby ? "Criando mesa..." : "Criar link aberto para convidado"}
+              </button>
+              {lastJoinLink ? (
+                <div
+                  data-testid="tunnel-join-link-box"
+                  style={{
+                    display: "grid",
+                    gap: 8,
+                    padding: 12,
+                    borderRadius: 14,
+                    background: "#f0fdfa",
+                    border: "1px solid #99f6e4",
+                  }}
+                >
+                  <strong style={{ color: "#115e59" }}>Link aberto pronto</strong>
+                  <div
+                    data-testid="tunnel-join-link"
+                    style={{
+                      padding: 10,
+                      borderRadius: 10,
+                      background: "#ffffff",
+                      border: "1px solid #99f6e4",
+                      fontFamily: "monospace",
+                      fontSize: 12,
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {lastJoinLink}
+                  </div>
+                  <button
+                    type="button"
+                    data-testid="tunnel-copy-join-link"
+                    onClick={() => handleCopyTunnelText("link aberto", lastJoinLink)}
+                    style={{
+                      padding: "10px 13px",
+                      borderRadius: 12,
+                      border: "1px solid #0f766e",
+                      background: "#0f766e",
+                      color: "#ffffff",
+                      cursor: "pointer",
+                      fontWeight: 950,
+                    }}
+                  >
+                    Copiar link aberto
+                  </button>
+                </div>
+              ) : null}
+              <div style={{ height: 1, background: "#d1fae5" }} />
+              <label style={{ display: "grid", gap: 6, fontSize: 13, fontWeight: 850 }}>
+                user_id do convidado para convite nominal
+                <input
+                  data-testid="tunnel-invite-target-user-id"
+                  value={inviteTargetUserId}
+                  onChange={(event) => setInviteTargetUserId(event.target.value)}
+                  placeholder="Cole aqui o UUID do convidado"
+                  style={{ padding: 10, borderRadius: 12, border: "1px solid #99c2b0" }}
+                />
+              </label>
+              <button
+                type="button"
+                data-testid="tunnel-create-invite-lobby"
+                onClick={handleCreateInviteLobby}
+                disabled={!isAuthenticated || isCreatingInviteLobby}
+                style={{
+                  padding: "11px 14px",
+                  borderRadius: 14,
+                  border: "1px solid #15803d",
+                  background: !isAuthenticated || isCreatingInviteLobby ? "#d1d5db" : "#16a34a",
+                  color: !isAuthenticated || isCreatingInviteLobby ? "#6b7280" : "#ffffff",
+                  cursor: !isAuthenticated || isCreatingInviteLobby ? "not-allowed" : "pointer",
+                  fontWeight: 950,
+                }}
+              >
+                {isCreatingInviteLobby ? "Criando mesa..." : "Criar mesa e enviar convite"}
+              </button>
+              {lastInviteLink ? (
+                <div
+                  data-testid="tunnel-invite-link-box"
+                  style={{
+                    display: "grid",
+                    gap: 8,
+                    padding: 12,
+                    borderRadius: 14,
+                    background: "#ecfdf5",
+                    border: "1px solid #bbf7d0",
+                  }}
+                >
+                  <strong style={{ color: "#14532d" }}>Link do convite pronto</strong>
+                  <div
+                    data-testid="tunnel-invite-link"
+                    style={{
+                      padding: 10,
+                      borderRadius: 10,
+                      background: "#ffffff",
+                      border: "1px solid #bbf7d0",
+                      fontFamily: "monospace",
+                      fontSize: 12,
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {lastInviteLink}
+                  </div>
+                  <button
+                    type="button"
+                    data-testid="tunnel-copy-invite-link"
+                    onClick={() => handleCopyTunnelText("link de convite", lastInviteLink)}
+                    style={{
+                      padding: "10px 13px",
+                      borderRadius: 12,
+                      border: "1px solid #15803d",
+                      background: "#15803d",
+                      color: "#ffffff",
+                      cursor: "pointer",
+                      fontWeight: 950,
+                    }}
+                  >
+                    Copiar link de convite
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            marginTop: 14,
+            display: "grid",
+            gap: 14,
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          }}
+        >
+          <div style={{ padding: 16, borderRadius: 20, background: "#f8fafc", border: "1px solid #d1d5db" }}>
+            <div style={{ fontSize: 13, fontWeight: 950, color: "#1d4ed8", textTransform: "uppercase" }}>
+              4. Convidado aceita
+            </div>
+            <p style={{ margin: "8px 0 10px", color: "#4b5563", lineHeight: 1.45 }}>
+              O ideal é abrir o link de convite. Se necessário, o convidado também pode atualizar
+              a lista e aceitar o convite pendente manualmente.
+            </p>
+            <button
+              type="button"
+              data-testid="tunnel-refresh-invites"
+              onClick={handleLoadSessionLists}
+              disabled={!effectiveProductUserId || isLoadingSessionLists}
+              style={{
+                padding: "10px 13px",
+                borderRadius: 12,
+                border: "1px solid #1d4ed8",
+                background: !effectiveProductUserId || isLoadingSessionLists ? "#d1d5db" : "#1d4ed8",
+                color: !effectiveProductUserId || isLoadingSessionLists ? "#6b7280" : "#ffffff",
+                cursor: !effectiveProductUserId || isLoadingSessionLists ? "not-allowed" : "pointer",
+                fontWeight: 950,
+              }}
+            >
+              {isLoadingSessionLists ? "Atualizando..." : "Atualizar meus convites"}
+            </button>
+
+            <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+              {sessionListsLoaded && pendingInvites.length === 0 ? (
+                <div style={{ color: "#6b7280", fontWeight: 800 }}>Nenhum convite pendente para esta conta.</div>
+              ) : null}
+              {pendingInvites.map((invite) => (
+                <div
+                  key={invite.inviteId}
+                  data-testid="tunnel-pending-invite-card"
+                  style={{ padding: 12, borderRadius: 14, background: "#ffffff", border: "1px solid #bfdbfe" }}
+                >
+                  <div style={{ fontWeight: 950, color: "#1d4ed8" }}>
+                    Mesa {invite.language} aguardando aceite
+                  </div>
+                  <div style={{ marginTop: 4, color: "#4b5563", fontSize: 13 }}>
+                    {invite.hostGuestName ? `Criada por ${invite.hostGuestName}.` : "Convite direto para esta conta."}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                    <button
+                      type="button"
+                      onClick={() => handleAcceptInvite(invite.inviteId)}
+                      disabled={inviteActionInFlightId === invite.inviteId || isLoading}
+                      style={{
+                        padding: "9px 12px",
+                        borderRadius: 12,
+                        border: "1px solid #16a34a",
+                        background: "#16a34a",
+                        color: "#ffffff",
+                        cursor: inviteActionInFlightId === invite.inviteId || isLoading ? "not-allowed" : "pointer",
+                        fontWeight: 950,
+                      }}
+                    >
+                      {inviteActionInFlightId === invite.inviteId ? "Aceitando..." : "Aceitar e abrir mesa"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeclineInvite(invite.inviteId)}
+                      disabled={inviteActionInFlightId === invite.inviteId || isLoading}
+                      style={{
+                        padding: "9px 12px",
+                        borderRadius: 12,
+                        border: "1px solid #b91c1c",
+                        background: "#ffffff",
+                        color: "#b91c1c",
+                        cursor: inviteActionInFlightId === invite.inviteId || isLoading ? "not-allowed" : "pointer",
+                        fontWeight: 950,
+                      }}
+                    >
+                      Recusar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ padding: 16, borderRadius: 20, background: "#fff7ed", border: "1px solid #fed7aa" }}>
+            <div style={{ fontSize: 13, fontWeight: 950, color: "#9a3412", textTransform: "uppercase" }}>
+              5. Host inicia e ambos jogam
+            </div>
+            <p style={{ margin: "8px 0 10px", color: "#4b5563", lineHeight: 1.45 }}>
+              Depois que o convidado aceitar, o host atualiza a mesa e inicia o lobby. Se a partida
+              já existir, use retomar.
+            </p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                data-testid="tunnel-refresh-current-match"
+                onClick={handleRefreshCurrentMatch}
+                disabled={!effectiveProductUserId || isLoading}
+                style={{
+                  padding: "10px 13px",
+                  borderRadius: 12,
+                  border: "1px solid #9a3412",
+                  background: "#ffffff",
+                  color: "#9a3412",
+                  cursor: !effectiveProductUserId || isLoading ? "not-allowed" : "pointer",
+                  fontWeight: 950,
+                }}
+              >
+                {isLoading ? "Atualizando..." : "Atualizar mesa aberta"}
+              </button>
+              {isWaiting && resolvedBootstrap.playerId && !resolvedBootstrap.playerContext?.has_forfeited ? (
+                <button
+                  type="button"
+                  data-testid="tunnel-start-lobby"
+                  onClick={handleStartCurrentLobby}
+                  disabled={isStartingCurrentLobby || isLoading}
+                  style={{
+                    padding: "10px 13px",
+                    borderRadius: 12,
+                    border: "1px solid #9a3412",
+                    background: "#9a3412",
+                    color: "#ffffff",
+                    cursor: isStartingCurrentLobby || isLoading ? "not-allowed" : "pointer",
+                    fontWeight: 950,
+                  }}
+                >
+                  {isStartingCurrentLobby ? "Iniciando..." : "Iniciar partida"}
+                </button>
+              ) : null}
+            </div>
+
+            <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+              {sessionListsLoaded && resumableMatches.length === 0 ? (
+                <div style={{ color: "#6b7280", fontWeight: 800 }}>Nenhuma partida retomável para esta conta.</div>
+              ) : null}
+              {resumableMatches.slice(0, 3).map((match) => (
+                <div
+                  key={`${match.matchId}-${match.playerId}`}
+                  data-testid="tunnel-resumable-match-card"
+                  style={{ padding: 12, borderRadius: 14, background: "#ffffff", border: "1px solid #fed7aa" }}
+                >
+                  <div style={{ fontWeight: 950, color: "#9a3412" }}>
+                    {match.displayName} · {match.matchStatus} · turno {match.turnNumber}
+                  </div>
+                  <div style={{ marginTop: 4, color: "#4b5563", fontSize: 13 }}>
+                    Idioma {match.language} · {match.score} ponto{match.score === 1 ? "" : "s"}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleResumeListedMatch(match.matchId)}
+                    disabled={isLoading}
+                    style={{
+                      marginTop: 9,
+                      padding: "9px 12px",
+                      borderRadius: 12,
+                      border: "1px solid #9a3412",
+                      background: "#9a3412",
+                      color: "#ffffff",
+                      cursor: isLoading ? "not-allowed" : "pointer",
+                      fontWeight: 950,
+                    }}
+                  >
+                    Retomar esta partida
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {quickMatchSession && !quickMatchSession.opponentIsBot ? (
+          <div
+            data-testid="tunnel-created-match-summary"
+            style={{
+              marginTop: 14,
+              padding: 14,
+              borderRadius: 18,
+              background: "#ecfdf5",
+              border: "1px solid #bbf7d0",
+              color: "#14532d",
+              display: "grid",
+              gap: 6,
+            }}
+          >
+            <strong>Mesa criada por convite</strong>
+            <span>Idioma {quickMatchSession.language}. Host logado e convite enviado ao user_id informado.</span>
+            {showDebug ? (
+              <span style={{ fontFamily: "monospace", wordBreak: "break-all" }}>
+                match_id: {quickMatchSession.matchId}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
+        {inviteLobbyMessage ? (
+          <p style={{ margin: "12px 0 0", color: "#166534", fontWeight: 900 }}>{inviteLobbyMessage}</p>
+        ) : null}
+        {inviteLobbyError ? (
+          <p style={{ margin: "12px 0 0", color: "#b00020", fontWeight: 900 }}>{inviteLobbyError}</p>
+        ) : null}
+        {sessionListsError ? (
+          <p style={{ margin: "12px 0 0", color: "#b00020", fontWeight: 900 }}>{sessionListsError}</p>
+        ) : null}
+        {sessionActionMessage ? (
+          <p style={{ margin: "12px 0 0", color: "#166534", fontWeight: 900 }}>{sessionActionMessage}</p>
+        ) : null}
+        {tunnelCopyMessage ? (
+          <p data-testid="tunnel-copy-message" style={{ margin: "12px 0 0", color: "#166534", fontWeight: 900 }}>
+            {tunnelCopyMessage}
+          </p>
+        ) : null}
+        {tunnelCopyError ? (
+          <p data-testid="tunnel-copy-error" style={{ margin: "12px 0 0", color: "#b00020", fontWeight: 900 }}>
+            {tunnelCopyError}
+          </p>
+        ) : null}
       </section>
 
       <section
@@ -4285,73 +5658,75 @@ export default function HomePage() {
         </section>
       ) : null}
 
-      <GamePlayScreen
-        stateLabel={stateLabel}
-        matchLanguage={resolvedBootstrap.language}
-        isWaiting={isWaiting}
-        isActive={isActive}
-        isVoting={isVoting}
-        isFinished={isFinished}
-        endSummary={resolvedBootstrap.endSummary}
-        winnerPlayerId={resolvedBootstrap.winnerPlayerId}
-        finishedAt={resolvedBootstrap.finishedAt}
-        dictionarySummary={resolvedBootstrap.dictionarySummary}
-        viewerPlayerId={resolvedBootstrap.playerId}
-        playersSummary={resolvedBootstrap.playersSummary}
-        currentTurnPlayerId={resolvedBootstrap.currentTurnPlayerId}
-        turnNumber={resolvedBootstrap.turnNumber}
-        boardState={resolvedBootstrap.boardState}
-        compositionPlacementsByCell={compositionPlacementsByCell}
-        pendingVoteTilesByCell={pendingVoteTilesByCell}
-        selectedTileId={selectedTileId}
-        selectedTileIds={isExchangeMode ? selectedExchangeTileIds : selectedTileIds}
-        selectedRackSlotId={selectedRackSlotId}
-        previewTileIds={previewTileIds}
-        playerRackState={orderedPlayerRackState}
-        rackSlotAssociations={localRackSlotAssociations}
-        rackSlotAssociationLabels={rackSlotAssociationLabels}
-        placedTilesPreview={placedTilesPreview}
-        localComposedWord={localComposedWord}
-        moveCompositionWarning={moveCompositionWarning}
-        canSubmitMove={
-          placedTilesPreview.length > 0 &&
-          Boolean(resolvedBootstrap.playerId) &&
-          !moveCompositionWarning
-        }
-        isSubmittingMove={isSubmittingMove}
-        movePreview={movePreview}
-        isLoadingMovePreview={isLoadingMovePreview}
-        pendingVoteError={pendingVoteError}
-        pendingVoteMove={pendingVoteMove}
-        canCurrentViewerVote={canCurrentViewerVote}
-        isSubmittingVote={isSubmittingVote}
-        voteResult={voteResult}
-        voteResolutionMessage={voteResolutionMessage}
-        showDebug={showDebug}
-        botActionMessage={botActionMessage}
-        botActionError={botActionError}
-        botActionHistory={botActionHistory}
-        lastTurnActionSummary={lastTurnActionSummary}
-        matchTimeline={matchTimeline}
-        isAutoPlayingBotTurn={isAutoPlayingBotTurn}
-        buildCellKey={buildCellKey}
-        renderCellLabel={renderCellLabel}
-        renderCellBackground={renderCellBackground}
-        onPlaceTile={handlePlaceTile}
-        onToggleTile={handleToggleTile}
-        onToggleRackSlot={handleToggleRackSlot}
-        onClearRackSlotAssignment={handleClearRackSlotAssignment}
-        onClearRackSlotAssociation={handleClearRackSlotAssociation}
-        onClearPreview={clearMoveCompositionPreview}
-        onChangeRackSlotDraft={handleChangeRackSlotDraft}
-        onReorderTile={handleReorderRackItem}
-        onSubmitMove={handleSubmitMove}
-        onApprove={() => handleSubmitVote(false)}
-        onReject={() => handleSubmitVote(true)}
-        onToggleDebug={() => setShowDebug((current) => !current)}
-      />
+      {resolvedBootstrap.matchId ? (
+        <GamePlayScreen
+          stateLabel={stateLabel}
+          matchLanguage={resolvedBootstrap.language}
+          isWaiting={isWaiting}
+          isActive={isActive}
+          isVoting={isVoting}
+          isFinished={isFinished}
+          endSummary={resolvedBootstrap.endSummary}
+          winnerPlayerId={resolvedBootstrap.winnerPlayerId}
+          finishedAt={resolvedBootstrap.finishedAt}
+          dictionarySummary={resolvedBootstrap.dictionarySummary}
+          viewerPlayerId={resolvedBootstrap.playerId}
+          playersSummary={resolvedBootstrap.playersSummary}
+          currentTurnPlayerId={resolvedBootstrap.currentTurnPlayerId}
+          turnNumber={resolvedBootstrap.turnNumber}
+          boardState={resolvedBootstrap.boardState}
+          compositionPlacementsByCell={compositionPlacementsByCell}
+          pendingVoteTilesByCell={pendingVoteTilesByCell}
+          selectedTileId={selectedTileId}
+          selectedTileIds={isExchangeMode ? selectedExchangeTileIds : selectedTileIds}
+          selectedRackSlotId={selectedRackSlotId}
+          previewTileIds={previewTileIds}
+          playerRackState={orderedPlayerRackState}
+          rackSlotAssociations={localRackSlotAssociations}
+          rackSlotAssociationLabels={rackSlotAssociationLabels}
+          placedTilesPreview={placedTilesPreview}
+          localComposedWord={localComposedWord}
+          moveCompositionWarning={moveCompositionWarning}
+          canSubmitMove={
+            placedTilesPreview.length > 0 &&
+            Boolean(resolvedBootstrap.playerId) &&
+            !moveCompositionWarning
+          }
+          isSubmittingMove={isSubmittingMove}
+          movePreview={movePreview}
+          isLoadingMovePreview={isLoadingMovePreview}
+          pendingVoteError={pendingVoteError}
+          pendingVoteMove={pendingVoteMove}
+          canCurrentViewerVote={canCurrentViewerVote}
+          isSubmittingVote={isSubmittingVote}
+          voteResult={voteResult}
+          voteResolutionMessage={voteResolutionMessage}
+          showDebug={showDebug}
+          botActionMessage={botActionMessage}
+          botActionError={botActionError}
+          botActionHistory={botActionHistory}
+          lastTurnActionSummary={lastTurnActionSummary}
+          matchTimeline={matchTimeline}
+          isAutoPlayingBotTurn={isAutoPlayingBotTurn}
+          buildCellKey={buildCellKey}
+          renderCellLabel={renderCellLabel}
+          renderCellBackground={renderCellBackground}
+          onPlaceTile={handlePlaceTile}
+          onToggleTile={handleToggleTile}
+          onToggleRackSlot={handleToggleRackSlot}
+          onClearRackSlotAssignment={handleClearRackSlotAssignment}
+          onClearRackSlotAssociation={handleClearRackSlotAssociation}
+          onClearPreview={clearMoveCompositionPreview}
+          onChangeRackSlotDraft={handleChangeRackSlotDraft}
+          onReorderTile={handleReorderRackItem}
+          onSubmitMove={handleSubmitMove}
+          onApprove={() => handleSubmitVote(false)}
+          onReject={() => handleSubmitVote(true)}
+          onToggleDebug={() => setShowDebug((current) => !current)}
+        />
+      ) : null}
 
-      {showDebug ? (
+      {showDebug && resolvedBootstrap.matchId ? (
         <>
       <MatchStatusPanel
         stateLabel={stateLabel}

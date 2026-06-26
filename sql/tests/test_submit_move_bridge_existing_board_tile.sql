@@ -19,6 +19,26 @@ declare
     v_opening_result jsonb;
     v_bridge_result jsonb;
 begin
+    insert into public.patxanga_dictionary (
+        language,
+        word_original,
+        word_normalized,
+        source,
+        is_active
+    )
+    values (
+        'pt-BR',
+        'DA',
+        public.normalize_patxanga_word('DA'),
+        'bridge_existing_board_tile_test',
+        true
+    )
+    on conflict (language, word_normalized) do update
+    set word_original = excluded.word_original,
+        source = excluded.source,
+        is_active = excluded.is_active,
+        updated_at = now();
+
     v_match_id := public.create_patxanga_match(
         p_host_user_id := v_user1,
         p_language := 'pt-BR',

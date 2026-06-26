@@ -1,7 +1,6 @@
 -- ============================================================
--- PATXANGA - RPC: calculate_patxanga_score()
--- Version: 1.2
--- Purpose: Calculate score breakdown (no persistence)
+-- PATXANGA - MIGRATION 51: Full-rack bonus 50
+-- Purpose: using all 7 rack tiles in one move grants +50 points.
 -- ============================================================
 
 create or replace function public.calculate_patxanga_score(
@@ -30,7 +29,6 @@ declare
     v_multiplier_type text;
     v_breakdown jsonb := '{}'::jsonb;
 begin
-
     if p_words is null then
         raise exception 'Words cannot be null';
     end if;
@@ -39,22 +37,20 @@ begin
         raise exception 'Placed tiles cannot be null';
     end if;
 
-    -- Full-rack play: all 7 rack tiles used in a single move.
     if jsonb_array_length(p_placed_tiles) = 7 then
         v_bonus_7 := 50;
     end if;
 
-    -- Detect Patxanga Real usage
-    for v_tile in
-        select value from jsonb_array_elements(p_placed_tiles)
-    loop
-        if coalesce(v_tile->>'special_type', '') = 'PATXANGA_REAL'
-           or coalesce(v_tile->>'special_type', '') = 'patxanga_real' then
-            v_has_patxanga_real := true;
-        end if;
-    end loop;
+    -- p_placed_tiles contains only client placement data. Special metadata is
+    -- available in the hydrated tiles embedded in p_words.
+    select exists (
+        select 1
+        from jsonb_array_elements(p_words) as word_data(word_json)
+        cross join jsonb_array_elements(word_data.word_json->'tiles') as tile_data(tile_json)
+        where lower(coalesce(tile_data.tile_json->'tile'->>'special_type', '')) = 'patxanga_real'
+    )
+    into v_has_patxanga_real;
 
-    -- Iterate through words
     for v_word in
         select value from jsonb_array_elements(p_words)
     loop
@@ -62,13 +58,11 @@ begin
         v_word_multiplier := 1;
         v_is_main := (v_word->>'type') = 'main';
 
-        -- Iterate through tiles of word
         for v_tile in
             select value from jsonb_array_elements(v_word->'tiles')
         loop
             v_letter_score := coalesce((v_tile->'tile'->>'points')::integer, 0);
 
-            -- Check if tile is newly placed
             v_is_new := exists (
                 select 1
                 from jsonb_array_elements(p_placed_tiles) pt
@@ -91,8 +85,6 @@ begin
                         v_word_multiplier := v_word_multiplier * 2;
                     when 'PT' then
                         v_word_multiplier := v_word_multiplier * 3;
-                    when 'NM' then
-                        null;
                     else
                         null;
                 end case;
@@ -110,10 +102,8 @@ begin
         end if;
     end loop;
 
-    -- Apply bonus before Patxanga Real
     v_score_main := v_score_main + v_bonus_7;
 
-    -- Apply Patxanga Real only to main word
     if v_has_patxanga_real then
         v_score_main := v_score_main * 2;
     end if;

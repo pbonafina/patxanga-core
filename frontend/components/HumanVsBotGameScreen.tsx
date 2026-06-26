@@ -15,6 +15,7 @@ type HumanVsBotGameScreenProps = GamePlayScreenProps & {
   onPassTurn: () => void;
   onToggleExchangeMode: () => void;
   onSubmitExchange: () => void;
+  onForceBotTurn: () => void;
   onCreateNewBotMatch: () => void;
   isCreatingBotMatch: boolean;
 };
@@ -98,6 +99,7 @@ export function HumanVsBotGameScreen({
   onPassTurn,
   onToggleExchangeMode,
   onSubmitExchange,
+  onForceBotTurn,
   onCreateNewBotMatch,
   isCreatingBotMatch,
 }: HumanVsBotGameScreenProps) {
@@ -118,6 +120,13 @@ export function HumanVsBotGameScreen({
   const isBotTurn = (Boolean(currentTurnPlayer?.is_bot) || isKnownBotTurn) && isActive;
   const canUseHumanTurnControls = isHumanTurn && canCurrentPlayerTakeTurnAction;
   const placedTileCount = placedTilesPreview.length;
+  const submitMoveBlockReason = !isHumanTurn
+    ? "Aguarde seu turno."
+    : moveCompositionWarning
+      ? moveCompositionWarning
+      : placedTileCount === 0
+        ? "Posicione ao menos uma peça no tabuleiro."
+        : null;
   const winnerPlayer = playersSummary.find((player) => player.player_id === winnerPlayerId) ?? null;
   const statusLabel = isFinished
     ? "Partida encerrada"
@@ -139,6 +148,11 @@ export function HumanVsBotGameScreen({
         : isHumanTurn
           ? "Escolha peças, marque o tabuleiro e confirme a jogada."
           : "Aguardando a mesa atualizar.";
+  const scrollToBoard = () => {
+    document
+      .getElementById("human-vs-bot-board-panel")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <section
@@ -146,7 +160,7 @@ export function HumanVsBotGameScreen({
       style={{
         display: "grid",
         gap: 18,
-        paddingBottom: isHumanTurn ? 104 : 0,
+        paddingBottom: isHumanTurn ? 220 : 0,
       }}
     >
       <div
@@ -309,6 +323,25 @@ export function HumanVsBotGameScreen({
           >
             {currentTurnPlayer?.display_name ?? botPlayer?.display_name ?? "Bot"} está com o turno.
             Ações humanas ficam bloqueadas até a jogada automática terminar.
+            <div style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                data-testid="force-bot-turn"
+                onClick={onForceBotTurn}
+                disabled={isAutoPlayingBotTurn}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 12,
+                  border: "1px solid #f59e0b",
+                  background: isAutoPlayingBotTurn ? "#fde68a" : "#fbbf24",
+                  color: "#422006",
+                  cursor: isAutoPlayingBotTurn ? "not-allowed" : "pointer",
+                  fontWeight: 900,
+                }}
+              >
+                {isAutoPlayingBotTurn ? "Bot jogando..." : "Jogar bot agora"}
+              </button>
+            </div>
           </div>
         ) : null}
         {botActionMessage || botActionError || isAutoPlayingBotTurn ? (
@@ -402,14 +435,35 @@ export function HumanVsBotGameScreen({
           }}
         >
           <div
+            id="human-vs-bot-board-panel"
+            data-testid="human-vs-bot-board-panel"
             style={{
               padding: 14,
               borderRadius: 20,
               border: "1px solid #e5e7eb",
               background: "#f8fafc",
               overflowX: "auto",
+              scrollMarginTop: 18,
             }}
           >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 12,
+                marginBottom: 10,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 900, textTransform: "uppercase", color: "#1d4ed8" }}>
+                  Tabuleiro
+                </div>
+                <div style={{ marginTop: 2, fontSize: 13, color: "#475569", fontWeight: 700 }}>
+                  Clique em uma casa livre depois de selecionar uma peça.
+                </div>
+              </div>
+            </div>
             <BoardSection
               boardState={boardState}
               compositionPlacementsByCell={compositionPlacementsByCell}
@@ -631,10 +685,10 @@ export function HumanVsBotGameScreen({
           data-testid="human-vs-bot-sticky-actions"
           style={{
             position: "fixed",
-            left: 12,
             right: 12,
-            bottom: 12,
-            zIndex: 40,
+            width: "min(720px, calc(100vw - 24px))",
+            bottom: "calc(10px + env(safe-area-inset-bottom))",
+            zIndex: 1000,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -646,11 +700,12 @@ export function HumanVsBotGameScreen({
             background: "rgba(255, 255, 255, 0.96)",
             boxShadow: "0 18px 46px rgba(15, 23, 42, 0.22)",
             color: "#111827",
+            pointerEvents: "none",
           }}
         >
-          <div style={{ minWidth: 180 }}>
+          <div style={{ minWidth: 180, pointerEvents: "none" }}>
             <div style={{ fontSize: 12, fontWeight: 900, textTransform: "uppercase", color: "#1d4ed8" }}>
-              Sua jogada
+              Confirmar jogada
             </div>
             <div style={{ marginTop: 3, fontSize: 14, fontWeight: 800 }}>
               {placedTileCount > 0
@@ -659,7 +714,31 @@ export function HumanVsBotGameScreen({
                   : `${placedTileCount} peça(s) posicionada(s)`
                 : "Selecione peças e casas no tabuleiro"}
             </div>
+            {submitMoveBlockReason ? (
+              <div style={{ marginTop: 3, fontSize: 12, fontWeight: 800, color: "#92400e" }}>
+                {submitMoveBlockReason}
+              </div>
+            ) : null}
           </div>
+
+          <button
+            type="button"
+            data-testid="sticky-scroll-to-board"
+            onClick={scrollToBoard}
+            style={{
+              minWidth: 140,
+              padding: "12px 14px",
+              borderRadius: 14,
+              border: "1px solid #0f766e",
+              background: "#ecfdf5",
+              color: "#115e59",
+              cursor: "pointer",
+              fontWeight: 900,
+              pointerEvents: "auto",
+            }}
+          >
+            Ver tabuleiro
+          </button>
 
           <button
             type="button"
@@ -667,7 +746,7 @@ export function HumanVsBotGameScreen({
             onClick={onSubmitMove}
             disabled={!canSubmitMove || isSubmittingMove}
             style={{
-              minWidth: 156,
+              minWidth: 180,
               padding: "12px 16px",
               borderRadius: 14,
               border: "1px solid #1d4ed8",
@@ -675,9 +754,10 @@ export function HumanVsBotGameScreen({
               color: "#ffffff",
               cursor: !canSubmitMove || isSubmittingMove ? "not-allowed" : "pointer",
               fontWeight: 900,
+              pointerEvents: "auto",
             }}
           >
-            {isSubmittingMove ? "Enviando..." : "Enviar jogada"}
+            {isSubmittingMove ? "Enviando..." : "Confirmar jogada"}
           </button>
         </div>
       ) : null}

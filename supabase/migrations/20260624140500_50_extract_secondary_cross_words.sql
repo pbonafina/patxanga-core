@@ -1,7 +1,6 @@
 -- ============================================================
--- PATXANGA - RPC: extract_patxanga_words()
--- Version: 1.1
--- Purpose: Extract main and secondary words from virtual board
+-- PATXANGA - Extract secondary cross words
+-- Purpose: validate and score perpendicular words formed by new tiles
 -- ============================================================
 
 create or replace function public.extract_patxanga_words(

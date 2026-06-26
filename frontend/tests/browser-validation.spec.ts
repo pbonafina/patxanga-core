@@ -918,9 +918,15 @@ test.describe("browser validation scenarios", () => {
     await page.goto("/");
 
     await expect(page.getByRole("heading", { name: "Patxanga" })).toBeVisible();
-    await expect(page.getByTestId("primary-product-actions")).toContainText("Jogar agora");
-    await expect(page.getByTestId("primary-product-actions")).toContainText("Treinar contra bot");
-    await expect(page.getByTestId("primary-product-actions")).toContainText("Retomar mesa");
+    await expect(page.getByTestId("primary-product-actions")).toContainText("Humano x bot");
+    await expect(page.getByTestId("primary-product-actions")).toContainText("Humano x humano");
+    await expect(page.getByTestId("primary-product-actions")).toContainText("Múltiplos humanos");
+    await expect(page.getByTestId("tunnel-human-match-panel")).toContainText(
+      "Partida online por túnel"
+    );
+    await expect(page.getByTestId("tunnel-public-url")).toBeVisible();
+    await expect(page.getByTestId("tunnel-create-open-join-lobby")).toBeDisabled();
+    await expect(page.getByTestId("tunnel-create-invite-lobby")).toBeDisabled();
     await expect(page.getByTestId("auth-product-panel")).toContainText("Entre para jogar online");
     await expect(page.getByTestId("advanced-tools-toggle")).toContainText(
       "Mostrar ferramentas avançadas"
@@ -1298,7 +1304,7 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("board-cell-7-9")).toContainText("L");
   });
 
-  test("alternates turns repeatedly in human versus bot after an initial bot opening", async ({ page }) => {
+  test("ends human versus bot after consecutive human and bot passes", async ({ page }) => {
     const scenario = createHumanVsBotScenarioWithBotTurn();
 
     await page.goto("/");
@@ -1322,14 +1328,8 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByText(/turno 4/i)).toBeVisible();
 
     await expect(page.getByTestId("game-bot-action-message")).toContainText("Bot ");
-    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
-
-    await page.getByTestId("pass-turn-action").click();
-    await expect(page.getByTestId("turn-action-message")).toContainText("Turno passado com sucesso.");
-
-    await expect(page.getByText(/turno 5/i)).toBeVisible();
-    await expect(page.getByText("Sua vez de jogar")).toBeVisible();
-    await expect(page.getByTestId("game-bot-action-message")).toContainText("Bot ");
+    await expect(page.getByText("Partida encerrada").first()).toBeVisible();
+    await expect(page.getByText("Motivo: all_passed")).toBeVisible();
   });
 
   test("auto-votes as bot when a human word enters pending vote", async ({ page }) => {
@@ -1347,7 +1347,7 @@ test.describe("browser validation scenarios", () => {
     await page.getByTestId("board-cell-7-8").click();
 
     await expect(page.getByTestId("local-composed-word")).toContainText("TS");
-    await page.getByRole("button", { name: "Confirmar jogada" }).click();
+    await page.getByTestId("sticky-submit-move").click();
 
     await expect(page.getByTestId("game-bot-action-message")).toContainText("Bot rejeitou TS");
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();

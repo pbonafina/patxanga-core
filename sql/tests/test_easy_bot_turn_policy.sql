@@ -366,13 +366,13 @@ begin
             v_fallback_result;
     end if;
 
-    if v_fallback_result->>'bot_action' <> 'pass' then
-        raise exception 'Expected fallback bot action pass, got %',
+    if v_fallback_result->>'bot_action' <> 'exchange_tiles' then
+        raise exception 'Expected fallback bot action exchange_tiles, got %',
             v_fallback_result;
     end if;
 
-    if v_fallback_result->>'pass_reason' <> 'no_playable_word' then
-        raise exception 'Expected fallback reason no_playable_word, got %',
+    if v_fallback_result->>'exchange_reason' <> 'no_playable_word_or_candidate_timeout' then
+        raise exception 'Expected fallback exchange reason no_playable_word_or_candidate_timeout, got %',
             v_fallback_result;
     end if;
 
@@ -381,11 +381,11 @@ begin
     from public.patxanga_moves
     where match_id = v_fallback_match_id
       and player_id = v_fallback_bot_player_id
-      and move_type = 'pass'
+      and move_type = 'exchange_tiles'
       and status = 'accepted';
 
     if v_pass_move_count <> 1 then
-        raise exception 'Expected exactly 1 fallback pass move, got %',
+        raise exception 'Expected exactly 1 fallback exchange move, got %',
             v_pass_move_count;
     end if;
 

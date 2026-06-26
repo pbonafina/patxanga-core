@@ -1,6 +1,7 @@
 -- ============================================================
--- PATXANGA - RPC: submit_patxanga_easy_bot_turn()
--- Purpose: easy bot submits the best playable catalog candidate or passes
+-- PATXANGA - MIGRATION 48: Bot turn timeout budget
+-- Purpose: keep browser/API bot turns from failing under anon's 3s
+-- statement_timeout once the board is dense enough for candidate search.
 -- ============================================================
 
 create or replace function public.submit_patxanga_easy_bot_turn(
@@ -11,7 +12,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public
-set statement_timeout = '15s'
+set statement_timeout = '45s'
 as
 $$
 declare
@@ -20,9 +21,6 @@ declare
     v_candidates jsonb;
     v_candidate jsonb;
     v_result jsonb;
-    v_bag_count integer := 0;
-    v_exchange_count integer := 0;
-    v_exchange_tile_ids jsonb := '[]'::jsonb;
 begin
     select *
     into v_match
@@ -61,23 +59,14 @@ begin
         raise exception 'Only easy bot policy is supported';
     end if;
 
-    begin
-        perform set_config('statement_timeout', '2500ms', true);
-
-        v_candidates := public.find_patxanga_playable_bot_candidate_moves(
-            p_match_id,
-            p_player_id,
-            coalesce((public.get_patxanga_bot_policy_config(
-                v_player.bot_level,
-                v_player.bot_profile
-            )->>'candidate_limit')::integer, 10)
-        );
-    exception
-        when query_canceled then
-            v_candidates := '[]'::jsonb;
-    end;
-
-    perform set_config('statement_timeout', '15s', true);
+    v_candidates := public.find_patxanga_playable_bot_candidate_moves(
+        p_match_id,
+        p_player_id,
+        coalesce((public.get_patxanga_bot_policy_config(
+            v_player.bot_level,
+            v_player.bot_profile
+        )->>'candidate_limit')::integer, 10)
+    );
 
     for v_candidate in
         select candidate.value
@@ -114,43 +103,6 @@ begin
         );
     end loop;
 
-    v_bag_count := jsonb_array_length(coalesce(v_match.bag_state->'tiles', '[]'::jsonb));
-    v_exchange_count := least(jsonb_array_length(v_player.rack_state), v_bag_count, 7);
-
-    if v_exchange_count > 0 then
-        select coalesce(jsonb_agg(selected.tile_id), '[]'::jsonb)
-        into v_exchange_tile_ids
-        from (
-            select to_jsonb(rack_tile.value->>'id') as tile_id
-            from jsonb_array_elements(v_player.rack_state) as rack_tile(value)
-            where rack_tile.value ? 'id'
-            order by
-                case
-                    when lower(coalesce(rack_tile.value->>'special_type', '')) in ('skip_turn', 'patxanga_real') then 0
-                    when coalesce((rack_tile.value->>'points')::integer, 0) >= 4 then 1
-                    else 2
-                end,
-                coalesce((rack_tile.value->>'points')::integer, 0) desc,
-                rack_tile.value->>'letter'
-            limit v_exchange_count
-        ) selected;
-
-        if jsonb_array_length(v_exchange_tile_ids) > 0 then
-            v_result := public.submit_patxanga_exchange_tiles(
-                p_match_id,
-                p_player_id,
-                v_exchange_tile_ids
-            );
-
-            return v_result || jsonb_build_object(
-                'bot_action', 'exchange_tiles',
-                'bot_strategy', 'playable_dictionary_word',
-                'exchange_reason', 'no_playable_word',
-                'exchanged_tile_ids', v_exchange_tile_ids
-            );
-        end if;
-    end if;
-
     v_result := public.submit_patxanga_pass_turn(
         p_match_id,
         p_player_id
@@ -163,6 +115,9 @@ begin
     );
 end;
 $$;
+
+revoke all on function public.submit_patxanga_easy_bot_turn(uuid, uuid)
+from public, anon, authenticated;
 
 grant execute on function public.submit_patxanga_easy_bot_turn(uuid, uuid)
 to authenticated, anon;

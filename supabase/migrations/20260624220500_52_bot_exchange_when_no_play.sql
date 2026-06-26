@@ -1,6 +1,7 @@
 -- ============================================================
--- PATXANGA - RPC: submit_patxanga_easy_bot_turn()
--- Purpose: easy bot submits the best playable catalog candidate or passes
+-- PATXANGA - MIGRATION 52: Bot exchange fallback
+-- Purpose: bots should exchange tiles when no move is available and the bag
+-- still has tiles, instead of repeatedly passing.
 -- ============================================================
 
 create or replace function public.submit_patxanga_easy_bot_turn(
@@ -11,7 +12,6 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public
-set statement_timeout = '15s'
 as
 $$
 declare
@@ -61,23 +61,14 @@ begin
         raise exception 'Only easy bot policy is supported';
     end if;
 
-    begin
-        perform set_config('statement_timeout', '2500ms', true);
-
-        v_candidates := public.find_patxanga_playable_bot_candidate_moves(
-            p_match_id,
-            p_player_id,
-            coalesce((public.get_patxanga_bot_policy_config(
-                v_player.bot_level,
-                v_player.bot_profile
-            )->>'candidate_limit')::integer, 10)
-        );
-    exception
-        when query_canceled then
-            v_candidates := '[]'::jsonb;
-    end;
-
-    perform set_config('statement_timeout', '15s', true);
+    v_candidates := public.find_patxanga_playable_bot_candidate_moves(
+        p_match_id,
+        p_player_id,
+        coalesce((public.get_patxanga_bot_policy_config(
+            v_player.bot_level,
+            v_player.bot_profile
+        )->>'candidate_limit')::integer, 50)
+    );
 
     for v_candidate in
         select candidate.value
@@ -159,10 +150,13 @@ begin
     return v_result || jsonb_build_object(
         'bot_action', 'pass',
         'bot_strategy', 'playable_dictionary_word',
-        'pass_reason', 'no_playable_word'
+        'pass_reason', 'no_playable_word_and_no_exchange_available'
     );
 end;
 $$;
+
+revoke all on function public.submit_patxanga_easy_bot_turn(uuid, uuid)
+from public, anon, authenticated;
 
 grant execute on function public.submit_patxanga_easy_bot_turn(uuid, uuid)
 to authenticated, anon;

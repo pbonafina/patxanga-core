@@ -22,6 +22,7 @@ typeset -a engine_regression_tests=(
   "sql/tests/test_dictionary_import_pipeline.sql"
   "sql/tests/test_word_frequency_pipeline.sql"
   "sql/tests/test_dictionary_imported_words_engine_path.sql"
+  "sql/tests/test_full_rack_bonus_50.sql"
   "sql/tests/test_dictionary_policy_voting_path.sql"
   "sql/tests/test_easy_bot_turn_policy.sql"
   "sql/tests/test_easy_bot_vote_verdict.sql"
@@ -32,6 +33,7 @@ typeset -a engine_regression_tests=(
   "sql/tests/test_multi_human_match_flows.sql"
   "sql/tests/test_exchange_tiles.sql"
   "sql/tests/test_pass_turn.sql"
+  "sql/tests/test_skip_turn_advances_over_next_player.sql"
   "sql/tests/test_submit_move_auto.sql"
   "sql/tests/test_match_end_all_passed.sql"
   "sql/tests/test_match_end_empty_rack.sql"
@@ -46,6 +48,7 @@ typeset -a entrypoint_regression_tests=(
   "sql/tests/test_get_pending_vote_context.sql"
   "sql/tests/test_preview_move.sql"
   "sql/tests/test_submit_move_bridge_existing_board_tile.sql"
+  "sql/tests/test_extract_secondary_cross_words.sql"
   "sql/tests/test_hydrate_placed_tiles_declared_letter.sql"
 )
 
