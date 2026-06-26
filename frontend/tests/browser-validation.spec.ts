@@ -922,11 +922,10 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("primary-product-actions")).toContainText("Humano x humano");
     await expect(page.getByTestId("primary-product-actions")).toContainText("Múltiplos humanos");
     await expect(page.getByTestId("tunnel-human-match-panel")).toContainText(
-      "Partida online por túnel"
+      "Partida online por link"
     );
     await expect(page.getByTestId("tunnel-public-url")).toBeVisible();
     await expect(page.getByTestId("tunnel-create-open-join-lobby")).toBeDisabled();
-    await expect(page.getByTestId("tunnel-create-invite-lobby")).toBeDisabled();
     await expect(page.getByTestId("auth-product-panel")).toContainText("Entre para jogar online");
     await expect(page.getByTestId("advanced-tools-toggle")).toContainText(
       "Mostrar ferramentas avançadas"

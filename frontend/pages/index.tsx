@@ -2403,7 +2403,7 @@ export default function HomePage() {
       setInviteLobbyMessage(
         nextInviteLink
           ? "Mesa criada. Copie o link de convite e envie ao convidado."
-          : "Mesa criada e convite enviado. Informe a URL do túnel para gerar o link."
+          : "Mesa criada e convite enviado. Confirme a URL pública para gerar o link."
       );
       await openMatchSession(createResult.match_id, authenticatedUserId);
       await handleLoadSessionLists();
@@ -2462,7 +2462,7 @@ export default function HomePage() {
       setInviteLobbyMessage(
         nextJoinLink
           ? "Mesa criada. Copie o link aberto e envie ao convidado."
-          : "Mesa criada. Informe a URL do túnel para gerar o link aberto."
+          : "Mesa criada. Confirme a URL pública para gerar o link aberto."
       );
       await openMatchSession(createResult.match_id, authenticatedUserId);
       await handleLoadSessionLists();
@@ -4132,14 +4132,14 @@ export default function HomePage() {
         <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div style={{ maxWidth: 720 }}>
             <div style={{ fontSize: 12, fontWeight: 950, letterSpacing: 1.4, textTransform: "uppercase", color: "#0f766e" }}>
-              Partida online por túnel
+              Partida online por link
             </div>
             <h2 style={{ margin: "8px 0 6px", fontSize: 32, lineHeight: 1.05 }}>
               Humano x humano em dois dispositivos
             </h2>
             <p style={{ margin: 0, color: "#46534d", lineHeight: 1.55 }}>
-              Use este painel quando o Mac estiver servindo o jogo por Cloudflare Tunnel.
-              O host cria o convite, o convidado aceita na própria sessão e o host inicia a mesa.
+              Crie uma mesa online, copie o link aberto e envie ao convidado. Quem recebe o link
+              entra com conta própria e é colocado na mesa automaticamente.
             </p>
           </div>
           <div
@@ -4197,16 +4197,16 @@ export default function HomePage() {
 
           <div style={{ padding: 16, borderRadius: 20, background: "#ffffff", border: "1px solid #c9dfd2" }}>
             <div style={{ fontSize: 13, fontWeight: 950, color: "#0f766e", textTransform: "uppercase" }}>
-              1. Endereço do túnel
+              1. Endereço público
             </div>
             <p style={{ margin: "8px 0 10px", color: "#4b5563", lineHeight: 1.45 }}>
-              Cole aqui a URL pública do Cloudflare e envie para o outro jogador abrir no navegador dele.
+              Confirme a URL pública que será usada nos links enviados ao outro jogador.
             </p>
             <input
               data-testid="tunnel-public-url"
               value={tunnelPublicUrl}
               onChange={(event) => setTunnelPublicUrl(event.target.value)}
-              placeholder="https://seu-tunel.trycloudflare.com"
+              placeholder="https://frontend-blush-one-28.vercel.app"
               style={{
                 width: "100%",
                 boxSizing: "border-box",
@@ -4218,13 +4218,13 @@ export default function HomePage() {
             />
             {tunnelUrlLooksLocal ? (
               <div style={{ marginTop: 8, color: "#92400e", fontSize: 13, fontWeight: 800 }}>
-                Esta URL parece local. Para outro dispositivo, use a URL https do túnel.
+                Esta URL parece local. Para convidar outro dispositivo, use a URL pública da alpha.
               </div>
             ) : null}
             <button
               type="button"
               data-testid="tunnel-copy-public-url"
-              onClick={() => handleCopyTunnelText("URL do túnel", tunnelPublicUrl)}
+              onClick={() => handleCopyTunnelText("URL pública", tunnelPublicUrl)}
               style={{
                 marginTop: 10,
                 padding: "10px 13px",
@@ -4236,10 +4236,11 @@ export default function HomePage() {
                 fontWeight: 950,
               }}
             >
-              Copiar URL para convidado
+              Copiar URL pública
             </button>
           </div>
 
+          {showDebug ? (
           <div style={{ padding: 16, borderRadius: 20, background: "#ffffff", border: "1px solid #c9dfd2" }}>
             <div style={{ fontSize: 13, fontWeight: 950, color: "#0f766e", textTransform: "uppercase" }}>
               2. Identidade deste jogador
@@ -4288,14 +4289,15 @@ export default function HomePage() {
               </p>
             )}
           </div>
+          ) : null}
 
           <div style={{ padding: 16, borderRadius: 20, background: "#ffffff", border: "1px solid #c9dfd2" }}>
             <div style={{ fontSize: 13, fontWeight: 950, color: "#0f766e", textTransform: "uppercase" }}>
-              3. Host cria o convite
+              2. Criar e enviar link
             </div>
             <p style={{ margin: "8px 0 10px", color: "#4b5563", lineHeight: 1.45 }}>
-              Para não depender do UUID do convidado, crie um link aberto. Se quiser convite
-              nominal, cole o user_id do convidado e use o convite direto.
+              O host cria a mesa e envia o link aberto. O convidado só precisa abrir o link,
+              entrar com conta e aguardar a mesa carregar.
             </p>
             <div style={{ display: "grid", gap: 10 }}>
               <label style={{ display: "grid", gap: 6, fontSize: 13, fontWeight: 850 }}>
@@ -4371,8 +4373,13 @@ export default function HomePage() {
                   >
                     Copiar link aberto
                   </button>
+                  <p style={{ margin: 0, color: "#115e59", fontSize: 13, fontWeight: 850 }}>
+                    Envie este link ao convidado. Ele entra na partida depois de login/criação de conta.
+                  </p>
                 </div>
               ) : null}
+              {showDebug ? (
+              <>
               <div style={{ height: 1, background: "#d1fae5" }} />
               <label style={{ display: "grid", gap: 6, fontSize: 13, fontWeight: 850 }}>
                 user_id do convidado para convite nominal
@@ -4446,6 +4453,8 @@ export default function HomePage() {
                   </button>
                 </div>
               ) : null}
+              </>
+              ) : null}
             </div>
           </div>
         </div>
@@ -4460,11 +4469,11 @@ export default function HomePage() {
         >
           <div style={{ padding: 16, borderRadius: 20, background: "#f8fafc", border: "1px solid #d1d5db" }}>
             <div style={{ fontSize: 13, fontWeight: 950, color: "#1d4ed8", textTransform: "uppercase" }}>
-              4. Convidado aceita
+              3. Convidado entra
             </div>
             <p style={{ margin: "8px 0 10px", color: "#4b5563", lineHeight: 1.45 }}>
-              O ideal é abrir o link de convite. Se necessário, o convidado também pode atualizar
-              a lista e aceitar o convite pendente manualmente.
+              Ao abrir o link, o convidado entra na mesa automaticamente após login. Use atualizar
+              apenas se a página já estava aberta.
             </p>
             <button
               type="button"
@@ -4541,11 +4550,11 @@ export default function HomePage() {
 
           <div style={{ padding: 16, borderRadius: 20, background: "#fff7ed", border: "1px solid #fed7aa" }}>
             <div style={{ fontSize: 13, fontWeight: 950, color: "#9a3412", textTransform: "uppercase" }}>
-              5. Host inicia e ambos jogam
+              4. Host inicia e ambos jogam
             </div>
             <p style={{ margin: "8px 0 10px", color: "#4b5563", lineHeight: 1.45 }}>
-              Depois que o convidado aceitar, o host atualiza a mesa e inicia o lobby. Se a partida
-              já existir, use retomar.
+              Depois que o convidado aparecer, o host atualiza a mesa e inicia a partida. Se a mesa
+              já estiver em andamento, use retomar.
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button
@@ -4862,6 +4871,7 @@ export default function HomePage() {
       <section
         data-testid="invite-lobby-product-panel"
         style={{
+          display: showAdvancedTools ? undefined : "none",
           marginTop: 24,
           padding: 20,
           border: "1px solid #bbf7d0",
@@ -5051,6 +5061,7 @@ export default function HomePage() {
       <section
         data-testid="demo-roadmap-panel"
         style={{
+          display: showAdvancedTools ? undefined : "none",
           marginTop: 24,
           padding: 20,
           border: "1px solid #b7c7aa",
