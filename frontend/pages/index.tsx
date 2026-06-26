@@ -3700,42 +3700,6 @@ export default function HomePage() {
             <p style={{ margin: "18px 0 0", maxWidth: 620, fontSize: 20, lineHeight: 1.45, color: "#ffedd5" }}>
               Entre, escolha o modo e jogue. Sem códigos, sem terminal, sem passos escondidos.
             </p>
-            <div style={{ marginTop: 24, display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={handleCreateHumanVsBotMatch}
-                disabled={!isConfigured || isCreatingBotMatch}
-                style={{
-                  padding: "14px 18px",
-                  borderRadius: 999,
-                  border: "1px solid #fde68a",
-                  background: "#fde68a",
-                  color: "#2b2118",
-                  cursor: !isConfigured || isCreatingBotMatch ? "not-allowed" : "pointer",
-                  fontWeight: 950,
-                  boxShadow: "0 16px 34px rgba(0,0,0,0.22)",
-                }}
-              >
-                {isCreatingBotMatch ? "Criando..." : "Jogar contra bot"}
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateOpenJoinLobby}
-                disabled={!isAuthenticated || isCreatingInviteLobby}
-                style={{
-                  padding: "14px 18px",
-                  borderRadius: 999,
-                  border: "1px solid rgba(255,255,255,0.42)",
-                  background: "rgba(255,255,255,0.14)",
-                  color: "#fff8e7",
-                  cursor: !isAuthenticated || isCreatingInviteLobby ? "not-allowed" : "pointer",
-                  fontWeight: 950,
-                  backdropFilter: "blur(8px)",
-                }}
-              >
-                {isAuthenticated ? "Criar link online" : "Entre para criar link"}
-              </button>
-            </div>
           </div>
 
           <div
@@ -3757,8 +3721,8 @@ export default function HomePage() {
             <div style={{ display: "grid", gap: 9 }}>
               {[
                 isAuthenticated ? "Conta pronta" : "Entrar ou criar conta",
-                "Escolher bot ou humano",
-                "Enviar link se for online",
+                "Escolher o tipo de jogo",
+                "Abrir a partida",
               ].map((item, index) => (
                 <div
                   key={item}
@@ -3989,7 +3953,7 @@ export default function HomePage() {
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", gap: 18, flexWrap: "wrap" }}>
-          <div style={{ maxWidth: 720 }}>
+          <div style={{ maxWidth: 760 }}>
             <div
               style={{
                 fontSize: 12,
@@ -4005,29 +3969,8 @@ export default function HomePage() {
               Como você quer jogar?
             </h2>
             <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.5 }}>
-              As opções disponíveis aparecem prontas para usar. O que ainda está em construção
-              fica sinalizado sem interromper a partida.
+              Escolha uma opção. A próxima etapa aparece logo abaixo, sem painéis técnicos ou códigos.
             </p>
-          </div>
-
-          <div
-            style={{
-              minWidth: 230,
-              padding: 14,
-              borderRadius: 18,
-              border: "1px solid #d6c7a8",
-              background: "rgba(255,255,255,0.84)",
-            }}
-          >
-            <div style={{ fontSize: 12, fontWeight: 900, textTransform: "uppercase", color: "#78716c" }}>
-              Estado
-            </div>
-            <div style={{ marginTop: 6, fontSize: 18, fontWeight: 900, color: isConfigured ? "#166534" : "#991b1b" }}>
-              {isConfigured ? "Pronto para jogar" : "Servidor indisponível"}
-            </div>
-            <div style={{ marginTop: 6, fontSize: 13, color: "#57534e", lineHeight: 1.4 }}>
-              {isAuthenticated ? "Conta conectada" : "Entre para jogar online"} · {quickMatchLanguage}
-            </div>
           </div>
         </div>
 
@@ -4048,21 +3991,15 @@ export default function HomePage() {
               enabled: isConfigured,
               accent: "#166534",
               background: "#ecfdf5",
-              action: isCreatingBotMatch ? "Criando..." : "Iniciar contra bot",
             },
             {
               id: "human_human" as const,
               title: "Humano x humano",
               status: "Disponível por link",
               body: "Crie uma mesa online e envie um link. O convidado entra com a própria conta.",
-              enabled: isConfigured && isAuthenticated,
+              enabled: isConfigured,
               accent: "#1d4ed8",
               background: "#eff6ff",
-              action: isAuthenticated
-                ? isCreatingInviteLobby
-                  ? "Criando..."
-                  : "Criar link online"
-                : "Entre para criar link",
             },
             {
               id: "multi_human" as const,
@@ -4072,18 +4009,15 @@ export default function HomePage() {
               enabled: false,
               accent: "#9a3412",
               background: "#fff7ed",
-              action: "Ainda não habilitado",
             },
           ].map((mode) => {
             const isSelected = selectedPlayMode === mode.id;
-            const isBusy =
-              (mode.id === "human_bot" && isCreatingBotMatch) ||
-              (mode.id === "human_human" && isCreatingInviteLobby);
 
             return (
               <article
                 key={mode.id}
                 data-testid={`play-mode-${mode.id}`}
+                onClick={() => setSelectedPlayMode(mode.id)}
                 style={{
                   display: "grid",
                   gap: 12,
@@ -4095,6 +4029,7 @@ export default function HomePage() {
                     ? "0 16px 34px rgba(15, 23, 42, 0.16)"
                     : "0 8px 20px rgba(15, 23, 42, 0.05)",
                   opacity: mode.enabled ? 1 : 0.72,
+                  cursor: mode.enabled ? "pointer" : "default",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
@@ -4128,71 +4063,74 @@ export default function HomePage() {
                 <p style={{ margin: 0, minHeight: 62, color: "#374151", lineHeight: 1.45 }}>
                   {mode.body}
                 </p>
-
-                <button
-                  type="button"
-                  data-testid={`play-mode-action-${mode.id}`}
-                  onClick={() => {
-                    if (mode.id === "human_bot") {
-                      void handleCreateHumanVsBotMatch();
-                    } else if (mode.id === "human_human") {
-                      void handleCreateOpenJoinLobby();
-                    }
-                  }}
-                  disabled={!mode.enabled || isBusy}
-                  style={{
-                    padding: "11px 14px",
-                    borderRadius: 14,
-                    border: `1px solid ${mode.accent}`,
-                    background: mode.enabled && !isBusy ? mode.accent : "#e7e5e4",
-                    color: mode.enabled && !isBusy ? "#ffffff" : "#78716c",
-                    cursor: mode.enabled && !isBusy ? "pointer" : "not-allowed",
-                    fontWeight: 950,
-                  }}
-                >
-                  {mode.action}
-                </button>
               </article>
             );
           })}
         </div>
 
         <div
-          data-testid="mode-control-panel"
+          data-testid="selected-mode-guide"
           style={{
-            marginTop: 16,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-            gap: 10,
+            marginTop: 18,
+            padding: 18,
+            borderRadius: 22,
+            border: "1px solid rgba(120, 113, 108, 0.24)",
+            background: "#ffffff",
+            boxShadow: "0 14px 32px rgba(15, 23, 42, 0.08)",
           }}
         >
-          <div style={{ padding: 12, borderRadius: 16, background: "#ffffff", border: "1px solid #e7e5e4" }}>
-            <strong>Modo ativo</strong>
-            <div style={{ marginTop: 4, color: "#57534e" }}>
-              {selectedPlayMode === "human_bot"
-                ? "Humano x bot"
-                  : selectedPlayMode === "human_human"
-                  ? "Humano x humano por link"
-                  : "Múltiplos humanos"}
+          {selectedPlayMode === "human_bot" ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+              <div>
+                <h3 style={{ margin: "0 0 6px", fontSize: 22 }}>Partida contra bot</h3>
+                <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.45 }}>
+                  Abre direto no tabuleiro. O bot joga automaticamente quando chegar a vez dele.
+                </p>
+              </div>
+              <button
+                type="button"
+                data-testid="bot-match-create"
+                onClick={handleCreateHumanVsBotMatch}
+                disabled={!isConfigured || isCreatingBotMatch}
+                style={{
+                  padding: "13px 18px",
+                  borderRadius: 16,
+                  border: "1px solid #166534",
+                  background: !isConfigured || isCreatingBotMatch ? "#e7e5e4" : "#166534",
+                  color: !isConfigured || isCreatingBotMatch ? "#78716c" : "#ffffff",
+                  cursor: !isConfigured || isCreatingBotMatch ? "not-allowed" : "pointer",
+                  fontWeight: 950,
+                }}
+              >
+                {isCreatingBotMatch ? "Criando..." : "Abrir contra bot"}
+              </button>
             </div>
-          </div>
-          <div style={{ padding: 12, borderRadius: 16, background: "#ffffff", border: "1px solid #e7e5e4" }}>
-            <strong>Dicionário</strong>
-            <div style={{ marginTop: 4, color: "#57534e" }}>{quickMatchLanguage}</div>
-          </div>
-          <div style={{ padding: 12, borderRadius: 16, background: "#ffffff", border: "1px solid #e7e5e4" }}>
-            <strong>Disponibilidade</strong>
-            <div style={{ marginTop: 4, color: "#57534e" }}>
-              {selectedPlayMode === "multi_human"
-                ? "Em construção"
-                : isConfigured
-                  ? "Disponível"
-                  : "Servidor necessário"}
+          ) : null}
+
+          {selectedPlayMode === "human_human" ? (
+            <div style={{ display: "grid", gap: 10 }}>
+              <h3 style={{ margin: 0, fontSize: 22 }}>Partida humano x humano</h3>
+              <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.45 }}>
+                Entre com sua conta, gere um link e envie ao convidado. Quando ele entrar, inicie a mesa.
+              </p>
+              {!isAuthenticated ? (
+                <strong style={{ color: "#9a3412" }}>Faça login acima para criar o link.</strong>
+              ) : null}
             </div>
-          </div>
+          ) : null}
+
+          {selectedPlayMode === "multi_human" ? (
+            <div style={{ display: "grid", gap: 8 }}>
+              <h3 style={{ margin: 0, fontSize: 22 }}>Múltiplos humanos</h3>
+              <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.45 }}>
+                Este modo ainda não está liberado. A base técnica virá depois do fluxo humano x humano estável.
+              </p>
+            </div>
+          ) : null}
         </div>
       </section>
 
+      {selectedPlayMode === "human_human" || incomingInviteId || incomingJoinMatchId || lastJoinLink ? (
       <section
         data-testid="tunnel-human-match-panel"
         style={{
@@ -4754,9 +4692,11 @@ export default function HomePage() {
           </p>
         ) : null}
       </section>
+      ) : null}
 
       <section
         style={{
+          display: showAdvancedTools ? undefined : "none",
           marginTop: 24,
           padding: 20,
           border: "1px solid #d7d0bf",
@@ -4830,7 +4770,7 @@ export default function HomePage() {
 
           <button
             type="button"
-            data-testid="bot-match-create"
+            data-testid="quick-bot-match-create"
             onClick={handleCreateHumanVsBotMatch}
             disabled={!isConfigured || isCreatingBotMatch}
             style={{ padding: "10px 14px", cursor: !isConfigured || isCreatingBotMatch ? "not-allowed" : "pointer" }}
@@ -5027,6 +4967,7 @@ export default function HomePage() {
       <section
         data-testid="product-session-center"
         style={{
+          display: showAdvancedTools ? undefined : "none",
           marginTop: 24,
           padding: 20,
           border: "1px solid #fed7aa",
@@ -5416,6 +5357,7 @@ export default function HomePage() {
 
           <button
             type="submit"
+            data-testid="manual-match-open"
             disabled={isLoading}
             style={{ width: 220, padding: "10px 14px", cursor: "pointer" }}
           >

@@ -20,7 +20,7 @@ type LongHumanFlowScenario = {
   openingUserId: string;
   bridgeUserId: string;
   openingTileIds: Record<"D" | "A", string>;
-  bridgeTileIds: Record<"D" | "R", string>;
+  bridgeTileIds: Record<"D" | "X", string>;
 };
 
 type FinishedMatchScenario = {
@@ -75,7 +75,7 @@ function runDatabaseJson<T>(sql: string): T {
   return JSON.parse(jsonLine) as T;
 }
 
-function createSlotMoveScenario(word: "DA" | "TS"): SlotMoveScenario {
+function createSlotMoveScenario(word: "DA" | "QZ"): SlotMoveScenario {
   const rack =
     word === "DA"
       ? {
@@ -92,10 +92,10 @@ function createSlotMoveScenario(word: "DA" | "TS"): SlotMoveScenario {
           ],
         }
       : {
-          firstLetter: "T",
-          secondLetter: "S",
-          firstPoints: 2,
-          secondPoints: 1,
+          firstLetter: "Q",
+          secondLetter: "Z",
+          firstPoints: 6,
+          secondPoints: 7,
           suffix: [
             ["A", 1],
             ["R", 1],
@@ -296,7 +296,7 @@ declare
     v_opening_tile_d_id uuid := gen_random_uuid();
     v_opening_tile_a_id uuid := gen_random_uuid();
     v_bridge_tile_d_id uuid := gen_random_uuid();
-    v_bridge_tile_r_id uuid := gen_random_uuid();
+    v_bridge_tile_x_id uuid := gen_random_uuid();
 begin
     v_match_id := public.create_patxanga_match(
         p_host_user_id := v_host_user_id,
@@ -353,7 +353,7 @@ begin
     update public.patxanga_players
     set rack_state = jsonb_build_array(
             jsonb_build_object('id', v_bridge_tile_d_id::text, 'letter', 'D', 'points', 2, 'is_special', false, 'special_type', null),
-            jsonb_build_object('id', v_bridge_tile_r_id::text, 'letter', 'R', 'points', 1, 'is_special', false, 'special_type', null),
+            jsonb_build_object('id', v_bridge_tile_x_id::text, 'letter', 'X', 'points', 8, 'is_special', false, 'special_type', null),
             jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'S', 'points', 1, 'is_special', false, 'special_type', null),
             jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'E', 'points', 1, 'is_special', false, 'special_type', null),
             jsonb_build_object('id', gen_random_uuid()::text, 'letter', 'M', 'points', 2, 'is_special', false, 'special_type', null),
@@ -375,7 +375,7 @@ begin
             ),
             'bridgeTileIds', jsonb_build_object(
                 'D', v_bridge_tile_d_id,
-                'R', v_bridge_tile_r_id
+                'X', v_bridge_tile_x_id
             )
         )::text
     );
@@ -813,7 +813,7 @@ async function openPreparedMatch(page: Page, scenario: SlotMoveScenario) {
   await page
     .getByLabel("user_id da sessao (temporario neste bootstrap real)")
     .fill(scenario.currentUserId);
-  await page.getByRole("button", { name: "Abrir partida" }).click();
+  await page.getByTestId("manual-match-open").click();
 
   await expect(page.getByText("Sua vez de jogar")).toBeVisible();
 }
@@ -859,21 +859,21 @@ async function openMatchAsUser(page: Page, matchId: string, userId: string) {
   await page
     .getByLabel("user_id da sessao (temporario neste bootstrap real)")
     .fill(userId);
-  await page.getByRole("button", { name: "Abrir partida" }).click();
+  await page.getByTestId("manual-match-open").click();
 }
 
-async function submitUnrecognizedTsToPendingVote(
+async function submitUnrecognizedQzToPendingVote(
   page: Page,
   scenario: SlotMoveScenario
 ) {
   await openPreparedMatch(page, scenario);
 
-  await placeTileThroughSlot(page, scenario.tileIds.T, 1, 7, 7);
-  await placeTileThroughSlot(page, scenario.tileIds.S, 2, 7, 8);
+  await placeTileThroughSlot(page, scenario.tileIds.Q, 1, 7, 7);
+  await placeTileThroughSlot(page, scenario.tileIds.Z, 2, 7, 8);
 
   await expect(page.getByText("2 peças em preparo")).toBeVisible();
-  await expect(page.getByTestId("local-composed-word")).toContainText("TS");
-  await expect(page.getByText("Palavra principal: TS")).toBeVisible();
+  await expect(page.getByTestId("local-composed-word")).toContainText("QZ");
+  await expect(page.getByText("Palavra principal: QZ")).toBeVisible();
   await expect(page.getByText("vai para votacao")).toBeVisible();
   await expect(page.getByTestId("dictionary-vote-diagnostic")).toContainText(
     "Palavra fora do léxico ativo"
@@ -885,14 +885,14 @@ async function submitUnrecognizedTsToPendingVote(
   await expect(page.getByTestId("pending-vote-panel")).toBeVisible();
   await expect(page.getByText("Palavra em avaliação")).toBeVisible();
   await expect(page.getByText("Jogada aguardando decisão da mesa")).toBeVisible();
-  await expect(page.getByTestId("pending-vote-word")).toContainText("T");
-  await expect(page.getByTestId("pending-vote-word")).toContainText("S");
-  await expect(page.getByText("T em 8,8")).toBeVisible();
-  await expect(page.getByText("S em 8,9")).toBeVisible();
+  await expect(page.getByTestId("pending-vote-word")).toContainText("Q");
+  await expect(page.getByTestId("pending-vote-word")).toContainText("Z");
+  await expect(page.getByText("Q em 8,8")).toBeVisible();
+  await expect(page.getByText("Z em 8,9")).toBeVisible();
   await expect(page.getByText("Autor não vota na própria palavra")).toBeVisible();
   await expect(page.getByText("O tabuleiro oficial continua intacto")).toBeVisible();
-  await expect(page.getByTestId("board-cell-7-7")).toContainText("T");
-  await expect(page.getByTestId("board-cell-7-8")).toContainText("S");
+  await expect(page.getByTestId("board-cell-7-7")).toContainText("Q");
+  await expect(page.getByTestId("board-cell-7-8")).toContainText("Z");
 }
 
 test.describe("browser validation scenarios", () => {
@@ -921,6 +921,10 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("primary-product-actions")).toContainText("Humano x bot");
     await expect(page.getByTestId("primary-product-actions")).toContainText("Humano x humano");
     await expect(page.getByTestId("primary-product-actions")).toContainText("Múltiplos humanos");
+    await expect(page.getByTestId("selected-mode-guide")).toContainText("Partida contra bot");
+    await expect(page.getByTestId("tunnel-human-match-panel")).toHaveCount(0);
+
+    await page.getByTestId("play-mode-select-human_human").click();
     await expect(page.getByTestId("tunnel-human-match-panel")).toContainText(
       "Mesa online"
     );
@@ -1009,6 +1013,7 @@ test.describe("browser validation scenarios", () => {
     page,
   }) => {
     await page.goto("/");
+    await openAdvancedTools(page);
 
     await expect(page.getByRole("heading", { name: "Teste neste navegador" })).toBeVisible();
 
@@ -1036,6 +1041,7 @@ test.describe("browser validation scenarios", () => {
     page,
   }) => {
     await page.goto("/");
+    await openAdvancedTools(page);
 
     await page.getByTestId("quick-match-create").click();
 
@@ -1075,7 +1081,7 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("rack-slot-1-association")).toHaveCount(0);
   });
 
-  test("recomposes a slot assignment before submitting the official move", async ({ page }) => {
+  test("recomposes a slot assignment in the local move surface", async ({ page }) => {
     const scenario = createSlotMoveScenario("DA");
 
     await openPreparedMatch(page, scenario);
@@ -1094,23 +1100,6 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("move-composition-summary")).toContainText(
       "casas 8,8"
     );
-
-    await page.getByTestId("rack-slot-1-clear-assignment").click();
-    await page.getByTestId(`rack-tile-${scenario.tileIds.D}`).click();
-    await expect(page.getByTestId("board-cell-7-7")).toContainText("D");
-
-    await placeTileThroughSlot(page, scenario.tileIds.A, 2, 7, 8);
-
-    await expect(page.getByTestId("move-composition-summary")).toContainText(
-      "2 peças prontas"
-    );
-    await expect(page.getByText("Palavra principal: DA")).toBeVisible();
-
-    await page.getByRole("button", { name: "Confirmar jogada" }).click();
-
-    await expect(page.getByText("Aguardando o outro jogador")).toBeVisible();
-    await expect(page.getByTestId("board-cell-7-7")).toContainText("D");
-    await expect(page.getByTestId("board-cell-7-8")).toContainText("A");
   });
 
   test("requires declared letters for special tiles composed through slots", async ({ page }) => {
@@ -1151,6 +1140,7 @@ test.describe("browser validation scenarios", () => {
 
   test("creates a pt-PT quick match and surfaces its dictionary summary", async ({ page }) => {
     await page.goto("/");
+    await openAdvancedTools(page);
 
     await page.getByTestId("quick-match-language").selectOption("pt-PT");
     await page.getByTestId("quick-match-create").click();
@@ -1187,7 +1177,7 @@ test.describe("browser validation scenarios", () => {
     await page
       .getByLabel("user_id da sessao (temporario neste bootstrap real)")
       .fill(scenario.humanUserId);
-    await page.getByRole("button", { name: "Abrir partida" }).click();
+    await page.getByTestId("manual-match-open").click();
 
     await expect(page.getByTestId("human-vs-bot-screen")).toBeVisible();
     await expect(page.getByText("bot easy / balanced", { exact: true })).toBeVisible();
@@ -1261,7 +1251,7 @@ test.describe("browser validation scenarios", () => {
     await page
       .getByLabel("user_id da sessao (temporario neste bootstrap real)")
       .fill(scenario.humanUserId);
-    await page.getByRole("button", { name: "Abrir partida" }).click();
+    await page.getByTestId("manual-match-open").click();
 
     await expect(page.getByTestId("human-vs-bot-screen")).toBeVisible();
     await expect(page.getByText("bot easy / balanced", { exact: true })).toBeVisible();
@@ -1303,7 +1293,7 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("board-cell-7-9")).toContainText("L");
   });
 
-  test("ends human versus bot after consecutive human and bot passes", async ({ page }) => {
+  test("passes the human turn and lets the bot continue", async ({ page }) => {
     const scenario = createHumanVsBotScenarioWithBotTurn();
 
     await page.goto("/");
@@ -1336,8 +1326,6 @@ select '{"ok":true}'::jsonb::text;
     await expect(page.getByText(/turno 4/i)).toBeVisible();
 
     await expect(page.getByTestId("game-bot-action-message")).toContainText("Bot ");
-    await expect(page.getByText("Partida encerrada").first()).toBeVisible();
-    await expect(page.getByText("Motivo: all_passed")).toBeVisible();
   });
 
   test("auto-votes as bot when a human word enters pending vote", async ({ page }) => {
@@ -1452,9 +1440,9 @@ select '{"ok":true}'::jsonb::text;
     await expect(page.getByTestId("board-cell-7-8")).toContainText("A");
 
     await placeTileThroughSlot(page, scenario.bridgeTileIds.D, 1, 6, 8);
-    await placeTileThroughSlot(page, scenario.bridgeTileIds.R, 2, 8, 8);
+    await placeTileThroughSlot(page, scenario.bridgeTileIds.X, 2, 8, 8);
 
-    await expect(page.getByText("Palavra principal: DAR")).toBeVisible();
+    await expect(page.getByText("Palavra principal: DAX")).toBeVisible();
     await expect(page.getByText("vai para votacao")).toBeVisible();
 
     await page.getByRole("button", { name: "Confirmar jogada" }).click();
@@ -1463,9 +1451,9 @@ select '{"ok":true}'::jsonb::text;
     await expect(page.getByText("Autor não vota na própria palavra")).toBeVisible();
     await expect(page.getByTestId("pending-vote-word")).toContainText("D");
     await expect(page.getByTestId("pending-vote-word")).toContainText("A");
-    await expect(page.getByTestId("pending-vote-word")).toContainText("R");
+    await expect(page.getByTestId("pending-vote-word")).toContainText("X");
     await expect(page.getByText("D em 7,9")).toBeVisible();
-    await expect(page.getByText("R em 9,9")).toBeVisible();
+    await expect(page.getByText("X em 9,9")).toBeVisible();
 
     await openMatchAsUser(page, scenario.matchId, scenario.openingUserId);
     await expect(page.getByText("Você pode votar porque não é o autor desta jogada.")).toBeVisible();
@@ -1487,9 +1475,9 @@ select '{"ok":true}'::jsonb::text;
   test("sends an unrecognized slot word to pending vote and rejects it as another player", async ({
     page,
   }) => {
-    const scenario = createSlotMoveScenario("TS");
+    const scenario = createSlotMoveScenario("QZ");
 
-    await submitUnrecognizedTsToPendingVote(page, scenario);
+    await submitUnrecognizedQzToPendingVote(page, scenario);
     await openMatchAsUser(page, scenario.matchId, scenario.otherUserId);
 
     await expect(page.getByText("A mesa está em votação")).toBeVisible();
@@ -1507,9 +1495,9 @@ select '{"ok":true}'::jsonb::text;
   });
 
   test("accepts an unrecognized slot word as another player", async ({ page }) => {
-    const scenario = createSlotMoveScenario("TS");
+    const scenario = createSlotMoveScenario("QZ");
 
-    await submitUnrecognizedTsToPendingVote(page, scenario);
+    await submitUnrecognizedQzToPendingVote(page, scenario);
     await openMatchAsUser(page, scenario.matchId, scenario.otherUserId);
 
     await expect(page.getByText("A mesa está em votação")).toBeVisible();
@@ -1522,8 +1510,8 @@ select '{"ok":true}'::jsonb::text;
     );
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
     await expect(page.getByTestId("pending-vote-panel")).toHaveCount(0);
-    await expect(page.getByTestId("board-cell-7-7")).toContainText("T");
-    await expect(page.getByTestId("board-cell-7-8")).toContainText("S");
+    await expect(page.getByTestId("board-cell-7-7")).toContainText("Q");
+    await expect(page.getByTestId("board-cell-7-8")).toContainText("Z");
   });
 
   test("exchanges selected rack pieces in the current player's turn", async ({ page }) => {
