@@ -320,7 +320,9 @@ export function RackSection({
                 Selecione uma peça e clique no tabuleiro para preparar a jogada.
               </div>
               <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
-                Use os slots para montar a palavra com calma antes de confirmar.
+                {slotCount > 0
+                  ? "Use os slots para montar a palavra com calma antes de confirmar."
+                  : "Monte a palavra colocando as peças diretamente no tabuleiro antes de confirmar."}
               </div>
               {selectedCount > 0 ? (
                 <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>

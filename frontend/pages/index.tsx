@@ -156,7 +156,7 @@ type MatchTimelineItem = {
   tone: MatchTimelineTone;
 };
 
-const DEFAULT_RACK_SLOT_IDS = ["__slot__:1", "__slot__:2", "__slot__:3"] as const;
+const DEFAULT_RACK_SLOT_IDS: readonly string[] = [];
 const INSERTION_TARGET_PREFIX = "__insert__:";
 const DECLARED_LETTER_SPECIAL_TYPES = new Set([
   "wildcard",

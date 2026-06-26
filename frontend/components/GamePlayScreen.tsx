@@ -287,6 +287,7 @@ export function GamePlayScreen({
   const placedTileCount = placedTilesPreview.length;
   const associatedSlotCount = Object.keys(rackSlotAssociations).length;
   const rackSlotCount = playerRackState.filter(isRackSlotItem).length;
+  const hasRackSlots = rackSlotCount > 0;
   const preparedTileCoordinates = formatPreparedTileCoordinates(placedTilesPreview);
   const isPlayersTurn =
     Boolean(viewerPlayerId) &&
@@ -1204,7 +1205,9 @@ export function GamePlayScreen({
                   {isPlayersTurn
                     ? placedTileCount > 0
                       ? `Jogada preparada com ${placedTileCount} peça${placedTileCount === 1 ? "" : "s"}.`
-                      : "Selecione peças do rack para jogar direto no tabuleiro ou vincule uma peça a um slot antes de associá-lo ao board."
+                      : hasRackSlots
+                        ? "Selecione peças do rack para jogar direto no tabuleiro ou vincule uma peça a um slot antes de associá-lo ao board."
+                        : "Selecione peças do rack e clique no tabuleiro para preparar a jogada."
                     : "Você pode reorganizar o rack, mas a confirmação da jogada só libera no seu turno."}
                 </div>
 
@@ -1250,7 +1253,9 @@ export function GamePlayScreen({
                   Selecione uma peça e clique no tabuleiro para preparar a jogada.
                 </div>
                 <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
-                  Use os slots para montar a palavra com calma antes de confirmar.
+                  {hasRackSlots
+                    ? "Use os slots para montar a palavra com calma antes de confirmar."
+                    : "Monte a palavra colocando as peças diretamente no tabuleiro antes de confirmar."}
                 </div>
                 {selectedGroupCount > 0 ? (
                   <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
