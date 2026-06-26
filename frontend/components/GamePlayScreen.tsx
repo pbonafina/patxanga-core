@@ -116,6 +116,8 @@ export type GamePlayScreenProps = {
   lastTurnActionSummary: TurnActionSummary | null;
   matchTimeline: MatchTimelineItem[];
   isAutoPlayingBotTurn: boolean;
+  canStartWaitingMatch?: boolean;
+  isStartingWaitingMatch?: boolean;
 
   buildCellKey: (rowIndex: number, colIndex: number) => string;
   renderCellLabel: (cell: BoardCell) => string;
@@ -137,6 +139,7 @@ export type GamePlayScreenProps = {
   onApprove: () => void;
   onReject: () => void;
   onToggleDebug: () => void;
+  onStartWaitingMatch?: () => void;
 };
 
 function getSlotShortLabel(slotId: string): string {
@@ -229,6 +232,8 @@ export function GamePlayScreen({
   lastTurnActionSummary,
   matchTimeline,
   isAutoPlayingBotTurn,
+  canStartWaitingMatch = false,
+  isStartingWaitingMatch = false,
 
   buildCellKey,
   renderCellLabel,
@@ -246,8 +251,10 @@ export function GamePlayScreen({
   onApprove,
   onReject,
   onToggleDebug,
+  onStartWaitingMatch,
 }: GamePlayScreenProps) {
   const gameplayEnabled = isActive || isVoting;
+  const hasBotPlayer = playersSummary.some((player) => player.is_bot);
 
   const currentTurnPlayer =
     playersSummary.find((player) => player.player_id === currentTurnPlayerId) ?? null;
@@ -291,7 +298,9 @@ export function GamePlayScreen({
         : "A mesa aguarda os votos dos demais jogadores."
       : isFinished
         ? "Veja o resultado final da partida."
-        : "Inicie a partida quando todos estiverem prontos.";
+        : canStartWaitingMatch
+          ? "Inicie a partida quando todos estiverem prontos."
+          : "Aguarde o host iniciar a partida.";
 
   const statusTone = isActive
     ? isPlayersTurn
@@ -668,28 +677,30 @@ export function GamePlayScreen({
         </div>
       ) : null}
 
-      <div
-        data-testid="bot-product-state"
-        style={{
-          marginBottom: 18,
-          padding: 14,
-          borderRadius: 16,
-          border: "1px solid #d1fae5",
-          background: "#f8fffb",
-          color: "#14532d",
-        }}
-      >
-        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.8, textTransform: "uppercase" }}>
-          Estado humano x bot
+      {hasBotPlayer ? (
+        <div
+          data-testid="bot-product-state"
+          style={{
+            marginBottom: 18,
+            padding: 14,
+            borderRadius: 16,
+            border: "1px solid #d1fae5",
+            background: "#f8fffb",
+            color: "#14532d",
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.8, textTransform: "uppercase" }}>
+            Estado humano x bot
+          </div>
+          <div style={{ marginTop: 8, fontSize: 14, fontWeight: 800 }}>
+            {isAutoPlayingBotTurn
+              ? "Bot pensando e executando via RPC oficial."
+              : botActionHistory.length > 0
+                ? `Bot com ${botActionHistory.length} ação${botActionHistory.length === 1 ? "" : "ões"} recente${botActionHistory.length === 1 ? "" : "s"} nesta sessão.`
+                : "Bot pronto para agir automaticamente quando o turno chegar."}
+          </div>
         </div>
-        <div style={{ marginTop: 8, fontSize: 14, fontWeight: 800 }}>
-          {isAutoPlayingBotTurn
-            ? "Bot pensando e executando via RPC oficial."
-            : botActionHistory.length > 0
-              ? `Bot com ${botActionHistory.length} ação${botActionHistory.length === 1 ? "" : "ões"} recente${botActionHistory.length === 1 ? "" : "s"} nesta sessão.`
-              : "Bot pronto para agir automaticamente quando o turno chegar."}
-        </div>
-      </div>
+      ) : null}
 
       {matchTimeline.length > 0 ? (
         <div
@@ -844,9 +855,30 @@ export function GamePlayScreen({
             lobby, o tabuleiro e o rack oficial ficam liberados aqui.
           </div>
           <div style={{ marginTop: 8, fontSize: 14 }}>
-            Próxima ação: use <strong>Iniciar partida do lobby</strong> no painel de ações da
-            partida atual.
+            {canStartWaitingMatch
+              ? "Próxima ação: inicie a partida agora para liberar o tabuleiro aos jogadores."
+              : "Próxima ação: aguarde o host iniciar a partida. Esta tela atualiza quando a mesa ficar ativa."}
           </div>
+          {canStartWaitingMatch && onStartWaitingMatch ? (
+            <button
+              type="button"
+              data-testid="waiting-start-match"
+              onClick={onStartWaitingMatch}
+              disabled={isStartingWaitingMatch}
+              style={{
+                marginTop: 14,
+                padding: "12px 16px",
+                borderRadius: 14,
+                border: "1px solid #1d4ed8",
+                background: isStartingWaitingMatch ? "#d1d5db" : "#1d4ed8",
+                color: isStartingWaitingMatch ? "#6b7280" : "#ffffff",
+                cursor: isStartingWaitingMatch ? "not-allowed" : "pointer",
+                fontWeight: 900,
+              }}
+            >
+              {isStartingWaitingMatch ? "Iniciando..." : "Iniciar partida"}
+            </button>
+          ) : null}
         </div>
       ) : null}
 

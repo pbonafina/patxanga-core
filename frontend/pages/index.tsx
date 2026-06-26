@@ -1380,6 +1380,48 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
   ]);
 
   useEffect(() => {
+    if (!resolvedBootstrap.matchId || !playerIdInput || resolvedBootstrap.status !== "waiting") {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function refreshWaitingMatchSnapshot() {
+      if (isLoading || isStartingCurrentLobby) {
+        return;
+      }
+
+      try {
+        const refreshedData = await loadMatchBootstrap({
+          matchId: resolvedBootstrap.matchId,
+          playerId: playerIdInput.trim(),
+        });
+
+        if (!cancelled) {
+          setBootstrapData(refreshedData);
+        }
+      } catch {
+        // Background lobby sync must not block the waiting screen.
+      }
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshWaitingMatchSnapshot();
+    }, 2500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [
+    isLoading,
+    isStartingCurrentLobby,
+    playerIdInput,
+    resolvedBootstrap.matchId,
+    resolvedBootstrap.status,
+  ]);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const directMatchId = params.get("matchId")?.trim() ?? "";
     const directUserId = params.get("userId")?.trim() ?? "";
@@ -3581,6 +3623,14 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
       lastTurnActionSummary={lastTurnActionSummary}
       matchTimeline={matchTimeline}
       isAutoPlayingBotTurn={isAutoPlayingBotTurn}
+      canStartWaitingMatch={
+        !isIncomingLinkSession &&
+        isWaiting &&
+        resolvedBootstrap.playersSummary.length >= 2 &&
+        Boolean(resolvedBootstrap.playerId) &&
+        !resolvedBootstrap.playerContext?.has_forfeited
+      }
+      isStartingWaitingMatch={isStartingCurrentLobby}
       buildCellKey={buildCellKey}
       renderCellLabel={renderCellLabel}
       renderCellBackground={renderCellBackground}
@@ -3596,6 +3646,7 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
       onApprove={() => handleSubmitVote(false)}
       onReject={() => handleSubmitVote(true)}
       onToggleDebug={() => setShowDebug((current) => !current)}
+      onStartWaitingMatch={handleStartCurrentLobby}
     />
   );
 
