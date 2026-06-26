@@ -980,6 +980,19 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByText("Convite recusado com sucesso.").first()).toBeVisible();
   });
 
+  test("opens a clean guest entry screen from a human match link", async ({ page }) => {
+    await page.goto("/?joinMatchId=00000000-0000-0000-0000-000000000001");
+
+    await expect(page.getByTestId("incoming-link-clean-entry")).toBeVisible();
+    await expect(page.getByTestId("incoming-link-clean-entry")).toContainText(
+      "Entrar na partida"
+    );
+    await expect(page.getByTestId("incoming-link-status")).toContainText(
+      "Entre ou crie conta"
+    );
+    await expect(page.getByTestId("primary-product-actions")).toHaveCount(0);
+  });
+
   test("creates an authenticated session and uses it as the product identity", async ({ page }) => {
     const email = `patxanga-e2e-${Date.now()}@example.com`;
     const invitedUserId = crypto.randomUUID();

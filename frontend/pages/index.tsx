@@ -3530,6 +3530,74 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
   }
 
   const hasBotPlayer = resolvedBootstrap.playersSummary.some((player) => player.is_bot);
+  const isIncomingLinkSession = Boolean(incomingInviteId || incomingJoinMatchId);
+  const gamePlayScreen = (
+    <GamePlayScreen
+      stateLabel={stateLabel}
+      matchLanguage={resolvedBootstrap.language}
+      isWaiting={isWaiting}
+      isActive={isActive}
+      isVoting={isVoting}
+      isFinished={isFinished}
+      endSummary={resolvedBootstrap.endSummary}
+      winnerPlayerId={resolvedBootstrap.winnerPlayerId}
+      finishedAt={resolvedBootstrap.finishedAt}
+      dictionarySummary={resolvedBootstrap.dictionarySummary}
+      viewerPlayerId={resolvedBootstrap.playerId}
+      playersSummary={resolvedBootstrap.playersSummary}
+      currentTurnPlayerId={resolvedBootstrap.currentTurnPlayerId}
+      turnNumber={resolvedBootstrap.turnNumber}
+      boardState={resolvedBootstrap.boardState}
+      compositionPlacementsByCell={compositionPlacementsByCell}
+      pendingVoteTilesByCell={pendingVoteTilesByCell}
+      selectedTileId={selectedTileId}
+      selectedTileIds={isExchangeMode ? selectedExchangeTileIds : selectedTileIds}
+      selectedRackSlotId={selectedRackSlotId}
+      previewTileIds={previewTileIds}
+      playerRackState={orderedPlayerRackState}
+      rackSlotAssociations={localRackSlotAssociations}
+      rackSlotAssociationLabels={rackSlotAssociationLabels}
+      placedTilesPreview={placedTilesPreview}
+      localComposedWord={localComposedWord}
+      moveCompositionWarning={moveCompositionWarning}
+      canSubmitMove={
+        placedTilesPreview.length > 0 &&
+        Boolean(resolvedBootstrap.playerId) &&
+        !moveCompositionWarning
+      }
+      isSubmittingMove={isSubmittingMove}
+      movePreview={movePreview}
+      isLoadingMovePreview={isLoadingMovePreview}
+      pendingVoteError={pendingVoteError}
+      pendingVoteMove={pendingVoteMove}
+      canCurrentViewerVote={canCurrentViewerVote}
+      isSubmittingVote={isSubmittingVote}
+      voteResult={voteResult}
+      voteResolutionMessage={voteResolutionMessage}
+      showDebug={showDebug}
+      botActionMessage={botActionMessage}
+      botActionError={botActionError}
+      botActionHistory={botActionHistory}
+      lastTurnActionSummary={lastTurnActionSummary}
+      matchTimeline={matchTimeline}
+      isAutoPlayingBotTurn={isAutoPlayingBotTurn}
+      buildCellKey={buildCellKey}
+      renderCellLabel={renderCellLabel}
+      renderCellBackground={renderCellBackground}
+      onPlaceTile={handlePlaceTile}
+      onToggleTile={handleToggleTile}
+      onToggleRackSlot={handleToggleRackSlot}
+      onClearRackSlotAssignment={handleClearRackSlotAssignment}
+      onClearRackSlotAssociation={handleClearRackSlotAssociation}
+      onClearPreview={clearMoveCompositionPreview}
+      onChangeRackSlotDraft={handleChangeRackSlotDraft}
+      onReorderTile={handleReorderRackItem}
+      onSubmitMove={handleSubmitMove}
+      onApprove={() => handleSubmitVote(false)}
+      onReject={() => handleSubmitVote(true)}
+      onToggleDebug={() => setShowDebug((current) => !current)}
+    />
+  );
 
   if (isDirectMatchLaunch && !resolvedBootstrap.matchId) {
     return (
@@ -3563,6 +3631,230 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
             {errorMessage ?? "Carregando o tabuleiro e o rack do jogador..."}
           </p>
         </section>
+      </main>
+    );
+  }
+
+  if (isIncomingLinkSession && !resolvedBootstrap.matchId) {
+    return (
+      <main
+        data-testid="incoming-link-clean-entry"
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          padding: "24px clamp(14px, 4vw, 40px)",
+          fontFamily: '"Avenir Next", "Trebuchet MS", sans-serif',
+          color: "#17211c",
+          background:
+            "radial-gradient(circle at 8% 8%, rgba(59, 130, 246, 0.16), transparent 28%), radial-gradient(circle at 92% 12%, rgba(20, 184, 166, 0.18), transparent 30%), linear-gradient(135deg, #eff6ff 0%, #f8fafc 54%, #ecfdf5 100%)",
+        }}
+      >
+        <section
+          style={{
+            width: "min(620px, 100%)",
+            display: "grid",
+            gap: 18,
+            padding: "clamp(20px, 4vw, 34px)",
+            borderRadius: 30,
+            border: "1px solid rgba(37, 99, 235, 0.20)",
+            background: "rgba(255,255,255,0.94)",
+            boxShadow: "0 24px 70px rgba(15, 23, 42, 0.14)",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 950, letterSpacing: 1.3, textTransform: "uppercase", color: "#1d4ed8" }}>
+              Convite Patxanga
+            </div>
+            <h1 style={{ margin: "8px 0 8px", fontSize: "clamp(32px, 6vw, 54px)", lineHeight: 0.95 }}>
+              Entrar na partida
+            </h1>
+            <p style={{ margin: 0, color: "#4b5563", fontSize: 17, lineHeight: 1.45 }}>
+              Este link abre uma mesa humano x humano. Entre com sua conta e o jogo será aberto automaticamente.
+            </p>
+          </div>
+
+          <div
+            data-testid="incoming-link-status"
+            style={{
+              padding: 14,
+              borderRadius: 18,
+              background: isAuthenticated ? "#ecfdf5" : "#fff7ed",
+              border: isAuthenticated ? "1px solid #bbf7d0" : "1px solid #fed7aa",
+              color: isAuthenticated ? "#166534" : "#9a3412",
+              fontWeight: 950,
+            }}
+          >
+            {isJoiningIncomingMatch || isAcceptingIncomingInvite
+              ? "Entrando na mesa..."
+              : isAuthenticated
+                ? "Conta conectada. Preparando a mesa..."
+                : "Entre ou crie conta para continuar."}
+          </div>
+
+          {!isAuthenticated ? (
+            <form
+              data-testid="incoming-link-auth-form"
+              onSubmit={handleAuthSubmit}
+              style={{
+                display: "grid",
+                gap: 12,
+                padding: 16,
+                borderRadius: 20,
+                border: "1px solid #c7d2fe",
+                background: "#ffffff",
+              }}
+            >
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  data-testid="incoming-link-auth-mode-sign-in"
+                  onClick={() => setAuthMode("sign_in")}
+                  style={{
+                    padding: "9px 12px",
+                    borderRadius: 999,
+                    border: "1px solid #a5b4fc",
+                    background: authMode === "sign_in" ? "#3730a3" : "#ffffff",
+                    color: authMode === "sign_in" ? "#ffffff" : "#3730a3",
+                    cursor: "pointer",
+                    fontWeight: 900,
+                  }}
+                >
+                  Entrar
+                </button>
+                <button
+                  type="button"
+                  data-testid="incoming-link-auth-mode-sign-up"
+                  onClick={() => setAuthMode("sign_up")}
+                  style={{
+                    padding: "9px 12px",
+                    borderRadius: 999,
+                    border: "1px solid #a5b4fc",
+                    background: authMode === "sign_up" ? "#3730a3" : "#ffffff",
+                    color: authMode === "sign_up" ? "#ffffff" : "#3730a3",
+                    cursor: "pointer",
+                    fontWeight: 900,
+                  }}
+                >
+                  Criar conta
+                </button>
+              </div>
+
+              {authMode === "sign_up" ? (
+                <label style={{ display: "grid", gap: 6, fontSize: 13, fontWeight: 850 }}>
+                  Nome na mesa
+                  <input
+                    data-testid="incoming-link-auth-display-name"
+                    value={authDisplayName}
+                    onChange={(event) => setAuthDisplayName(event.target.value)}
+                    placeholder="ex: Paulo"
+                    style={{ padding: 11, borderRadius: 12, border: "1px solid #c7d2fe" }}
+                  />
+                </label>
+              ) : null}
+
+              <label style={{ display: "grid", gap: 6, fontSize: 13, fontWeight: 850 }}>
+                Email
+                <input
+                  data-testid="incoming-link-auth-email"
+                  type="email"
+                  value={authEmail}
+                  onChange={(event) => setAuthEmail(event.target.value)}
+                  placeholder="voce@example.com"
+                  style={{ padding: 11, borderRadius: 12, border: "1px solid #c7d2fe" }}
+                />
+              </label>
+
+              <label style={{ display: "grid", gap: 6, fontSize: 13, fontWeight: 850 }}>
+                Senha
+                <input
+                  data-testid="incoming-link-auth-password"
+                  type="password"
+                  value={authPassword}
+                  onChange={(event) => setAuthPassword(event.target.value)}
+                  placeholder="mínimo 6 caracteres"
+                  style={{ padding: 11, borderRadius: 12, border: "1px solid #c7d2fe" }}
+                />
+              </label>
+
+              <button
+                type="submit"
+                data-testid="incoming-link-auth-submit"
+                disabled={!isConfigured || isAuthLoading}
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: 14,
+                  border: "1px solid #3730a3",
+                  background: !isConfigured || isAuthLoading ? "#d1d5db" : "#4f46e5",
+                  color: !isConfigured || isAuthLoading ? "#6b7280" : "#ffffff",
+                  cursor: !isConfigured || isAuthLoading ? "not-allowed" : "pointer",
+                  fontWeight: 950,
+                }}
+              >
+                {isAuthLoading
+                  ? "Processando..."
+                  : authMode === "sign_up"
+                    ? "Criar conta e entrar"
+                    : "Entrar na partida"}
+              </button>
+            </form>
+          ) : null}
+
+          {authMessage ? (
+            <p style={{ margin: 0, color: "#166534", fontWeight: 900 }}>{authMessage}</p>
+          ) : null}
+          {authError ? (
+            <p style={{ margin: 0, color: "#b00020", fontWeight: 900 }}>{authError}</p>
+          ) : null}
+          {sessionListsError ? (
+            <p data-testid="incoming-link-error" style={{ margin: 0, color: "#b00020", fontWeight: 900 }}>
+              {sessionListsError}
+            </p>
+          ) : null}
+          {sessionActionMessage ? (
+            <p style={{ margin: 0, color: "#1d4ed8", fontWeight: 900 }}>{sessionActionMessage}</p>
+          ) : null}
+        </section>
+      </main>
+    );
+  }
+
+  if (isIncomingLinkSession && resolvedBootstrap.matchId && !hasBotPlayer) {
+    return (
+      <main
+        data-testid="incoming-link-game-screen"
+        style={{
+          minHeight: "100vh",
+          padding: 24,
+          fontFamily: '"Avenir Next", "Trebuchet MS", sans-serif',
+          maxWidth: 1280,
+          margin: "0 auto",
+          color: "#1f2933",
+          background:
+            "radial-gradient(circle at 10% 0%, rgba(191, 219, 254, 0.42), transparent 30%), radial-gradient(circle at 95% 12%, rgba(187, 247, 208, 0.5), transparent 32%), #f8fafc",
+        }}
+      >
+        <section
+          style={{
+            marginBottom: 16,
+            padding: 16,
+            borderRadius: 22,
+            border: "1px solid #bfdbfe",
+            background: "#ffffff",
+            boxShadow: "0 12px 30px rgba(15, 23, 42, 0.08)",
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 950, textTransform: "uppercase", letterSpacing: 1.2, color: "#1d4ed8" }}>
+            Mesa humano x humano
+          </div>
+          <h1 style={{ margin: "6px 0 6px", fontSize: 28 }}>Você entrou na partida</h1>
+          <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.45 }}>
+            {isWaiting
+              ? "Aguarde o host iniciar a partida. Esta tela atualiza a mesa e mostra o jogo assim que estiver ativa."
+              : "Jogue diretamente nesta tela."}
+          </p>
+        </section>
+        {gamePlayScreen}
       </main>
     );
   }
@@ -5938,71 +6230,7 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
       ) : null}
 
       {resolvedBootstrap.matchId ? (
-        <GamePlayScreen
-          stateLabel={stateLabel}
-          matchLanguage={resolvedBootstrap.language}
-          isWaiting={isWaiting}
-          isActive={isActive}
-          isVoting={isVoting}
-          isFinished={isFinished}
-          endSummary={resolvedBootstrap.endSummary}
-          winnerPlayerId={resolvedBootstrap.winnerPlayerId}
-          finishedAt={resolvedBootstrap.finishedAt}
-          dictionarySummary={resolvedBootstrap.dictionarySummary}
-          viewerPlayerId={resolvedBootstrap.playerId}
-          playersSummary={resolvedBootstrap.playersSummary}
-          currentTurnPlayerId={resolvedBootstrap.currentTurnPlayerId}
-          turnNumber={resolvedBootstrap.turnNumber}
-          boardState={resolvedBootstrap.boardState}
-          compositionPlacementsByCell={compositionPlacementsByCell}
-          pendingVoteTilesByCell={pendingVoteTilesByCell}
-          selectedTileId={selectedTileId}
-          selectedTileIds={isExchangeMode ? selectedExchangeTileIds : selectedTileIds}
-          selectedRackSlotId={selectedRackSlotId}
-          previewTileIds={previewTileIds}
-          playerRackState={orderedPlayerRackState}
-          rackSlotAssociations={localRackSlotAssociations}
-          rackSlotAssociationLabels={rackSlotAssociationLabels}
-          placedTilesPreview={placedTilesPreview}
-          localComposedWord={localComposedWord}
-          moveCompositionWarning={moveCompositionWarning}
-          canSubmitMove={
-            placedTilesPreview.length > 0 &&
-            Boolean(resolvedBootstrap.playerId) &&
-            !moveCompositionWarning
-          }
-          isSubmittingMove={isSubmittingMove}
-          movePreview={movePreview}
-          isLoadingMovePreview={isLoadingMovePreview}
-          pendingVoteError={pendingVoteError}
-          pendingVoteMove={pendingVoteMove}
-          canCurrentViewerVote={canCurrentViewerVote}
-          isSubmittingVote={isSubmittingVote}
-          voteResult={voteResult}
-          voteResolutionMessage={voteResolutionMessage}
-          showDebug={showDebug}
-          botActionMessage={botActionMessage}
-          botActionError={botActionError}
-          botActionHistory={botActionHistory}
-          lastTurnActionSummary={lastTurnActionSummary}
-          matchTimeline={matchTimeline}
-          isAutoPlayingBotTurn={isAutoPlayingBotTurn}
-          buildCellKey={buildCellKey}
-          renderCellLabel={renderCellLabel}
-          renderCellBackground={renderCellBackground}
-          onPlaceTile={handlePlaceTile}
-          onToggleTile={handleToggleTile}
-          onToggleRackSlot={handleToggleRackSlot}
-          onClearRackSlotAssignment={handleClearRackSlotAssignment}
-          onClearRackSlotAssociation={handleClearRackSlotAssociation}
-          onClearPreview={clearMoveCompositionPreview}
-          onChangeRackSlotDraft={handleChangeRackSlotDraft}
-          onReorderTile={handleReorderRackItem}
-          onSubmitMove={handleSubmitMove}
-          onApprove={() => handleSubmitVote(false)}
-          onReject={() => handleSubmitVote(true)}
-          onToggleDebug={() => setShowDebug((current) => !current)}
-        />
+        gamePlayScreen
       ) : null}
 
       {showDebug && resolvedBootstrap.matchId ? (
