@@ -922,13 +922,13 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("primary-product-actions")).toContainText("Humano x humano");
     await expect(page.getByTestId("primary-product-actions")).toContainText("Múltiplos humanos");
     await expect(page.getByTestId("tunnel-human-match-panel")).toContainText(
-      "Partida online por link"
+      "Mesa online"
     );
     await expect(page.getByTestId("tunnel-public-url")).toBeVisible();
     await expect(page.getByTestId("tunnel-create-open-join-lobby")).toBeDisabled();
-    await expect(page.getByTestId("auth-product-panel")).toContainText("Entre para jogar online");
+    await expect(page.getByTestId("auth-product-panel")).toContainText("Entre para salvar e jogar online");
     await expect(page.getByTestId("advanced-tools-toggle")).toContainText(
-      "Mostrar ferramentas avançadas"
+      "Mostrar opções técnicas"
     );
     await openAdvancedTools(page);
     await expect(
@@ -990,18 +990,19 @@ test.describe("browser validation scenarios", () => {
     );
     await expect(page.getByTestId("auth-message")).toContainText("Conta criada");
 
-    const activeUserId = await page.getByTestId("auth-active-user-id").innerText();
+    const activeUserId = await page.getByTestId("auth-active-user-id").textContent();
 
+    await openAdvancedTools(page);
     await page.getByTestId("invite-target-user-id").fill(invitedUserId);
     await page.getByTestId("invite-lobby-create").click();
     await expect(page.getByTestId("invite-lobby-message")).toContainText(
-      "Mesa criada e convite enviado"
+      "Mesa criada"
     );
     await expect(page.getByText("Pré-jogo pronto para iniciar")).toBeVisible();
 
     await page.getByTestId("quick-match-create").click();
     await expect(page.getByText(`host_user_id: ${activeUserId}`)).toBeVisible();
-    await expect(page.getByText("Partida ativa")).toBeVisible();
+    await expect(page.getByText("Partida ativa", { exact: true })).toBeVisible();
   });
 
   test("associates a local rack slot to the board without affecting gameplay state", async ({
@@ -1009,7 +1010,7 @@ test.describe("browser validation scenarios", () => {
   }) => {
     await page.goto("/");
 
-    await expect(page.getByRole("heading", { name: "Partida local rápida" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Teste neste navegador" })).toBeVisible();
 
     await page.getByTestId("quick-match-create").click();
 
@@ -1154,7 +1155,6 @@ test.describe("browser validation scenarios", () => {
     await page.getByTestId("quick-match-language").selectOption("pt-PT");
     await page.getByTestId("quick-match-create").click();
 
-    await expect(page.getByText("language: pt-PT")).toBeVisible();
     await expect(page.getByTestId("dictionary-language-badge")).toContainText(
       "dicionário pt-PT ativo"
     );
@@ -1313,6 +1313,15 @@ test.describe("browser validation scenarios", () => {
     );
     await expect(page.getByText("Sua vez de jogar")).toBeVisible();
     await expect(page.getByText(/turno 2/i)).toBeVisible();
+
+    runDatabaseJson<{ ok: true }>(`
+update public.patxanga_matches
+set bag_state = jsonb_build_object('tiles', '[]'::jsonb, 'remaining', 0),
+    updated_at = now()
+where id = '${scenario.matchId}'::uuid;
+
+select '{"ok":true}'::jsonb::text;
+`);
 
     const firstBotActionText = await page
       .getByTestId("game-bot-action-message")

@@ -3637,33 +3637,52 @@ export default function HomePage() {
     <main
       style={{
         minHeight: "100vh",
-        padding: 24,
+        padding: "24px clamp(14px, 3vw, 34px) 40px",
         fontFamily: '"Avenir Next", "Trebuchet MS", sans-serif',
         maxWidth: 1280,
         margin: "0 auto",
-        color: "#1f2933",
+        color: "#17211c",
+        background:
+          "radial-gradient(circle at 4% 4%, rgba(234, 179, 8, 0.18), transparent 24%), radial-gradient(circle at 96% 6%, rgba(20, 184, 166, 0.16), transparent 26%), linear-gradient(180deg, #fffaf0 0%, #f5f7ee 46%, #eef4f0 100%)",
       }}
     >
       <section
         style={{
-          padding: 24,
-          borderRadius: 28,
+          position: "relative",
+          overflow: "hidden",
+          padding: "clamp(22px, 4vw, 42px)",
+          borderRadius: 34,
           background:
-            "radial-gradient(circle at 18% 20%, rgba(250, 204, 21, 0.22), transparent 30%), radial-gradient(circle at 82% 12%, rgba(20, 184, 166, 0.18), transparent 28%), linear-gradient(135deg, #2b2118 0%, #5b3b24 45%, #14342f 100%)",
-          color: "#fff7ed",
-          boxShadow: "0 22px 60px rgba(43, 33, 24, 0.28)",
+            "radial-gradient(circle at 17% 18%, rgba(252, 211, 77, 0.30), transparent 30%), radial-gradient(circle at 90% 10%, rgba(45, 212, 191, 0.22), transparent 28%), linear-gradient(135deg, #261a12 0%, #5b321b 44%, #103f37 100%)",
+          color: "#fff8e7",
+          boxShadow: "0 28px 70px rgba(43, 33, 24, 0.30)",
         }}
       >
         <div
           style={{
+            position: "absolute",
+            right: -70,
+            bottom: -86,
+            width: 300,
+            height: 300,
+            borderRadius: 44,
+            transform: "rotate(-10deg)",
+            background:
+              "linear-gradient(135deg, rgba(255,255,255,0.13), rgba(255,255,255,0.04))",
+            border: "1px solid rgba(255,255,255,0.16)",
+          }}
+        />
+        <div
+          style={{
+            position: "relative",
             display: "flex",
             justifyContent: "space-between",
-            gap: 18,
+            gap: 22,
             flexWrap: "wrap",
-            alignItems: "flex-end",
+            alignItems: "stretch",
           }}
         >
-          <div style={{ maxWidth: 720 }}>
+          <div style={{ maxWidth: 700 }}>
             <div
               style={{
                 fontSize: 12,
@@ -3673,54 +3692,106 @@ export default function HomePage() {
                 color: "#fde68a",
               }}
             >
-              Palavra, mesa e disputa
+              Jogo de palavras em português
             </div>
-            <h1 style={{ margin: "8px 0 0", fontSize: 54, lineHeight: 0.95 }}>
+            <h1 style={{ margin: "10px 0 0", fontSize: "clamp(48px, 8vw, 92px)", lineHeight: 0.86, letterSpacing: -3 }}>
               Patxanga
             </h1>
-            <p style={{ margin: "14px 0 0", maxWidth: 620, fontSize: 18, lineHeight: 1.5 }}>
-              Mesa local conectada ao backend real, com jogo humano, votação de palavras e bot
-              demonstrável para acelerar desenvolvimento.
+            <p style={{ margin: "18px 0 0", maxWidth: 620, fontSize: 20, lineHeight: 1.45, color: "#ffedd5" }}>
+              Entre, escolha o modo e jogue. Sem códigos, sem terminal, sem passos escondidos.
             </p>
+            <div style={{ marginTop: 24, display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={handleCreateHumanVsBotMatch}
+                disabled={!isConfigured || isCreatingBotMatch}
+                style={{
+                  padding: "14px 18px",
+                  borderRadius: 999,
+                  border: "1px solid #fde68a",
+                  background: "#fde68a",
+                  color: "#2b2118",
+                  cursor: !isConfigured || isCreatingBotMatch ? "not-allowed" : "pointer",
+                  fontWeight: 950,
+                  boxShadow: "0 16px 34px rgba(0,0,0,0.22)",
+                }}
+              >
+                {isCreatingBotMatch ? "Criando..." : "Jogar contra bot"}
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateOpenJoinLobby}
+                disabled={!isAuthenticated || isCreatingInviteLobby}
+                style={{
+                  padding: "14px 18px",
+                  borderRadius: 999,
+                  border: "1px solid rgba(255,255,255,0.42)",
+                  background: "rgba(255,255,255,0.14)",
+                  color: "#fff8e7",
+                  cursor: !isAuthenticated || isCreatingInviteLobby ? "not-allowed" : "pointer",
+                  fontWeight: 950,
+                  backdropFilter: "blur(8px)",
+                }}
+              >
+                {isAuthenticated ? "Criar link online" : "Entre para criar link"}
+              </button>
+            </div>
           </div>
 
           <div
             style={{
-              minWidth: 260,
-              padding: 16,
-              borderRadius: 20,
-              background: "rgba(255, 255, 255, 0.12)",
-              border: "1px solid rgba(255, 255, 255, 0.22)",
+              minWidth: 280,
+              flex: "0 1 360px",
+              padding: 18,
+              borderRadius: 26,
+              background: "rgba(255, 255, 255, 0.13)",
+              border: "1px solid rgba(255, 255, 255, 0.25)",
               backdropFilter: "blur(10px)",
+              display: "grid",
+              gap: 12,
             }}
           >
-            <div style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", color: "#fde68a" }}>
-              Ambiente
+            <div style={{ fontSize: 13, fontWeight: 950, textTransform: "uppercase", color: "#fde68a", letterSpacing: 1.2 }}>
+              Comece agora
             </div>
-            <div style={{ marginTop: 8, fontSize: 17, fontWeight: 900 }}>
-              {isConfigured ? "Backend real conectado" : "Modo local de fallback"}
+            <div style={{ display: "grid", gap: 9 }}>
+              {[
+                isAuthenticated ? "Conta pronta" : "Entrar ou criar conta",
+                "Escolher bot ou humano",
+                "Enviar link se for online",
+              ].map((item, index) => (
+                <div
+                  key={item}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 12px",
+                    borderRadius: 16,
+                    background: "rgba(255,255,255,0.12)",
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "grid",
+                      placeItems: "center",
+                      width: 26,
+                      height: 26,
+                      borderRadius: 999,
+                      background: "#fde68a",
+                      color: "#3b2414",
+                      fontWeight: 950,
+                    }}
+                  >
+                    {index + 1}
+                  </span>
+                  <strong>{item}</strong>
+                </div>
+              ))}
             </div>
-            <div style={{ marginTop: 8, fontSize: 13, color: "#ffedd5", lineHeight: 1.45 }}>
-              {isAuthenticated
-                ? "Sessão autenticada pronta para convites, retomada e criação de mesas."
-                : "Entre para usar convites e retomada sem copiar identificadores."}
+            <div style={{ marginTop: 2, fontSize: 13, color: "#ffedd5" }}>
+              {isConfigured ? "Servidor online e dicionário pt-PT expandido ativo." : "Servidor indisponível no momento."}
             </div>
-            <button
-              type="button"
-              onClick={() => setShowDebug((current) => !current)}
-              style={{
-                marginTop: 14,
-                padding: "9px 13px",
-                borderRadius: 999,
-                border: "1px solid rgba(255, 255, 255, 0.32)",
-                background: showDebug ? "#fef3c7" : "rgba(255, 255, 255, 0.16)",
-                color: showDebug ? "#422006" : "#fff7ed",
-                cursor: "pointer",
-                fontWeight: 800,
-              }}
-            >
-              {showDebug ? "Debug visível" : "Mostrar debug"}
-            </button>
           </div>
         </div>
       </section>
@@ -3740,14 +3811,14 @@ export default function HomePage() {
         <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div style={{ maxWidth: 620 }}>
             <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 1.2, textTransform: "uppercase", color: "#3730a3" }}>
-              Conta Patxanga
+              Sua conta
             </div>
             <h2 style={{ margin: "8px 0 6px" }}>
-              {isAuthenticated ? "Sessão pronta para jogar" : "Entre para jogar online"}
+              {isAuthenticated ? "Você está pronto para jogar" : "Entre para salvar e jogar online"}
             </h2>
             <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.5 }}>
-              A conta passa a ser a identidade principal para criar mesas, receber convites,
-              retomar partidas e substituir o uso manual de UUID no fluxo comum.
+              A conta guarda suas mesas, permite receber links de convite e retomar partidas
+              sem copiar códigos técnicos.
             </p>
           </div>
 
@@ -3760,13 +3831,14 @@ export default function HomePage() {
                 border: "1px solid #a5b4fc",
                 background: "#ffffff",
                 color: "#1e1b4b",
-              }}
-            >
+            }}
+          >
               <div data-testid="auth-session-summary" style={{ fontWeight: 900 }}>
                 {authenticatedDisplayName ?? "Usuário autenticado"}
               </div>
-              <div style={{ marginTop: 6, fontSize: 13, color: "#4338ca" }}>
-                user_id ativo: <code data-testid="auth-active-user-id">{authenticatedUserId}</code>
+              <div style={{ marginTop: 6, fontSize: 13, color: "#4338ca", fontWeight: 800 }}>
+                Conta conectada nesta mesa.
+                <span data-testid="auth-active-user-id" style={{ display: "none" }}>{authenticatedUserId}</span>
               </div>
               <button
                 type="button"
@@ -3927,14 +3999,14 @@ export default function HomePage() {
                 color: "#92400e",
               }}
             >
-              Escolha o modo
+              Escolha sua mesa
             </div>
             <h2 style={{ margin: "8px 0 6px", fontSize: 32, lineHeight: 1.05 }}>
-              Painel de controle da partida
+              Como você quer jogar?
             </h2>
             <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.5 }}>
-              Selecione como quer jogar. Só ficam acionáveis os fluxos que já temos
-              implementados com backend real neste momento.
+              As opções disponíveis aparecem prontas para usar. O que ainda está em construção
+              fica sinalizado sem interromper a partida.
             </p>
           </div>
 
@@ -3951,10 +4023,10 @@ export default function HomePage() {
               Estado
             </div>
             <div style={{ marginTop: 6, fontSize: 18, fontWeight: 900, color: isConfigured ? "#166534" : "#991b1b" }}>
-              {isConfigured ? "Backend conectado" : "Backend indisponível"}
+              {isConfigured ? "Pronto para jogar" : "Servidor indisponível"}
             </div>
             <div style={{ marginTop: 6, fontSize: 13, color: "#57534e", lineHeight: 1.4 }}>
-              Conta: {isAuthenticated ? "autenticada" : "não autenticada"} · idioma {quickMatchLanguage}
+              {isAuthenticated ? "Conta conectada" : "Entre para jogar online"} · {quickMatchLanguage}
             </div>
           </div>
         </div>
@@ -3972,7 +4044,7 @@ export default function HomePage() {
               id: "human_bot" as const,
               title: "Humano x bot",
               status: "Disponível agora",
-              body: "Cria uma mesa contra Bot Easy. O bot joga automaticamente no próprio turno.",
+              body: "Entre numa partida imediata contra o bot. Boa para testar regras, dicionário e ritmo de jogo.",
               enabled: isConfigured,
               accent: "#166534",
               background: "#ecfdf5",
@@ -3981,18 +4053,22 @@ export default function HomePage() {
             {
               id: "human_human" as const,
               title: "Humano x humano",
-              status: "Disponível local",
-              body: "Cria uma mesa rápida com host e convidado. Útil para dois navegadores ou dois dispositivos.",
-              enabled: isConfigured,
+              status: "Disponível por link",
+              body: "Crie uma mesa online e envie um link. O convidado entra com a própria conta.",
+              enabled: isConfigured && isAuthenticated,
               accent: "#1d4ed8",
               background: "#eff6ff",
-              action: isCreatingQuickMatch ? "Criando..." : "Criar mesa 1x1",
+              action: isAuthenticated
+                ? isCreatingInviteLobby
+                  ? "Criando..."
+                  : "Criar link online"
+                : "Entre para criar link",
             },
             {
               id: "multi_human" as const,
               title: "Múltiplos humanos",
-              status: "Planejado",
-              body: "Mesa 3+ precisa de UX de convites múltiplos, presença e controle de assentos. Backend parcial existe, fluxo final ainda não.",
+              status: "Em construção",
+              body: "Mesas com três ou mais jogadores ainda precisam de convites múltiplos e controle de assentos.",
               enabled: false,
               accent: "#9a3412",
               background: "#fff7ed",
@@ -4002,7 +4078,7 @@ export default function HomePage() {
             const isSelected = selectedPlayMode === mode.id;
             const isBusy =
               (mode.id === "human_bot" && isCreatingBotMatch) ||
-              (mode.id === "human_human" && isCreatingQuickMatch);
+              (mode.id === "human_human" && isCreatingInviteLobby);
 
             return (
               <article
@@ -4060,7 +4136,7 @@ export default function HomePage() {
                     if (mode.id === "human_bot") {
                       void handleCreateHumanVsBotMatch();
                     } else if (mode.id === "human_human") {
-                      void handleCreateQuickMatch();
+                      void handleCreateOpenJoinLobby();
                     }
                   }}
                   disabled={!mode.enabled || isBusy}
@@ -4095,8 +4171,8 @@ export default function HomePage() {
             <div style={{ marginTop: 4, color: "#57534e" }}>
               {selectedPlayMode === "human_bot"
                 ? "Humano x bot"
-                : selectedPlayMode === "human_human"
-                  ? "Humano x humano"
+                  : selectedPlayMode === "human_human"
+                  ? "Humano x humano por link"
                   : "Múltiplos humanos"}
             </div>
           </div>
@@ -4108,10 +4184,10 @@ export default function HomePage() {
             <strong>Disponibilidade</strong>
             <div style={{ marginTop: 4, color: "#57534e" }}>
               {selectedPlayMode === "multi_human"
-                ? "Bloqueado: falta UX de mesa 3+"
+                ? "Em construção"
                 : isConfigured
-                  ? "Pronto para iniciar"
-                  : "Backend necessário"}
+                  ? "Disponível"
+                  : "Servidor necessário"}
             </div>
           </div>
         </div>
@@ -4132,14 +4208,14 @@ export default function HomePage() {
         <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div style={{ maxWidth: 720 }}>
             <div style={{ fontSize: 12, fontWeight: 950, letterSpacing: 1.4, textTransform: "uppercase", color: "#0f766e" }}>
-              Partida online por link
+              Mesa online
             </div>
             <h2 style={{ margin: "8px 0 6px", fontSize: 32, lineHeight: 1.05 }}>
-              Humano x humano em dois dispositivos
+              Convide alguém com um link
             </h2>
             <p style={{ margin: 0, color: "#46534d", lineHeight: 1.55 }}>
-              Crie uma mesa online, copie o link aberto e envie ao convidado. Quem recebe o link
-              entra com conta própria e é colocado na mesa automaticamente.
+              O host cria a mesa, copia o link e envia. O convidado abre, entra com conta própria
+              e aparece na partida automaticamente.
             </p>
           </div>
           <div
@@ -4153,10 +4229,10 @@ export default function HomePage() {
               border: "1px solid #c9dfd2",
             }}
           >
-            <strong style={{ color: "#14532d" }}>Estado operacional</strong>
-            <span>Backend: {isConfigured ? "conectado" : "indisponível"}</span>
-            <span>Conta: {isAuthenticated ? "autenticada" : "login necessário"}</span>
-            <span>Mesa: {resolvedBootstrap.matchId ? stateLabel : "nenhuma aberta"}</span>
+            <strong style={{ color: "#14532d" }}>Status</strong>
+            <span>{isConfigured ? "Servidor pronto" : "Servidor indisponível"}</span>
+            <span>{isAuthenticated ? "Você está conectado" : "Entre para criar links"}</span>
+            <span>{resolvedBootstrap.matchId ? `Mesa ${stateLabel}` : "Sem mesa aberta"}</span>
           </div>
         </div>
 
@@ -4197,10 +4273,10 @@ export default function HomePage() {
 
           <div style={{ padding: 16, borderRadius: 20, background: "#ffffff", border: "1px solid #c9dfd2" }}>
             <div style={{ fontSize: 13, fontWeight: 950, color: "#0f766e", textTransform: "uppercase" }}>
-              1. Endereço público
+              Endereço usado no convite
             </div>
             <p style={{ margin: "8px 0 10px", color: "#4b5563", lineHeight: 1.45 }}>
-              Confirme a URL pública que será usada nos links enviados ao outro jogador.
+              Normalmente já vem preenchido. Altere só se estiver testando outro endereço.
             </p>
             <input
               data-testid="tunnel-public-url"
@@ -4236,7 +4312,7 @@ export default function HomePage() {
                 fontWeight: 950,
               }}
             >
-              Copiar URL pública
+              Copiar endereço
             </button>
           </div>
 
@@ -4293,11 +4369,10 @@ export default function HomePage() {
 
           <div style={{ padding: 16, borderRadius: 20, background: "#ffffff", border: "1px solid #c9dfd2" }}>
             <div style={{ fontSize: 13, fontWeight: 950, color: "#0f766e", textTransform: "uppercase" }}>
-              2. Criar e enviar link
+              Criar convite
             </div>
             <p style={{ margin: "8px 0 10px", color: "#4b5563", lineHeight: 1.45 }}>
-              O host cria a mesa e envia o link aberto. O convidado só precisa abrir o link,
-              entrar com conta e aguardar a mesa carregar.
+              Escolha o dicionário e gere um link. Esse é o único item que precisa enviar ao outro jogador.
             </p>
             <div style={{ display: "grid", gap: 10 }}>
               <label style={{ display: "grid", gap: 6, fontSize: 13, fontWeight: 850 }}>
@@ -4328,7 +4403,7 @@ export default function HomePage() {
                   fontWeight: 950,
                 }}
               >
-                {isCreatingInviteLobby ? "Criando mesa..." : "Criar link aberto para convidado"}
+                {isCreatingInviteLobby ? "Criando mesa..." : "Criar link de convite"}
               </button>
               {lastJoinLink ? (
                 <div
@@ -4342,7 +4417,7 @@ export default function HomePage() {
                     border: "1px solid #99f6e4",
                   }}
                 >
-                  <strong style={{ color: "#115e59" }}>Link aberto pronto</strong>
+                  <strong style={{ color: "#115e59" }}>Link pronto para enviar</strong>
                   <div
                     data-testid="tunnel-join-link"
                     style={{
@@ -4371,10 +4446,10 @@ export default function HomePage() {
                       fontWeight: 950,
                     }}
                   >
-                    Copiar link aberto
+                    Copiar link
                   </button>
                   <p style={{ margin: 0, color: "#115e59", fontSize: 13, fontWeight: 850 }}>
-                    Envie este link ao convidado. Ele entra na partida depois de login/criação de conta.
+                    Envie este link ao convidado. Depois que ele entrar, atualize a mesa e inicie a partida.
                   </p>
                 </div>
               ) : null}
@@ -4469,11 +4544,10 @@ export default function HomePage() {
         >
           <div style={{ padding: 16, borderRadius: 20, background: "#f8fafc", border: "1px solid #d1d5db" }}>
             <div style={{ fontSize: 13, fontWeight: 950, color: "#1d4ed8", textTransform: "uppercase" }}>
-              3. Convidado entra
+              Entrada do convidado
             </div>
             <p style={{ margin: "8px 0 10px", color: "#4b5563", lineHeight: 1.45 }}>
-              Ao abrir o link, o convidado entra na mesa automaticamente após login. Use atualizar
-              apenas se a página já estava aberta.
+              Se você recebeu um link, basta entrar com sua conta. Se já estava nesta tela, atualize suas mesas.
             </p>
             <button
               type="button"
@@ -4490,7 +4564,7 @@ export default function HomePage() {
                 fontWeight: 950,
               }}
             >
-              {isLoadingSessionLists ? "Atualizando..." : "Atualizar meus convites"}
+              {isLoadingSessionLists ? "Atualizando..." : "Atualizar minhas mesas"}
             </button>
 
             <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
@@ -4550,11 +4624,10 @@ export default function HomePage() {
 
           <div style={{ padding: 16, borderRadius: 20, background: "#fff7ed", border: "1px solid #fed7aa" }}>
             <div style={{ fontSize: 13, fontWeight: 950, color: "#9a3412", textTransform: "uppercase" }}>
-              4. Host inicia e ambos jogam
+              Iniciar ou retomar
             </div>
             <p style={{ margin: "8px 0 10px", color: "#4b5563", lineHeight: 1.45 }}>
-              Depois que o convidado aparecer, o host atualiza a mesa e inicia a partida. Se a mesa
-              já estiver em andamento, use retomar.
+              Quando a mesa estiver pronta, inicie. Se a partida já existe, retome do ponto salvo.
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button
@@ -4649,8 +4722,8 @@ export default function HomePage() {
             }}
           >
             <strong>Mesa criada por convite</strong>
-            <span>Idioma {quickMatchSession.language}. Host logado e convite enviado ao user_id informado.</span>
-            {showDebug ? (
+            <span>Idioma {quickMatchSession.language}. Envie o link ao convidado e inicie quando ele entrar.</span>
+            {showAdvancedTools ? (
               <span style={{ fontFamily: "monospace", wordBreak: "break-all" }}>
                 match_id: {quickMatchSession.matchId}
               </span>
@@ -4694,9 +4767,9 @@ export default function HomePage() {
       >
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
-            <h2 style={{ marginTop: 0 }}>Partida local rápida</h2>
+            <h2 style={{ marginTop: 0 }}>Teste neste navegador</h2>
             <p style={{ marginBottom: 0, color: "#4b5563" }}>
-              Crie uma mesa em segundos para jogar, demonstrar o bot ou alternar entre sessões.
+              Use quando quiser testar uma partida sem enviar link para outra pessoa.
             </p>
           </div>
           <div
@@ -4710,7 +4783,7 @@ export default function HomePage() {
               fontWeight: 800,
             }}
           >
-            {isConfigured ? "pronto para criar" : "backend indisponível"}
+            {isConfigured ? "disponível" : "servidor indisponível"}
           </div>
         </div>
 
@@ -4752,7 +4825,7 @@ export default function HomePage() {
             disabled={!isConfigured || isCreatingQuickMatch}
             style={{ padding: "10px 14px", cursor: !isConfigured || isCreatingQuickMatch ? "not-allowed" : "pointer" }}
           >
-            {isCreatingQuickMatch ? "Gerando partida..." : "Gerar partida local"}
+            {isCreatingQuickMatch ? "Criando..." : "Criar teste local"}
           </button>
 
           <button
@@ -4762,7 +4835,7 @@ export default function HomePage() {
             disabled={!isConfigured || isCreatingBotMatch}
             style={{ padding: "10px 14px", cursor: !isConfigured || isCreatingBotMatch ? "not-allowed" : "pointer" }}
           >
-            {isCreatingBotMatch ? "Gerando contra bot..." : "Gerar partida contra bot"}
+            {isCreatingBotMatch ? "Criando..." : "Jogar contra bot"}
           </button>
 
           {quickMatchSession ? (
@@ -4783,7 +4856,7 @@ export default function HomePage() {
                 disabled={isLoading}
                 style={{ padding: "10px 14px", cursor: isLoading ? "not-allowed" : "pointer" }}
               >
-                {quickMatchSession.opponentIsBot ? "Abrir como bot (debug)" : "Entrar como guest"}
+                {quickMatchSession.opponentIsBot ? "Ver lado do bot" : "Entrar como convidado"}
               </button>
             </>
           ) : null}
@@ -4820,7 +4893,7 @@ export default function HomePage() {
               fontWeight: 800,
             }}
           >
-            Bot usa RPC oficial e não escreve estado local paralelo
+            Bot joga automaticamente quando chega sua vez
           </div>
           <div
             style={{
@@ -4832,11 +4905,11 @@ export default function HomePage() {
               fontWeight: 800,
             }}
           >
-            Dicionário segue separado por idioma, sem fallback automático
+            Dicionário ativo: {quickMatchLanguage}
           </div>
         </div>
 
-        {quickMatchSession ? (
+        {quickMatchSession && showAdvancedTools ? (
           <div style={{ marginTop: 12, display: "grid", gap: 6, fontFamily: "monospace", fontSize: 13 }}>
             <div>match_id: {quickMatchSession.matchId}</div>
             <div>language: {quickMatchSession.language}</div>
@@ -4965,11 +5038,11 @@ export default function HomePage() {
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 1.2, textTransform: "uppercase", color: "#9a3412" }}>
-              Central de mesas
+              Suas mesas
             </div>
-            <h2 style={{ margin: "8px 0 6px" }}>Convites e partidas retomáveis</h2>
+            <h2 style={{ margin: "8px 0 6px" }}>Continuar uma partida</h2>
             <p style={{ margin: 0, color: "#4b5563" }}>
-              Usa a conta autenticada para buscar o que precisa de ação do jogador.
+              Veja convites recebidos e partidas salvas na sua conta.
             </p>
           </div>
           <button
@@ -4983,7 +5056,7 @@ export default function HomePage() {
               alignSelf: "flex-start",
             }}
           >
-            {isLoadingSessionLists ? "Atualizando..." : "Atualizar minha central"}
+            {isLoadingSessionLists ? "Atualizando..." : "Atualizar minhas mesas"}
           </button>
         </div>
 
@@ -5102,19 +5175,18 @@ export default function HomePage() {
 
       <section
         style={{
-          marginTop: 24,
-          padding: 18,
+          marginTop: 32,
+          padding: 14,
           border: "1px solid #d7d0bf",
           borderRadius: 20,
-          background: "#fffaf0",
+          background: "rgba(255, 250, 240, 0.72)",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
-            <h2 style={{ margin: 0 }}>Ferramentas avançadas</h2>
-            <p style={{ margin: "6px 0 0", color: "#4b5563" }}>
-              UUIDs, cenários browser e alternador de sessão ficam recolhidos para manter o fluxo
-              principal jogável.
+            <h2 style={{ margin: 0, fontSize: 18 }}>Área técnica</h2>
+            <p style={{ margin: "4px 0 0", color: "#6b7280", fontSize: 13 }}>
+              Opções de validação e manutenção ficam recolhidas.
             </p>
           </div>
           <button
@@ -5123,7 +5195,7 @@ export default function HomePage() {
             onClick={() => setShowAdvancedTools((current) => !current)}
             style={{ padding: "10px 14px", cursor: "pointer", alignSelf: "flex-start" }}
           >
-            {showAdvancedTools ? "Ocultar ferramentas avançadas" : "Mostrar ferramentas avançadas"}
+            {showAdvancedTools ? "Ocultar opções técnicas" : "Mostrar opções técnicas"}
           </button>
         </div>
       </section>
