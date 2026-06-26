@@ -697,6 +697,7 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
   const botAutoVoteKeyRef = useRef<string | null>(null);
   const botAutoVoteInFlightRef = useRef(false);
   const humanHumanAutoCreateRequestedRef = useRef(false);
+  const humanHumanGuestJoinNotifiedRef = useRef(false);
 
   const resolvedBootstrap = useMatchBootstrap(bootstrapData ?? undefined);
   const { isConfigured } = getSupabaseEnv();
@@ -710,6 +711,10 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
   const isAuthenticated = Boolean(authenticatedUserId);
   const tunnelUrlLooksLocal =
     tunnelPublicUrl.includes("localhost") || tunnelPublicUrl.includes("127.0.0.1");
+  const humanHumanGuestJoined =
+    Boolean(lastJoinLink) &&
+    resolvedBootstrap.matchId === matchIdInput.trim() &&
+    resolvedBootstrap.playersSummary.filter((player) => !player.is_bot).length >= 2;
 
   const isWaiting = resolvedBootstrap.status === "waiting";
   const isActive = resolvedBootstrap.status === "active";
@@ -1095,6 +1100,20 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
       setPlayerIdInput(authenticatedUserId);
     }
   }, [authenticatedUserId]);
+
+  useEffect(() => {
+    if (!lastJoinLink || !resolvedBootstrap.matchId) {
+      humanHumanGuestJoinNotifiedRef.current = false;
+      return;
+    }
+
+    if (!humanHumanGuestJoined || humanHumanGuestJoinNotifiedRef.current) {
+      return;
+    }
+
+    humanHumanGuestJoinNotifiedRef.current = true;
+    setSessionActionMessage("Convidado entrou na mesa. O host já pode iniciar a partida.");
+  }, [humanHumanGuestJoined, lastJoinLink, resolvedBootstrap.matchId]);
 
   useEffect(() => {
     if (
@@ -2489,6 +2508,7 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
     setQuickMatchError(null);
     setLastInviteId(null);
     setLastInviteLink(null);
+    humanHumanGuestJoinNotifiedRef.current = false;
 
     if (!authenticatedUserId) {
       setInviteLobbyError("Entre com sua conta antes de criar uma mesa por link.");
@@ -4592,6 +4612,21 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
                   >
                     {lastJoinLink}
                   </div>
+                  <div
+                    data-testid="human-human-guest-join-status"
+                    style={{
+                      padding: 12,
+                      borderRadius: 14,
+                      background: humanHumanGuestJoined ? "#dcfce7" : "#eff6ff",
+                      border: humanHumanGuestJoined ? "1px solid #86efac" : "1px solid #bfdbfe",
+                      color: humanHumanGuestJoined ? "#166534" : "#1d4ed8",
+                      fontWeight: 950,
+                    }}
+                  >
+                    {humanHumanGuestJoined
+                      ? "Convidado entrou na mesa. Você já pode iniciar a partida."
+                      : "Aguardando convidado. Estou verificando automaticamente a cada poucos segundos."}
+                  </div>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <button
                       type="button"
@@ -4624,9 +4659,9 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
                         fontWeight: 950,
                       }}
                     >
-                      {isLoading ? "Atualizando..." : "Ver se convidado entrou"}
+                      {isLoading ? "Atualizando..." : "Atualizar agora"}
                     </button>
-                    {isWaiting && resolvedBootstrap.playerId && !resolvedBootstrap.playerContext?.has_forfeited ? (
+                    {humanHumanGuestJoined && isWaiting && resolvedBootstrap.playerId && !resolvedBootstrap.playerContext?.has_forfeited ? (
                       <button
                         type="button"
                         data-testid="human-human-start-match"
@@ -4647,7 +4682,7 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
                     ) : null}
                   </div>
                   <p style={{ margin: 0, color: "#115e59", lineHeight: 1.45 }}>
-                    Envie este link. O convidado abre, entra com a conta dele e entra na mesa. Depois use “Ver se convidado entrou” e “Iniciar partida”.
+                    Envie este link. O convidado abre, entra com a conta dele e entra na mesa. O host é avisado automaticamente quando ele entrar.
                   </p>
                 </div>
               ) : null}
