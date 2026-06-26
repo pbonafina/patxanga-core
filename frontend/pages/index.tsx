@@ -1314,13 +1314,16 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
   }, [authenticatedDisplayName, authenticatedUserId, incomingJoinMatchId]);
 
   useEffect(() => {
-    if (!resolvedBootstrap.matchId || !playerIdInput || resolvedBootstrap.status !== "active") {
+    const shouldRefreshPlayableMatch =
+      resolvedBootstrap.status === "active" || resolvedBootstrap.status === "voting";
+
+    if (!resolvedBootstrap.matchId || !playerIdInput || !shouldRefreshPlayableMatch) {
       return;
     }
 
     let cancelled = false;
 
-    async function refreshActiveMatchSnapshot() {
+    async function refreshPlayableMatchSnapshot() {
       if (
         isSubmittingMove ||
         isSubmittingExchange ||
@@ -1362,7 +1365,7 @@ export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
     }
 
     const timer = window.setInterval(() => {
-      void refreshActiveMatchSnapshot();
+      void refreshPlayableMatchSnapshot();
     }, 2500);
 
     return () => {
