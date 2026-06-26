@@ -299,9 +299,7 @@ export function RackSection({
           }}
         >
           <div>
-            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#6b7280" }}>
-              Seu rack
-            </div>
+            {/* Item "Seu rack" suspenso temporariamente da UI executável. */}
             <div style={{ marginTop: 6, fontSize: 14, color: "#4b5563" }}>
               {isPlayersTurn
                 ? "É sua vez de montar e enviar a jogada."

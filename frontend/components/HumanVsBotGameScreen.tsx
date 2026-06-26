@@ -490,9 +490,7 @@ export function HumanVsBotGameScreen({
                     background: "#ffffff",
                   }}
                 >
-                  <div style={{ fontSize: 12, fontWeight: 900, textTransform: "uppercase", color: "#6b7280" }}>
-                    Sua rack
-                  </div>
+                  {/* Item "Sua rack" suspenso temporariamente da UI executável. */}
                   <RackSection
                     rackTiles={playerRackState}
                     selectedTileIds={selectedTileIds}
