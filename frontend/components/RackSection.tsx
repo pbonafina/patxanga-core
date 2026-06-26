@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { /* useEffect, */ useMemo /* , useState */ } from "react";
 
 type RackTile = {
   id?: string;
@@ -36,91 +36,95 @@ type RackSectionProps = {
   onChangeSlotDraft: (slotId: string, nextValue: string) => void;
 };
 
-const DIGIT_SEGMENTS: Record<string, string[]> = {
-  "0": ["a", "b", "c", "d", "e", "f"],
-  "1": ["b", "c"],
-  "2": ["a", "b", "g", "e", "d"],
-  "3": ["a", "b", "g", "c", "d"],
-  "4": ["f", "g", "b", "c"],
-  "5": ["a", "f", "g", "c", "d"],
-  "6": ["a", "f", "g", "e", "c", "d"],
-  "7": ["a", "b", "c"],
-  "8": ["a", "b", "c", "d", "e", "f", "g"],
-  "9": ["a", "b", "c", "d", "f", "g"],
-  "-": ["g"],
-};
-
-function segmentStyle(name: string, active: boolean, alert: boolean): React.CSSProperties {
-  const lit = active
-    ? alert
-      ? "#f87171"
-      : "#fb7185"
-    : "rgba(255,255,255,0.08)";
-
-  const common: React.CSSProperties = {
-    position: "absolute",
-    background: lit,
-    borderRadius: 999,
-    boxShadow: active ? `0 0 8px ${alert ? "rgba(248, 113, 113, 0.45)" : "rgba(251, 113, 133, 0.35)"}` : "none",
-  };
-
-  switch (name) {
-    case "a":
-      return { ...common, top: 4, left: 8, width: 18, height: 4 };
-    case "b":
-      return { ...common, top: 8, right: 4, width: 4, height: 16 };
-    case "c":
-      return { ...common, bottom: 8, right: 4, width: 4, height: 16 };
-    case "d":
-      return { ...common, bottom: 4, left: 8, width: 18, height: 4 };
-    case "e":
-      return { ...common, bottom: 8, left: 4, width: 4, height: 16 };
-    case "f":
-      return { ...common, top: 8, left: 4, width: 4, height: 16 };
-    case "g":
-      return { ...common, top: 23, left: 8, width: 18, height: 4 };
-    default:
-      return common;
-  }
-}
-
-function SevenSegmentDigit({ value, alert }: { value: string; alert: boolean }) {
-  const activeSegments = DIGIT_SEGMENTS[value] ?? [];
-
-  return (
-    <div
-      style={{
-        width: 34,
-        height: 50,
-        position: "relative",
-        borderRadius: 8,
-        background: alert ? "#2b0b10" : "#111827",
-        border: alert ? "1px solid #ef4444" : "1px solid #374151",
-        boxShadow: alert
-          ? "0 0 18px rgba(239, 68, 68, 0.25)"
-          : "inset 0 0 12px rgba(248, 113, 113, 0.08)",
-      }}
-    >
-      {["a", "b", "c", "d", "e", "f", "g"].map((segment) => (
-        <div
-          key={segment}
-          style={segmentStyle(segment, activeSegments.includes(segment), alert)}
-        />
-      ))}
-    </div>
-  );
-}
-
-function formatCountdown(totalSeconds: number | null) {
-  if (totalSeconds === null) {
-    return "--:--";
-  }
-
-  const safe = Math.max(0, totalSeconds);
-  const minutes = Math.floor(safe / 60);
-  const seconds = safe % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
+/*
+ * Relógio do turno suspenso temporariamente da UI executável.
+ *
+ * const DIGIT_SEGMENTS: Record<string, string[]> = {
+ *   "0": ["a", "b", "c", "d", "e", "f"],
+ *   "1": ["b", "c"],
+ *   "2": ["a", "b", "g", "e", "d"],
+ *   "3": ["a", "b", "g", "c", "d"],
+ *   "4": ["f", "g", "b", "c"],
+ *   "5": ["a", "f", "g", "c", "d"],
+ *   "6": ["a", "f", "g", "e", "c", "d"],
+ *   "7": ["a", "b", "c"],
+ *   "8": ["a", "b", "c", "d", "e", "f", "g"],
+ *   "9": ["a", "b", "c", "d", "f", "g"],
+ *   "-": ["g"],
+ * };
+ *
+ * function segmentStyle(name: string, active: boolean, alert: boolean): React.CSSProperties {
+ *   const lit = active
+ *     ? alert
+ *       ? "#f87171"
+ *       : "#fb7185"
+ *     : "rgba(255,255,255,0.08)";
+ *
+ *   const common: React.CSSProperties = {
+ *     position: "absolute",
+ *     background: lit,
+ *     borderRadius: 999,
+ *     boxShadow: active ? `0 0 8px ${alert ? "rgba(248, 113, 113, 0.45)" : "rgba(251, 113, 133, 0.35)"}` : "none",
+ *   };
+ *
+ *   switch (name) {
+ *     case "a":
+ *       return { ...common, top: 4, left: 8, width: 18, height: 4 };
+ *     case "b":
+ *       return { ...common, top: 8, right: 4, width: 4, height: 16 };
+ *     case "c":
+ *       return { ...common, bottom: 8, right: 4, width: 4, height: 16 };
+ *     case "d":
+ *       return { ...common, bottom: 4, left: 8, width: 18, height: 4 };
+ *     case "e":
+ *       return { ...common, bottom: 8, left: 4, width: 4, height: 16 };
+ *     case "f":
+ *       return { ...common, top: 8, left: 4, width: 4, height: 16 };
+ *     case "g":
+ *       return { ...common, top: 23, left: 8, width: 18, height: 4 };
+ *     default:
+ *       return common;
+ *   }
+ * }
+ *
+ * function SevenSegmentDigit({ value, alert }: { value: string; alert: boolean }) {
+ *   const activeSegments = DIGIT_SEGMENTS[value] ?? [];
+ *
+ *   return (
+ *     <div
+ *       style={{
+ *         width: 34,
+ *         height: 50,
+ *         position: "relative",
+ *         borderRadius: 8,
+ *         background: alert ? "#2b0b10" : "#111827",
+ *         border: alert ? "1px solid #ef4444" : "1px solid #374151",
+ *         boxShadow: alert
+ *           ? "0 0 18px rgba(239, 68, 68, 0.25)"
+ *           : "inset 0 0 12px rgba(248, 113, 113, 0.08)",
+ *       }}
+ *     >
+ *       {["a", "b", "c", "d", "e", "f", "g"].map((segment) => (
+ *         <div
+ *           key={segment}
+ *           style={segmentStyle(segment, activeSegments.includes(segment), alert)}
+ *         />
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ *
+ * function formatCountdown(totalSeconds: number | null) {
+ *   if (totalSeconds === null) {
+ *     return "--:--";
+ *   }
+ *
+ *   const safe = Math.max(0, totalSeconds);
+ *   const minutes = Math.floor(safe / 60);
+ *   const seconds = safe % 60;
+ *   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+ * }
+ */
 
 function isSlotItem(item: unknown): item is RackSlotItem {
   return Boolean(
@@ -215,45 +219,49 @@ export function RackSection({
   onReorderTile,
   onChangeSlotDraft,
 }: RackSectionProps) {
-  const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
-  const [blinkVisible, setBlinkVisible] = useState(true);
-
-  useEffect(() => {
-    if (!isPlayersTurn) {
-      setCountdownSeconds(null);
-      setBlinkVisible(true);
-      return;
-    }
-
-    setCountdownSeconds(60);
-    setBlinkVisible(true);
-
-    const timer = window.setInterval(() => {
-      setCountdownSeconds((current) => {
-        if (current === null) return 60;
-        return Math.max(0, current - 1);
-      });
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, [isPlayersTurn]);
-
-  useEffect(() => {
-    if (!isPlayersTurn || countdownSeconds === null || countdownSeconds > 10) {
-      setBlinkVisible(true);
-      return;
-    }
-
-    const blinker = window.setInterval(() => {
-      setBlinkVisible((current) => !current);
-    }, 350);
-
-    return () => window.clearInterval(blinker);
-  }, [countdownSeconds, isPlayersTurn]);
-
-  const countdown = useMemo(() => formatCountdown(countdownSeconds), [countdownSeconds]);
-  const digits = countdown.split("");
-  const isAlert = isPlayersTurn && countdownSeconds !== null && countdownSeconds <= 10;
+  /*
+   * Relógio do turno suspenso temporariamente da UI executável.
+   *
+   * const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
+   * const [blinkVisible, setBlinkVisible] = useState(true);
+   *
+   * useEffect(() => {
+   *   if (!isPlayersTurn) {
+   *     setCountdownSeconds(null);
+   *     setBlinkVisible(true);
+   *     return;
+   *   }
+   *
+   *   setCountdownSeconds(60);
+   *   setBlinkVisible(true);
+   *
+   *   const timer = window.setInterval(() => {
+   *     setCountdownSeconds((current) => {
+   *       if (current === null) return 60;
+   *       return Math.max(0, current - 1);
+   *     });
+   *   }, 1000);
+   *
+   *   return () => window.clearInterval(timer);
+   * }, [isPlayersTurn]);
+   *
+   * useEffect(() => {
+   *   if (!isPlayersTurn || countdownSeconds === null || countdownSeconds > 10) {
+   *     setBlinkVisible(true);
+   *     return;
+   *   }
+   *
+   *   const blinker = window.setInterval(() => {
+   *     setBlinkVisible((current) => !current);
+   *   }, 350);
+   *
+   *   return () => window.clearInterval(blinker);
+   * }, [countdownSeconds, isPlayersTurn]);
+   *
+   * const countdown = useMemo(() => formatCountdown(countdownSeconds), [countdownSeconds]);
+   * const digits = countdown.split("");
+   * const isAlert = isPlayersTurn && countdownSeconds !== null && countdownSeconds <= 10;
+   */
   const selectedCount = selectedTileIds.length;
   const slotCount = rackTiles.filter((item) => isSlotItem(item)).length;
   const previewTileIdSet = useMemo(() => new Set(previewTileIds), [previewTileIds]);
@@ -328,54 +336,58 @@ export function RackSection({
             ) : null}
           </div>
 
-          <div
-            style={{
-              opacity: isPlayersTurn ? (isAlert && !blinkVisible ? 0.35 : 1) : 0.55,
-              transition: "opacity 0.18s ease",
-            }}
-          >
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#6b7280", marginBottom: 6, textAlign: "right" }}>
-              {isPlayersTurn ? "Tempo do turno" : "Aguardando turno"}
-            </div>
-            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              {digits.map((digit, index) =>
-                digit === ":" ? (
-                  <div
-                    key={`sep-${index}`}
-                    style={{
-                      width: 12,
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
-                  >
+          {/*
+            Relógio do turno e box visual suspensos temporariamente da UI executável.
+
+            <div
+              style={{
+                opacity: isPlayersTurn ? (isAlert && !blinkVisible ? 0.35 : 1) : 0.55,
+                transition: "opacity 0.18s ease",
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#6b7280", marginBottom: 6, textAlign: "right" }}>
+                {isPlayersTurn ? "Tempo do turno" : "Aguardando turno"}
+              </div>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {digits.map((digit, index) =>
+                  digit === ":" ? (
                     <div
+                      key={`sep-${index}`}
                       style={{
-                        width: 4,
-                        height: 4,
-                        borderRadius: 999,
-                        background: isAlert ? "#f87171" : "#fb7185",
-                        opacity: isPlayersTurn ? 1 : 0.4,
+                        width: 12,
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        gap: 6,
                       }}
-                    />
-                    <div
-                      style={{
-                        width: 4,
-                        height: 4,
-                        borderRadius: 999,
-                        background: isAlert ? "#f87171" : "#fb7185",
-                        opacity: isPlayersTurn ? 1 : 0.4,
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <SevenSegmentDigit key={`digit-${index}`} value={digit} alert={isAlert} />
-                )
-              )}
+                    >
+                      <div
+                        style={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: 999,
+                          background: isAlert ? "#f87171" : "#fb7185",
+                          opacity: isPlayersTurn ? 1 : 0.4,
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: 999,
+                          background: isAlert ? "#f87171" : "#fb7185",
+                          opacity: isPlayersTurn ? 1 : 0.4,
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <SevenSegmentDigit key={`digit-${index}`} value={digit} alert={isAlert} />
+                  )
+                )}
+              </div>
             </div>
-          </div>
+          */}
         </div>
       </div>
 
