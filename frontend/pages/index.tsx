@@ -586,7 +586,11 @@ function renderCellBackground(cell: BoardCell, rowIndex: number, colIndex: numbe
   }
 }
 
-export default function HomePage() {
+type PatxangaPageProps = {
+  operationalMode?: boolean;
+};
+
+export function PatxangaPage({ operationalMode = false }: PatxangaPageProps) {
   const [matchIdInput, setMatchIdInput] = useState("");
   const [playerIdInput, setPlayerIdInput] = useState("");
   const [authSession, setAuthSession] = useState<Session | null>(null);
@@ -623,7 +627,7 @@ export default function HomePage() {
     Record<string, string>
   >({});
   const [showDebug, setShowDebug] = useState(false);
-  const [showAdvancedTools, setShowAdvancedTools] = useState(false);
+  const [showAdvancedTools, setShowAdvancedTools] = useState(operationalMode);
   const [selectedPlayMode, setSelectedPlayMode] = useState<PlayMode>("human_bot");
   const [quickMatchSession, setQuickMatchSession] = useState<{
     matchId: string;
@@ -5114,32 +5118,34 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section
-        style={{
-          marginTop: 32,
-          padding: 14,
-          border: "1px solid #d7d0bf",
-          borderRadius: 20,
-          background: "rgba(255, 250, 240, 0.72)",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: 18 }}>Área técnica</h2>
-            <p style={{ margin: "4px 0 0", color: "#6b7280", fontSize: 13 }}>
-              Opções de validação e manutenção ficam recolhidas.
-            </p>
+      {operationalMode ? (
+        <section
+          style={{
+            marginTop: 32,
+            padding: 14,
+            border: "1px solid #d7d0bf",
+            borderRadius: 20,
+            background: "rgba(255, 250, 240, 0.72)",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 18 }}>Área técnica</h2>
+              <p style={{ margin: "4px 0 0", color: "#6b7280", fontSize: 13 }}>
+                Debug, validação, partidas preparadas e apoio operacional ficam fora da entrada pública.
+              </p>
+            </div>
+            <button
+              type="button"
+              data-testid="advanced-tools-toggle"
+              onClick={() => setShowAdvancedTools((current) => !current)}
+              style={{ padding: "10px 14px", cursor: "pointer", alignSelf: "flex-start" }}
+            >
+              {showAdvancedTools ? "Ocultar opções técnicas" : "Mostrar opções técnicas"}
+            </button>
           </div>
-          <button
-            type="button"
-            data-testid="advanced-tools-toggle"
-            onClick={() => setShowAdvancedTools((current) => !current)}
-            style={{ padding: "10px 14px", cursor: "pointer", alignSelf: "flex-start" }}
-          >
-            {showAdvancedTools ? "Ocultar opções técnicas" : "Mostrar opções técnicas"}
-          </button>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       {showAdvancedTools ? (
         <>
@@ -5823,4 +5829,8 @@ export default function HomePage() {
 
     </main>
   );
+}
+
+export default function HomePage() {
+  return <PatxangaPage />;
 }

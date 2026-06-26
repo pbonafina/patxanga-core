@@ -823,7 +823,7 @@ async function openAdvancedTools(page: Page) {
     return;
   }
 
-  await page.getByTestId("advanced-tools-toggle").click();
+  await page.goto("/operacional");
   await expect(page.getByRole("heading", { name: "Abrir partida" })).toBeVisible();
 }
 
@@ -931,10 +931,11 @@ test.describe("browser validation scenarios", () => {
     await expect(page.getByTestId("tunnel-public-url")).toBeVisible();
     await expect(page.getByTestId("tunnel-create-open-join-lobby")).toBeDisabled();
     await expect(page.getByTestId("auth-product-panel")).toContainText("Entre para salvar e jogar online");
-    await expect(page.getByTestId("advanced-tools-toggle")).toContainText(
-      "Mostrar opções técnicas"
-    );
+    await expect(page.getByTestId("advanced-tools-toggle")).toHaveCount(0);
     await openAdvancedTools(page);
+    await expect(page.getByTestId("advanced-tools-toggle")).toContainText(
+      "Ocultar opções técnicas"
+    );
     await expect(
       page.getByRole("heading", { name: "Cenarios de validacao browser" })
     ).toBeVisible();
